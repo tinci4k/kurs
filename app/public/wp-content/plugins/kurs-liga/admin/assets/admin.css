@@ -1,0 +1,582 @@
+/* KURS Liga — Admin Styles v1.0 */
+
+/* ── Layout ──────────────────────────────────────────────────────────────── */
+.kurs-wrap { max-width: 1400px; }
+.kurs-page-title .dashicons { vertical-align: middle; margin-right: .25rem; }
+.kurs-back { font-size: .75em; color: #646970; margin-right: .4rem; text-decoration: none; }
+.kurs-back:hover { color: #1a3a6b; text-decoration: none; }
+
+/* ── Two-col ─────────────────────────────────────────────────────────────── */
+.kurs-two-col {
+	display: grid;
+	grid-template-columns: 1fr 380px;
+	gap: 2rem;
+	margin-top: 1.5rem;
+	align-items: start;
+}
+@media (max-width: 1100px) { .kurs-two-col { grid-template-columns: 1fr; } }
+
+/* ── Cards ───────────────────────────────────────────────────────────────── */
+.kurs-card {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 1.25rem;
+	margin-bottom: 1rem;
+}
+.kurs-card__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: 1rem;
+	padding-bottom: .75rem;
+	border-bottom: 1px solid #f0f0f0;
+}
+.kurs-card__head h2 { margin: 0; font-size: 1.1rem; }
+.kurs-card__foot {
+	display: flex;
+	gap: .5rem;
+	margin-top: 1rem;
+	padding-top: .75rem;
+	border-top: 1px solid #f0f0f0;
+}
+
+/* ── Badges & Tags ───────────────────────────────────────────────────────── */
+.kurs-badge, .kurs-tag {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 20px;
+	font-size: .75rem;
+	font-weight: 600;
+	line-height: 1.5;
+}
+.kurs-badge--active   { background: #d4edda; color: #155724; }
+.kurs-badge--archived { background: #eee;    color: #888; }
+.kurs-tag--pan_ljetna { background: #fff3cd; color: #856404; }
+.kurs-tag--kc_liga    { background: #cce5ff; color: #004085; }
+
+/* ── Phase pills ─────────────────────────────────────────────────────────── */
+.kurs-phase-pill {
+	display: inline-block;
+	padding: 1px 8px;
+	border-radius: 3px;
+	font-size: .72rem;
+	font-weight: 600;
+	margin-left: .3rem;
+}
+.kurs-phase-pill--group   { background: #e8f4fd; color: #1a3a6b; }
+.kurs-phase-pill--playoff { background: #fff8e5; color: #7a5700; }
+
+/* ── Dashboard cards ─────────────────────────────────────────────────────── */
+.kurs-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+	gap: 1.5rem;
+	margin-top: 1.5rem;
+}
+.kurs-card__stats { display: flex; gap: 2rem; margin: .6rem 0 .75rem; }
+.kurs-stat { text-align: center; }
+.kurs-stat__val { display: block; font-size: 2rem; font-weight: 700; color: #1a3a6b; line-height: 1; }
+.kurs-stat__lbl { font-size: .72rem; color: #888; text-transform: uppercase; letter-spacing: .04em; }
+.kurs-division-row { font-size: .875rem; margin: .35rem 0; color: #555; }
+.kurs-division-row strong { color: #1a3a6b; margin-right: .3rem; }
+
+/* ── Quick actions ───────────────────────────────────────────────────────── */
+.kurs-quick { margin-top: 2rem; }
+.kurs-quick__list { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .75rem; }
+.kurs-quick__btn {
+	display: inline-block;
+	padding: .45rem 1rem;
+	background: #1a3a6b;
+	color: #fff !important;
+	border-radius: 4px;
+	text-decoration: none;
+	font-size: .875rem;
+	font-weight: 600;
+	transition: background .15s;
+}
+.kurs-quick__btn:hover { background: #122952; text-decoration: none; }
+.kurs-quick__btn.secondary { background: #f0f0f1; color: #333 !important; }
+.kurs-quick__btn.secondary:hover { background: #e0e0e0; }
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.kurs-tabs {
+	display: flex;
+	border-bottom: 2px solid #dcdcde;
+	margin: 1.5rem 0 0;
+}
+.kurs-tab {
+	padding: .6rem 1.25rem;
+	color: #555;
+	text-decoration: none;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -2px;
+	font-weight: 500;
+	font-size: .9rem;
+}
+.kurs-tab:hover { color: #1a3a6b; text-decoration: none; }
+.kurs-tab.is-active { color: #1a3a6b; border-bottom-color: #1a3a6b; font-weight: 700; }
+
+/* ── Setup layout ────────────────────────────────────────────────────────── */
+.kurs-setup-layout {
+	display: grid;
+	grid-template-columns: 260px 1fr;
+	gap: 1.5rem;
+	margin-top: 1.5rem;
+	align-items: start;
+}
+.kurs-setup-sidebar { position: sticky; top: 40px; }
+.kurs-setup-main > .kurs-card { margin-bottom: 1rem; }
+@media (max-width: 900px) { .kurs-setup-layout { grid-template-columns: 1fr; } }
+
+/* ── Phase block ─────────────────────────────────────────────────────────── */
+.kurs-phase-block {
+	border-left: 3px solid #1a3a6b;
+	padding: .7rem 1rem;
+	margin: .75rem 0 0;
+	background: #f8f9fa;
+	border-radius: 0 4px 4px 0;
+}
+.kurs-phase-block__head { display: flex; align-items: center; gap: .4rem; margin-bottom: .5rem; }
+.kurs-phase-block__head h4 { margin: 0; font-size: .9rem; }
+
+/* ── Add phase ───────────────────────────────────────────────────────────── */
+.kurs-add-phase {
+	background: #f0f0f1;
+	border-radius: 4px;
+	padding: .55rem .75rem;
+	margin-top: .75rem;
+}
+.kurs-add-phase summary { cursor: pointer; color: #1a3a6b; font-weight: 600; font-size: .85rem; }
+
+/* ── Group chips ─────────────────────────────────────────────────────────── */
+.kurs-chips { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 28px; }
+.kurs-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: .25rem;
+	background: #1a3a6b;
+	color: #fff;
+	border-radius: 20px;
+	padding: .2rem .75rem;
+	font-size: .8rem;
+	font-weight: 600;
+}
+.kurs-chip__del {
+	background: none;
+	border: none;
+	color: rgba(255,255,255,.65);
+	cursor: pointer;
+	font-size: 1rem;
+	line-height: 1;
+	padding: 0;
+}
+.kurs-chip__del:hover { color: #fff; }
+
+/* ── Assign layout ───────────────────────────────────────────────────────── */
+.kurs-assign-layout {
+	display: grid;
+	grid-template-columns: 260px 1fr;
+	gap: 1.5rem;
+	margin-top: 1.5rem;
+	align-items: start;
+}
+.kurs-team-pool {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 1rem;
+	position: sticky;
+	top: 40px;
+}
+.kurs-team-list { margin-top: .6rem; display: flex; flex-direction: column; gap: .3rem; }
+.kurs-team-pill {
+	display: flex;
+	align-items: center;
+	gap: .4rem;
+	padding: .3rem .5rem;
+	border: 1px solid #e5e5e5;
+	border-radius: 4px;
+	font-size: .82rem;
+	background: #fafafa;
+}
+.kurs-team-pill img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Team autocomplete (dodjela ekipa u grupe) ───────────────────────────── */
+.kurs-team-ac-wrap {
+	position: relative;
+	width: 100%;
+}
+.kurs-team-ac-wrap .kurs-team-search {
+	width: 100%;
+	box-sizing: border-box;
+}
+.kurs-team-ac-list {
+	position: absolute;
+	top: calc(100% + 2px);
+	left: 0;
+	right: 0;
+	z-index: 9999;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 0 0 5px 5px;
+	box-shadow: 0 4px 14px rgba(0,0,0,.12);
+	max-height: 200px;
+	overflow-y: auto;
+}
+.kurs-team-ac-item {
+	padding: .38rem .65rem;
+	cursor: pointer;
+	font-size: .82rem;
+	border-bottom: 1px solid #f5f5f5;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: background .1s;
+}
+.kurs-team-ac-item:last-child { border-bottom: none; }
+.kurs-team-ac-item:hover,
+.kurs-team-ac-item.is-focused { background: #f0f4ff; }
+
+/* ── Nova ekipa forma u pool sidebaru ────────────────────────────────────── */
+.kurs-new-team-form input[type="text"] { width: 100%; box-sizing: border-box; margin-bottom: .4rem; }
+.kurs-new-team-form .button { width: 100%; text-align: center; }
+.kurs-avatar {
+	width: 24px; height: 24px;
+	background: #1a3a6b; color: #fff;
+	border-radius: 50%;
+	display: inline-flex; align-items: center; justify-content: center;
+	font-size: .62rem; font-weight: 700; flex-shrink: 0;
+}
+
+/* ── Group columns (assign step) ─────────────────────────────────────────── */
+.kurs-groups-canvas h2 { margin-top: 1.5rem; font-size: 1.05rem; border-bottom: 1px solid #eee; padding-bottom: .4rem; }
+.kurs-group-cols { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+.kurs-group-col {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	min-width: 160px;
+	flex: 1;
+	max-width: 260px;
+}
+.kurs-group-col__head {
+	background: #1a3a6b; color: #fff;
+	padding: .5rem .75rem;
+	border-radius: 6px 6px 0 0;
+	display: flex; justify-content: space-between; align-items: center;
+	font-size: .875rem; font-weight: 700;
+}
+.kurs-group-col__head .kurs-muted { color: rgba(255,255,255,.65); font-weight: 400; font-size: .75rem; }
+.kurs-group-col__teams { padding: .4rem .5rem; min-height: 32px; }
+.kurs-group-team {
+	display: flex; justify-content: space-between; align-items: center;
+	padding: .25rem .4rem;
+	border-radius: 3px;
+	font-size: .82rem;
+	background: #eef2ff;
+	margin-bottom: .2rem;
+	border: 1px solid #d8e0ff;
+}
+.kurs-btn-rm {
+	background: none; border: none; color: #c00; cursor: pointer;
+	font-size: 1rem; line-height: 1; padding: 0; flex-shrink: 0;
+}
+.kurs-group-col__add {
+	padding: .4rem .5rem;
+	border-top: 1px solid #eee;
+	display: flex;
+	gap: .35rem;
+	align-items: flex-start;
+}
+.kurs-group-col__add .kurs-team-ac-wrap { flex: 1; min-width: 0; }
+.kurs-group-col__add .kurs-team-search  { font-size: .78rem; }
+
+/* ── Selector bar ────────────────────────────────────────────────────────── */
+.kurs-selector-bar {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: .8rem 1rem;
+	margin: 1.5rem 0;
+}
+.kurs-selector-bar form { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.kurs-selector-bar__label { font-weight: 600; font-size: .82rem; }
+
+/* ── Matches layout ──────────────────────────────────────────────────────── */
+.kurs-matches-layout {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 2rem;
+	align-items: start;
+}
+@media (max-width: 1200px) { .kurs-matches-layout { grid-template-columns: 1fr; } }
+
+.kurs-panel { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 1.25rem; }
+.kurs-panel h2 { margin-top: 0; border-bottom: 1px solid #f0f0f0; padding-bottom: .6rem; margin-bottom: .75rem; }
+
+/* ── Standings ───────────────────────────────────────────────────────────── */
+.kurs-standings { width: 100%; border-collapse: collapse; }
+.kurs-standings th,
+.kurs-standings td { padding: .4rem .5rem; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: .85rem; }
+.kurs-standings thead th { font-size: .72rem; text-transform: uppercase; color: #888; background: #fafafa; font-weight: 600; }
+.kurs-standings .kurs-standings__name { text-align: left; }
+.kurs-standings .kurs-standings__pos  { color: #999; font-size: .8rem; width: 28px; }
+.kurs-standings .kurs-standings__pts  { font-size: .95rem; }
+.kurs-standings tr:hover td { background: #f9f9f9; }
+.kurs-standings__top td { background: #fffdf0; }
+.kurs-standings__top:hover td { background: #fffbe8; }
+
+/* ── Round header ────────────────────────────────────────────────────────── */
+.kurs-round-hd {
+	font-size: .72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: #aaa;
+	padding: .55rem 0 .2rem;
+	margin-top: .4rem;
+	border-top: 1px solid #f0f0f0;
+}
+.kurs-round-hd:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
+/* ── Match row ───────────────────────────────────────────────────────────── */
+.kurs-match { padding: .45rem 0; border-bottom: 1px solid #f5f5f5; }
+.kurs-match:last-child { border-bottom: none; }
+.kurs-match__teams { display: flex; align-items: center; gap: .5rem; }
+.kurs-match__home { flex: 1; text-align: right; font-weight: 600; font-size: .875rem; }
+.kurs-match__away { flex: 1; font-weight: 600; font-size: .875rem; }
+.kurs-score {
+	background: #1a3a6b; color: #fff;
+	font-weight: 800; font-size: 1rem;
+	padding: .15rem .65rem;
+	border-radius: 4px;
+	min-width: 58px;
+	text-align: center;
+	white-space: nowrap;
+}
+.kurs-result-form { display: flex; align-items: center; gap: .3rem; }
+.kurs-si { width: 38px !important; text-align: center; font-size: .9rem; font-weight: 700; padding: .15rem; }
+.kurs-match__meta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: .15rem;
+	padding-left: .1rem;
+}
+.kurs-match__date { font-size: .75rem; color: #aaa; }
+.kurs-del-match-form { display: inline; }
+.kurs-del-btn {
+	background: none; border: none; color: #ccc; cursor: pointer; font-size: .9rem; line-height: 1; padding: 0;
+}
+.kurs-del-btn:hover { color: #c00; }
+
+/* ── Add match form ──────────────────────────────────────────────────────── */
+.kurs-add-match { background: #f8f9fa; border-radius: 4px; padding: .6rem .75rem; margin-bottom: .75rem; border: 1px solid #e5e5e5; }
+.kurs-add-match summary { cursor: pointer; color: #1a3a6b; font-weight: 600; font-size: .85rem; }
+
+/* ── Action buttons ─────────────────────────────────────────────────────── */
+.kurs-row-actions { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
+.kurs-btn-edit   { color: #1a3a6b !important; border-color: #1a3a6b !important; }
+.kurs-btn-delete { color: #b32d2e !important; border-color: #b32d2e !important; }
+.kurs-btn-delete:hover { background: #b32d2e !important; color: #fff !important; }
+
+/* ── League tag (generic) ────────────────────────────────────────────────── */
+.kurs-tag--league { background: #f0f4ff; color: #1a3a6b; }
+.kurs-league-name { font-size: .875rem; color: #555; }
+
+/* ── Team avatar (large) ─────────────────────────────────────────────────── */
+.kurs-avatar--lg {
+	width: 36px; height: 36px;
+	background: #1a3a6b; color: #fff;
+	border-radius: 50%;
+	display: inline-flex; align-items: center; justify-content: center;
+	font-size: .75rem; font-weight: 700;
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+.kurs-form-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .55rem; }
+.kurs-muted { color: #888; font-size: .83rem; margin: 0; }
+.kurs-notice {
+	background: #fff8e5;
+	border-left: 4px solid #e8b84b;
+	padding: .75rem 1rem;
+	border-radius: 0 4px 4px 0;
+	margin: 1rem 0;
+}
+.kurs-notice strong { color: #856404; }
+.kurs-empty-state {
+	text-align: center;
+	padding: 3rem;
+	color: #888;
+	background: #fafafa;
+	border-radius: 6px;
+	border: 1px dashed #ddd;
+	margin-top: 1.5rem;
+}
+.kurs-empty-state p { font-size: 1rem; }
+.kurs-phase-label { font-size: .82rem; color: #666; margin: .4rem 0 .2rem; }
+.kurs-table th, .kurs-table td { vertical-align: middle; }
+
+/* ── Roster gumb (ekipe lista) ───────────────────────────────────────────── */
+.kurs-btn-roster { color: #1e6f26 !important; border-color: #1e6f26 !important; }
+.kurs-btn-roster:hover { background: #1e6f26 !important; color: #fff !important; }
+
+/* ── Logo u naslovu (roster stranica) ───────────────────────────────────── */
+.kurs-team-logo-inline {
+	width: 36px; height: 36px;
+	border-radius: 50%;
+	object-fit: cover;
+	vertical-align: middle;
+	margin-right: .35rem;
+}
+
+/* ── Selector bar (sezona/divizija odabir) ───────────────────────────────── */
+.kurs-selector-bar {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin: 1rem 0 1.5rem;
+	background: #f0f4ff;
+	border: 1px solid #d0d9f5;
+	border-radius: 6px;
+	padding: .65rem 1rem;
+}
+.kurs-selector-bar form { display: flex; align-items: center; gap: .5rem; }
+.kurs-selector-bar select { min-width: 280px; }
+.kurs-selector-bar__label { font-size: .85rem; color: #555; font-weight: 600; white-space: nowrap; }
+
+/* ── Roster layout (2-col: tablica + sidebar) ────────────────────────────── */
+.kurs-roster-layout {
+	display: grid;
+	grid-template-columns: 1fr 380px;
+	gap: 1.5rem;
+	align-items: start;
+}
+@media (max-width: 960px) { .kurs-roster-layout { grid-template-columns: 1fr; } }
+
+/* ── Panel (roster tablica) ──────────────────────────────────────────────── */
+.kurs-panel {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 1.25rem;
+}
+.kurs-panel__head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	margin-bottom: .75rem;
+}
+.kurs-panel__head h2 { margin: 0; }
+
+/* ── Roster tablica ──────────────────────────────────────────────────────── */
+.kurs-roster-table { margin-top: .5rem; }
+.kurs-roster-table td, .kurs-roster-table th { vertical-align: middle; }
+.kurs-jersey {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px; height: 32px;
+	background: #1a3a6b;
+	color: #fff;
+	border-radius: 4px;
+	font-weight: 700;
+	font-size: .85rem;
+}
+
+/* ── Roster sidebar ──────────────────────────────────────────────────────── */
+.kurs-roster-sidebar { display: flex; flex-direction: column; gap: 0; }
+.kurs-form-col { display: flex; flex-direction: column; }
+.kurs-card--info h4 { font-size: .85rem; color: #555; }
+
+/* ── Autocomplete dropdown ───────────────────────────────────────────────── */
+.kurs-ac-wrap {
+	position: relative;
+	display: inline-block;
+	width: 100%;
+}
+.kurs-ac-wrap .regular-text { width: 100%; box-sizing: border-box; }
+.kurs-ac-list {
+	position: absolute;
+	top: calc(100% + 2px);
+	left: 0;
+	right: 0;
+	z-index: 9999;
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 0 0 5px 5px;
+	box-shadow: 0 4px 14px rgba(0,0,0,.12);
+	max-height: 220px;
+	overflow-y: auto;
+}
+.kurs-ac-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: .42rem .75rem;
+	cursor: pointer;
+	font-size: .875rem;
+	border-bottom: 1px solid #f5f5f5;
+	transition: background .1s;
+}
+.kurs-ac-item:last-child { border-bottom: none; }
+.kurs-ac-item:hover,
+.kurs-ac-item.is-focused { background: #f0f4ff; }
+.kurs-ac-item.is-in-squad { opacity: .55; cursor: default; }
+.kurs-ac-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kurs-ac-badge {
+	flex-shrink: 0;
+	font-size: .68rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: .03em;
+	background: #e8f5e9;
+	color: #1e6f26;
+	border-radius: 3px;
+	padding: .1rem .4rem;
+	margin-left: .5rem;
+}
+.kurs-ac-badge--in {
+	background: #f0f4ff;
+	color: #1a3a6b;
+}
+
+/* ── Duplikat modal ──────────────────────────────────────────────────────── */
+#kurs-dup-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 100010;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.kurs-modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0,0,0,.45);
+}
+.kurs-modal-box {
+	position: relative;
+	z-index: 1;
+	background: #fff;
+	border-radius: 8px;
+	box-shadow: 0 8px 40px rgba(0,0,0,.25);
+	padding: 1.75rem 2rem;
+	max-width: 440px;
+	width: 90%;
+}
+.kurs-modal-title { margin: 0 0 .6rem; font-size: 1.1rem; }
+.kurs-modal-msg { margin: 0 0 .35rem; }
+.kurs-modal-actions {
+	display: flex;
+	gap: .5rem;
+	flex-wrap: wrap;
+	margin-top: 1.25rem;
+}
+.kurs-modal-actions .button { flex-shrink: 0; }
+
+/* ── Roster inline edit red ──────────────────────────────────────────────── */
+.kurs-roster-table tr.is-editing td { background: #fafbff; }
+.squad-edit-jersey { width: 52px !important; text-align: center; }
+.squad-edit-name   { width: 180px; }

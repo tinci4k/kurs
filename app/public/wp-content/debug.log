@@ -1,0 +1,7 @@
+[21-Jun-2026 06:36:44 UTC] Automatic updates starting...
+[21-Jun-2026 06:36:45 UTC] Automatic updates complete.
+[21-Jun-2026 06:58:54 UTC] PHP Deprecated:  strip_tags(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\Tinci\Local Sites\kurshr\app\public\wp-admin\admin-header.php on line 41
+[21-Jun-2026 06:59:17 UTC] PHP Deprecated:  strip_tags(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\Tinci\Local Sites\kurshr\app\public\wp-admin\admin-header.php on line 41
+[21-Jun-2026 07:10:39 UTC] PHP Deprecated:  strip_tags(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\Tinci\Local Sites\kurshr\app\public\wp-admin\admin-header.php on line 41
+[21-Jun-2026 07:10:42 UTC] PHP Deprecated:  strip_tags(): Passing null to parameter #1 ($string) of type string is deprecated in C:\Users\Tinci\Local Sites\kurshr\app\public\wp-admin\admin-header.php on line 41
+[21-Jun-2026 08:12:42 UTC] PHP Warning:  mysqli_real_connect(): (HY000/2002): No connection could be made because the target machine actively refused it in C:\Users\Tinci\Local Sites\kurshr\app\public\wp-includes\class-wpdb.php on line 1988
