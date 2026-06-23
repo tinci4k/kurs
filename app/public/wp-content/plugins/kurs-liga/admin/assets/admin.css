@@ -904,6 +904,14 @@
 }
 .kurs-btn-add-team:hover { background: #b50d18; }
 
+/* ── Mobilno: „Dodjela ekipa" (pool + grupe) složeno okomito ─────────────── */
+@media (max-width: 782px) {
+	.kurs-assign-layout { grid-template-columns: 1fr; }
+	.kurs-groups-canvas { order: 1; }                            /* grupe (gdje se dodaje) prve */
+	.kurs-team-pool { order: 2; position: static; top: auto; }   /* dostupne ekipe (referenca) ispod */
+	.kurs-group-col { min-width: 0; }                            /* da grupa ne strši izvan ekrana */
+}
+
 /* ── Autocomplete ─────────────────────────────────────────────────────────── */
 .kurs-team-ac-wrap { position: relative; width: 100%; }
 .kurs-team-ac-wrap .kurs-team-search { width: 100%; box-sizing: border-box; }
@@ -1223,6 +1231,31 @@
 .kurs-standings .kurs-standings__pts  { font-family: var(--font-cond); font-weight: 800; font-size: 15px; }
 .kurs-standings tr:hover td { background: #f8f8f4; }
 .kurs-standings__top td { background: #fffdf0; }
+
+/* ── Mobilni prikaz „Utakmice & tablice" (≤600px) ────────────────────────── */
+@media (max-width: 600px) {
+	/* Selektor sezone/prikaza — polja pune širine, lakše za dodir */
+	.kurs-selector-bar form { gap: 6px 8px; }
+	.kurs-selector-bar select { flex: 1 1 100%; width: 100%; min-width: 0; }
+
+	/* Ljestvica — uži razmaci da svih 8 stupaca stane bez horizontalnog scrolla */
+	.kurs-standings th, .kurs-standings td { padding: 6px 4px; font-size: 12px; }
+	.kurs-standings .kurs-standings__name { font-size: 12px; }
+	.kurs-standings .kurs-standings__pos { width: 18px; }
+
+	/* Redak utakmice — datum + ekipe u prvom redu, akcije u drugom (puna širina),
+	   da nazivi ekipa dobiju prostor i ne lome se na svaku riječ */
+	.kurs-match__row {
+		grid-template-columns: auto 1fr;
+		grid-template-areas: "dt teams" "act act";
+		row-gap: 10px;
+		padding: 12px 14px;
+	}
+	.kurs-match__dt { grid-area: dt; }
+	.kurs-match__teams { grid-area: teams; min-width: 0; }
+	.kurs-match__home, .kurs-match__away { font-size: 14px; }
+	.kurs-match__actions { grid-area: act; justify-content: flex-end; padding-left: 0; }
+}
 
 /* ── Tags & Badges ───────────────────────────────────────────────────────── */
 .kurs-badge, .kurs-tag {
@@ -2433,6 +2466,20 @@ input.kurs-datepicker:focus { border-color: var(--ka-red) !important; }
 .kurs-ref-input { flex: 1 1 0; min-width: 0; height: 38px; padding: 0 12px; border: 1.5px solid var(--ka-border); border-radius: 6px; font-family: var(--font-body); font-size: 13px; background: var(--ka-white); }
 .kurs-ref-input:focus { border-color: var(--ka-dark); outline: none; }
 .kurs-ref-input[readonly] { background: #f1f1ec; color: #555; cursor: default; }
+
+/* ── Mobilno: ostali admin ekrani (Zapisnik postave, Suci, dvostupčane forme) ── */
+@media (max-width: 782px) {
+	/* Zapisnik — postave domaćina i gosta jedna ispod druge */
+	.kurs-record-squads { grid-template-columns: 1fr; gap: 18px; }
+}
+@media (max-width: 600px) {
+	/* Suci — polja (Sudac 1 / Sudac 2) jedno ispod drugog */
+	.kurs-refs-inputs { flex-direction: column; }
+	/* Dvostupčane forme (sezona: godina/status, trener/predstavnik, dodaj igrača) */
+	.kurs-stack-mobile { grid-template-columns: 1fr !important; }
+	/* Zapisnik — kompaktnija tablica postave da stane bez prelijevanja */
+	.kurs-squad-table td, .kurs-squad-table th { padding: 6px 5px; }
+}
 .kurs-refs-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .kurs-ref-msg { font-family: var(--font-mono); font-size: 11px; color: #2e7d32; }
 

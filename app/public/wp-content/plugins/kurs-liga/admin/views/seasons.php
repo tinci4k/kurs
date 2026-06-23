@@ -137,7 +137,7 @@ $edit_item = ( $action === 'edit' && $edit_id ) ? Kurs_Season::get( $edit_id ) :
 							<input type="text" name="name" class="regular-text" style="width:100%;"
 							       value="<?php echo esc_attr( $edit_item->name ); ?>" required>
 						</div>
-						<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+						<div class="kurs-stack-mobile" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
 							<div>
 								<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Godina</label>
 								<input type="number" name="year" class="small-text" style="width:100%;"

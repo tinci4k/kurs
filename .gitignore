@@ -1,1 +1,8 @@
-wp-config.php 
+wp-config.php
+
+# WordPress debug log (dev artefakt)
+debug.log
+
+# All-in-One WP Migration (alat za migraciju) + backupi — ne idu u repo
+ai1wm-backups/
+all-in-one-wp-migration/

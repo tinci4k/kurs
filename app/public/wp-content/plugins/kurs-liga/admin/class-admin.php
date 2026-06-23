@@ -37,19 +37,19 @@ class Kurs_Admin {
 
 	public function menus(): void {
 		add_menu_page(
-			'KURS Liga', 'KURS Liga', 'manage_options',
+			'KURS Liga', 'KURS Liga', KURS_CAP,
 			'kurs-dashboard', [ $this, 'pg_dashboard' ],
 			'dashicons-shield', 25
 		);
-		add_submenu_page( 'kurs-dashboard', 'Dashboard',    'Dashboard',    'manage_options', 'kurs-dashboard',    [ $this, 'pg_dashboard' ] );
-		add_submenu_page( 'kurs-dashboard', 'Sezone',       'Sezone',       'manage_options', 'kurs-seasons',      [ $this, 'pg_seasons' ] );
-		add_submenu_page( 'kurs-dashboard', 'Utakmice',     'Utakmice',     'manage_options', 'kurs-matches',      [ $this, 'pg_matches' ] );
-		add_submenu_page( 'kurs-dashboard', 'Ekipe',        'Ekipe',        'manage_options', 'kurs-teams',        [ $this, 'pg_teams' ] );
+		add_submenu_page( 'kurs-dashboard', 'Dashboard',    'Dashboard',    KURS_CAP, 'kurs-dashboard',    [ $this, 'pg_dashboard' ] );
+		add_submenu_page( 'kurs-dashboard', 'Sezone',       'Sezone',       KURS_CAP, 'kurs-seasons',      [ $this, 'pg_seasons' ] );
+		add_submenu_page( 'kurs-dashboard', 'Utakmice',     'Utakmice',     KURS_CAP, 'kurs-matches',      [ $this, 'pg_matches' ] );
+		add_submenu_page( 'kurs-dashboard', 'Ekipe',        'Ekipe',        KURS_CAP, 'kurs-teams',        [ $this, 'pg_teams' ] );
 		// Skrivene stranice — dostupne preko gumba "Postavi"/konteksta, ne u glavnom meniju.
 		// "Postavi ligu" treba odabranu sezonu pa se otvara iz liste Sezona / Dashboarda, ne kao samostavna stavka.
-		add_submenu_page( null, 'Postavi ligu',      'Postavi ligu', 'manage_options', 'kurs-season-setup', [ $this, 'pg_setup' ] );
-		add_submenu_page( null, 'Roster',            'Roster',       'manage_options', 'kurs-roster',       [ $this, 'pg_roster' ] );
-		add_submenu_page( null, 'Zapisnik utakmice', 'Zapisnik',     'manage_options', 'kurs-match-record', [ $this, 'pg_match_record' ] );
+		add_submenu_page( null, 'Postavi ligu',      'Postavi ligu', KURS_CAP, 'kurs-season-setup', [ $this, 'pg_setup' ] );
+		add_submenu_page( null, 'Roster',            'Roster',       KURS_CAP, 'kurs-roster',       [ $this, 'pg_roster' ] );
+		add_submenu_page( null, 'Zapisnik utakmice', 'Zapisnik',     KURS_CAP, 'kurs-match-record', [ $this, 'pg_match_record' ] );
 	}
 
 	// ── Assets ────────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ class Kurs_Admin {
 	public function maybe_render_pdf(): void {
 		if ( ( $_GET['page'] ?? '' ) !== 'kurs-match-record' ) return;
 		if ( ( $_GET['format'] ?? '' ) !== 'pdf' )            return;
-		if ( ! current_user_can( 'manage_options' ) )         return;
+		if ( ! current_user_can( KURS_CAP ) )         return;
 
 		// match-record.php pripremi podatke i pogodi PDF granu (include + exit).
 		require KURS_DIR . 'admin/views/match-record.php';
@@ -102,7 +102,7 @@ class Kurs_Admin {
 	// ── Form handlers ─────────────────────────────────────────────────────────
 
 	public function handle_forms(): void {
-		if ( ! current_user_can( 'manage_options' ) ) return;
+		if ( ! current_user_can( KURS_CAP ) ) return;
 		if ( empty( $_POST['kurs_action'] ) ) return;
 
 		match ( sanitize_key( $_POST['kurs_action'] ) ) {
@@ -411,7 +411,7 @@ class Kurs_Admin {
 
 	public function ajax_add_group(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		$id = Kurs_Season::create_group( absint( $_POST['phase_id'] ), sanitize_text_field( $_POST['name'] ) );
 		$id
 			? wp_send_json_success( [ 'id' => $id, 'name' => sanitize_text_field( $_POST['name'] ) ] )
@@ -420,14 +420,14 @@ class Kurs_Admin {
 
 	public function ajax_del_group(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		Kurs_Season::delete_group( absint( $_POST['group_id'] ) );
 		wp_send_json_success();
 	}
 
 	public function ajax_assign_team(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		$gid = absint( $_POST['group_id'] );
 		$tid = absint( $_POST['team_id'] );
 		Kurs_Season::assign_team( $gid, $tid );
@@ -436,7 +436,7 @@ class Kurs_Admin {
 
 	public function ajax_remove_team(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		Kurs_Season::remove_team( absint( $_POST['group_id'] ), absint( $_POST['team_id'] ) );
 		wp_send_json_success();
 	}
@@ -445,7 +445,7 @@ class Kurs_Admin {
 
 	public function ajax_set_logo(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$team_id = absint( $_POST['team_id'] );
 		$att_id  = absint( $_POST['attachment_id'] );
@@ -460,7 +460,7 @@ class Kurs_Admin {
 
 	public function ajax_set_banner(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$team_id = absint( $_POST['team_id'] );
 		$att_id  = absint( $_POST['attachment_id'] );
@@ -475,7 +475,7 @@ class Kurs_Admin {
 
 	public function ajax_set_photo(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$team_id = absint( $_POST['team_id'] );
 		$att_id  = absint( $_POST['attachment_id'] );
@@ -492,7 +492,7 @@ class Kurs_Admin {
 
 	public function ajax_add_squad(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$player_id   = absint( $_POST['player_id'] );
 		$team_id     = absint( $_POST['team_id'] );
@@ -513,7 +513,7 @@ class Kurs_Admin {
 
 	public function ajax_remove_squad(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		Kurs_Season::remove_from_squad(
 			absint( $_POST['player_id'] ),
@@ -525,7 +525,7 @@ class Kurs_Admin {
 
 	public function ajax_quick_add_player(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$name = sanitize_text_field( $_POST['name'] ?? '' );
 		if ( ! $name ) wp_send_json_error( 'Ime igrača je obavezno.' );
@@ -561,7 +561,7 @@ class Kurs_Admin {
 
 	public function ajax_create_team(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$name = sanitize_text_field( $_POST['team_name'] ?? '' );
 		if ( ! $name ) wp_send_json_error( 'Naziv ekipe je obavezan.' );
@@ -599,7 +599,7 @@ class Kurs_Admin {
 
 	public function ajax_search_players(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$term = sanitize_text_field( $_POST['term'] ?? '' );
 		if ( strlen( $term ) < 1 ) {
@@ -630,7 +630,7 @@ class Kurs_Admin {
 
 	public function ajax_update_squad_player(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$player_id   = absint( $_POST['player_id'] );
 		$team_id     = absint( $_POST['team_id'] );
@@ -669,7 +669,7 @@ class Kurs_Admin {
 
 	public function ajax_update_playoff_spots(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$group_id = absint( $_POST['group_id'] );
 		$spots    = absint( $_POST['spots'] );
@@ -688,7 +688,7 @@ class Kurs_Admin {
 
 	public function ajax_generate_fixtures(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$group_id = absint( $_POST['group_id'] );
 		if ( ! $group_id ) wp_send_json_error( 'Nedostaje group_id.' );
@@ -736,7 +736,7 @@ class Kurs_Admin {
 
 	public function ajax_update_match(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$match_id = absint( $_POST['match_id'] );
 		$date  = ! empty( $_POST['match_date'] ) ? self::parse_hr_date( sanitize_text_field( $_POST['match_date'] ) ) : null;
@@ -764,7 +764,7 @@ class Kurs_Admin {
 
 	public function ajax_record_add_event(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$match_id  = absint( $_POST['match_id'] );
 		$team_id   = absint( $_POST['team_id'] );
@@ -805,7 +805,7 @@ class Kurs_Admin {
 
 	public function ajax_record_del_event(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$event_id = absint( $_POST['event_id'] );
 		if ( ! $event_id ) wp_send_json_error( 'Nevažeći event_id.' );
@@ -826,7 +826,7 @@ class Kurs_Admin {
 
 	public function ajax_record_del_foul(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$match_id = absint( $_POST['match_id'] );
 		$team_id  = absint( $_POST['team_id'] );
@@ -842,7 +842,7 @@ class Kurs_Admin {
 
 	public function ajax_record_update_event(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 
 		$event_id = absint( $_POST['event_id'] );
 		$match_id = absint( $_POST['match_id'] );
@@ -874,7 +874,7 @@ class Kurs_Admin {
 
 	public function ajax_record_set_captain(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] );
 		$team_id  = absint( $_POST['team_id'] );
 		$player   = absint( $_POST['player_id'] ?? 0 );
@@ -885,7 +885,7 @@ class Kurs_Admin {
 
 	public function ajax_record_set_absent(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] );
 		$team_id  = absint( $_POST['team_id'] );
 		$player   = absint( $_POST['player_id'] ?? 0 );
@@ -897,7 +897,7 @@ class Kurs_Admin {
 
 	public function ajax_record_set_referees(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( 'manage_options' ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] );
 		if ( ! $match_id ) wp_send_json_error( 'Nevažeći podaci.' );
 		$r1 = sanitize_text_field( wp_unslash( $_POST['referee1'] ?? '' ) );

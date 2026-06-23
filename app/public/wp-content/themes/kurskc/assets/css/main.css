@@ -349,6 +349,9 @@ html { scroll-behavior: smooth; }
 }
 .header-search:focus-within .header-search__btn,
 .header-search__btn:hover { color: var(--c-kc); }
+/* Mobilni gumb-ikona koji otvara tražilicu (skriven na desktopu) */
+.header-search-toggle { display: none; align-items: center; justify-content: center; background: none; border: none; color: var(--c-text); cursor: pointer; padding: 6px; }
+.header-search-toggle:hover { color: var(--c-kc); }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -1172,6 +1175,16 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 .hub-dd--season .hub-dd__opt:hover { background: #2e3037; }
 .hub-dd--season .hub-dd__opt.is-active { background: #fff; color: #111317; }
 
+/* League hub banner — mobilno: naslov/podnaslov puna širina, dropdown ispod (puna širina) */
+@media (max-width: 600px) {
+  .league-banner { flex-direction: column; align-items: flex-start; gap: 16px; padding: 20px 16px; }
+  .league-banner__left { width: 100%; }
+  .league-banner__name { font-size: 26px; }
+  .league-banner__sub { white-space: normal; }
+  .hub-dd--season { width: 100%; }
+  .hub-dd--season .hub-dd__toggle { width: 100%; min-width: 0; }
+}
+
 /* ═══ Traka sponzora (iznad footera) — dizajn „KURS Sponzori" ═══════════════ */
 .sponsors { background: var(--c-bg); overflow: hidden; }
 .sponsors__stripe { height: 4px; background: linear-gradient(90deg,var(--c-kc) 0 33%,var(--c-pan) 33% 66%,var(--c-gold) 66% 100%); }
@@ -1187,7 +1200,7 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 
 .sp-item { flex: none; text-decoration: none; color: inherit; }
 .sp-logo { display: inline-flex; align-items: center; }
-.sp-logo img { width: auto; object-fit: contain; display: block; filter: grayscale(1) opacity(.62); transition: filter .35s ease; }
+.sp-logo img { width: auto; max-width: 100%; object-fit: contain; display: block; filter: grayscale(1) opacity(.62); transition: filter .35s ease; }
 .sp-txt { display: flex; align-items: center; gap: 11px; filter: grayscale(1) opacity(.62); transition: filter .35s ease; }
 .sp-item:hover .sp-logo img, .sp-item:hover .sp-txt { filter: grayscale(0) opacity(1); }
 .sp-txt__abbr { display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--font-cond); font-weight: 800; border-radius: 8px; flex: none; line-height: 1; }
@@ -1239,9 +1252,10 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
   .sponsors__title { font-size: 19px; }
   .sponsors__hint { display: none; }
   .sponsors__track { gap: 22px; }
-  .sp-t3 { height: 84px; } .sp-t3 .sp-logo img { height: 46px; } .sp-t3 .sp-txt__abbr { width: 26px; height: 26px; font-size: 12px; } .sp-t3 .sp-txt__name { font-size: 14px; }
-  .sp-t2 { height: 84px; min-width: 140px; padding: 0 12px; } .sp-t2 .sp-logo img { height: 44px; }
-  .sp-t1 { height: 84px; min-width: 200px; padding: 0 14px; } .sp-t1 .sp-logo img { height: 50px; } .sp-t1 .sp-txt__name { font-size: 19px; }
+  .sp-t3 { height: 92px; } .sp-t3 .sp-logo img { height: 46px; } .sp-t3 .sp-txt__abbr { width: 26px; height: 26px; font-size: 12px; } .sp-t3 .sp-txt__name { font-size: 14px; }
+  .sp-t2 { height: 92px; min-width: 150px; padding: 12px 16px; gap: 5px; } .sp-t2 .sp-logo img { height: 42px; }
+  .sp-t1 { height: 92px; min-width: 210px; padding: 14px 18px; gap: 5px; } .sp-t1 .sp-logo img { height: 42px; } .sp-t1 .sp-txt__name { font-size: 19px; }
+  .sp-t1__tag, .sp-t2__tag { font-size: 8px; }
   .sponsors__cta { gap: 10px; } .sponsors__cta-txt { font-size: 9px; }
 }
 
@@ -1486,9 +1500,14 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
   }
   .site-nav.is-open a { font-size: 20px; }
   .nav-toggle { display: flex; z-index: 201; }
-  /* Tražilica → puna širina u zasebnom redu (logo + hamburger ostaju gore) */
-  .site-header .container { flex-wrap: wrap; }
-  .header-search { order: 10; width: 100%; margin-top: 10px; height: 42px; }
+  /* Tražilica → ikona koja otvara panel ispod headera (ne zauzima drugi red) */
+  .site-header .container { position: relative; }
+  .header-search-toggle { display: flex; margin-left: auto; }
+  .header-search { display: none; }
+  .site-header.search-open .header-search {
+    display: flex; position: absolute; top: calc(100% + 8px); left: 16px; right: 16px;
+    width: auto; margin: 0; height: 42px; z-index: 150; box-shadow: 0 12px 28px rgba(0,0,0,.16);
+  }
   /* Liga dropdown → statički, indentirani pod-linkovi u mobilnom izborniku */
   .nav-league-wrap { flex-direction: column; align-items: stretch; width: 100%; }
   .nav-league__caret { display: none; }
@@ -1681,7 +1700,7 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 .related__grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
 .related-card { border:1px solid var(--c-border); border-radius:6px; overflow:hidden; text-decoration:none; color:inherit; display:block; transition:box-shadow .15s, transform .15s; }
 .related-card:hover { transform:translateY(-2px); box-shadow:0 4px 14px rgba(0,0,0,.08); }
-.related-card__thumb { position:relative; height:120px; overflow:hidden; background:var(--c-bg); }
+.related-card__thumb { position:relative; aspect-ratio:16/9; overflow:hidden; background:var(--c-bg); }
 .related-card__thumb img { width:100%; height:100%; object-fit:cover; }
 .related-card__badge { position:absolute; top:9px; left:9px; background:var(--c-dark); color:#fff; font-family:var(--font-cond); font-weight:700; font-size:9px; text-transform:uppercase; padding:3px 7px; border-radius:3px; border-left:3px solid var(--c-kc); }
 .related-card__body { padding:13px; }

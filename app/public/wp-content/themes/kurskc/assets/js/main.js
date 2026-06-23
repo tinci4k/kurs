@@ -114,4 +114,25 @@ document.addEventListener('DOMContentLoaded', function () {
 		sponsors.addEventListener('touchcancel', resumeSp);
 	}
 
+	/* ── Mobilna tražilica: ikona otvara/zatvara search panel ────── */
+	var searchToggle = document.getElementById('search-toggle');
+	var siteHeader = document.querySelector('.site-header');
+	if (searchToggle && siteHeader) {
+		searchToggle.addEventListener('click', function (e) {
+			e.stopPropagation();
+			var open = siteHeader.classList.toggle('search-open');
+			searchToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			if (open) {
+				var inp = siteHeader.querySelector('.header-search__input');
+				if (inp) inp.focus();
+			}
+		});
+		document.addEventListener('click', function (e) {
+			if (!siteHeader.contains(e.target)) siteHeader.classList.remove('search-open');
+		});
+		document.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') siteHeader.classList.remove('search-open');
+		});
+	}
+
 });

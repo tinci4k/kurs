@@ -145,7 +145,7 @@ if ( $action === 'edit' && $edit_id ) {
 
 								<div style="border-top:1px solid var(--ka-border);padding-top:14px;">
 									<div class="kurs-field-label" style="margin-bottom:8px;">Trener i predstavnik <span class="kurs-muted" style="font-weight:400;text-transform:none;letter-spacing:0;">(neobavezno)</span></div>
-									<div style="display:grid;grid-template-columns:1fr 140px;gap:10px;">
+									<div class="kurs-stack-mobile" style="display:grid;grid-template-columns:1fr 140px;gap:10px;">
 										<div>
 											<label class="kurs-muted" style="display:block;font-size:11px;margin-bottom:3px;">Trener — ime</label>
 											<input type="text" name="coach_name" class="regular-text" style="width:100%;"
@@ -365,7 +365,7 @@ if ( $action === 'edit' && $edit_id ) {
 
 					<!-- Dodaj igrača -->
 					<div style="padding:14px 18px;border-top:1px solid var(--ka-border);">
-						<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+						<div class="kurs-stack-mobile" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
 
 							<!-- Postojeći igrač -->
 							<div>

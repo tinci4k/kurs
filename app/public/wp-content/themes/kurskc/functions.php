@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURSKC_VERSION', '1.0.27' );
+define( 'KURSKC_VERSION', '1.0.33' );
 define( 'KURSKC_DIR', get_template_directory() );
 define( 'KURSKC_URI', get_template_directory_uri() );
 
@@ -224,7 +224,7 @@ add_action( 'init', function () {
 <!-- wp:group {"style":{"spacing":{"padding":{"top":"24px","right":"26px","bottom":"24px","left":"26px"}},"border":{"radius":"10px"},"color":{"background":"#ffffff"}},"layout":{"type":"constrained"}} -->
 <div class="wp-block-group has-background" style="border-radius:10px;background-color:#ffffff;padding-top:24px;padding-right:26px;padding-bottom:24px;padding-left:26px">
 <!-- wp:paragraph -->
-<p>👤 <strong>Predsjednik udruge:</strong> Tomislav Zalar<br>📝 <strong>Naziv:</strong> KOPRIVNIČKA UDRUGA ZA REKREATIVNI SPORT (KURS)<br>🔢 <strong>OIB:</strong> 84116319927<br>📧 <strong>Glavni mail:</strong> <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a></p>
+<p>👤 <strong>Predsjednik udruge:</strong> Tomislav Zalar<br>📝 <strong>Naziv:</strong> KOPRIVNIČKA UDRUGA ZA REKREATIVNI SPORT (KURS)<br>🔢 <strong>OIB:</strong> 84116319927<br>📍 <strong>Adresa:</strong> Trg Zlate Bartl 4, 48000 Koprivnica<br>📧 <strong>Glavni mail:</strong> <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a></p>
 <!-- /wp:paragraph -->
 </div>
 <!-- /wp:group -->
@@ -313,6 +313,343 @@ add_action( 'init', function () {
 		update_post_meta( $id, '_wp_page_template', 'page-kontakt.php' );
 	}
 }, 26 );
+
+/**
+ * Kreiraj "Kolačići" (politika kolačića) stranicu — editabilno u Gutenbergu.
+ * Sadržaj odražava stvarno stanje: samo nužni WordPress kolačići, bez analitike/praćenja.
+ */
+add_action( 'init', function () {
+	if ( get_page_by_path( 'kolacici' ) ) return;
+
+	$content = '<!-- wp:paragraph -->
+<p><em>Zadnje ažurirano: lipanj 2026.</em></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Ova Politika kolačića objašnjava što su kolačići, koje kolačiće koristi mrežna stranica <strong>kurskc.hr</strong> (Koprivnička udruga za rekreativni sport — KURS) te kako njima možete upravljati.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Što su kolačići?</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Kolačići (engl. „cookies") male su tekstualne datoteke koje se pohranjuju na vaše računalo ili mobilni uređaj kada posjetite mrežnu stranicu. Omogućuju da stranica zapamti vaše radnje i postavke (primjerice prijavu) tijekom određenog razdoblja.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Koje kolačiće koristimo?</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Naša stranica koristi <strong>isključivo nužne (funkcionalne) kolačiće</strong> koje postavlja sustav WordPress. <strong>Ne koristimo kolačiće za analitiku, oglašavanje niti praćenje</strong> na društvenim mrežama.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Posjetitelji koji samo pregledavaju javni dio stranice (vijesti, lige, tablice, rasporedi) u pravilu <strong>ne dobivaju nikakve kolačiće</strong>. Nužni kolačići postavljaju se tek kada se ovlašteni korisnik (urednik ili administrator) <strong>prijavi</strong> u administracijsko sučelje.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Nužni (funkcionalni) kolačići</h3>
+<!-- /wp:heading -->
+
+<!-- wp:table -->
+<figure class="wp-block-table"><table><thead><tr><th>Kolačić</th><th>Svrha</th><th>Trajanje</th></tr></thead><tbody><tr><td>wordpress_[hash]</td><td>Provjera autentičnosti korisnika tijekom prijave</td><td>Sesija</td></tr><tr><td>wordpress_logged_in_[hash]</td><td>Pamti da je korisnik prijavljen i tko je</td><td>Sesija / do odjave</td></tr><tr><td>wp-settings-[id], wp-settings-time-[id]</td><td>Postavke izgleda administracijskog sučelja</td><td>do 1 godine</td></tr><tr><td>wordpress_test_cookie</td><td>Provjerava podržava li preglednik kolačiće</td><td>Sesija</td></tr></tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Vanjske usluge</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><strong>Google Fonts</strong> — za prikaz tipografije fontovi se učitavaju s Googleovih poslužitelja (fonts.googleapis.com, fonts.gstatic.com). Pritom se Googleu prenosi vaša IP adresa, ali se ne postavljaju kolačići. Više informacija: <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Googleova politika privatnosti</a>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p><strong>Poveznice na društvene mreže</strong> — stranica sadrži poveznice na naše Facebook profile. Klikom na njih odlazite na Facebook, gdje vrijede njihovi kolačići i pravila privatnosti.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Upravljanje kolačićima</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Kolačiće u svakom trenutku možete pregledati, blokirati ili obrisati putem postavki svog preglednika. Napominjemo da blokiranje nužnih kolačića može onemogućiti prijavu u administraciju stranice.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:list -->
+<ul class="wp-block-list">
+<!-- wp:list-item -->
+<li><a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener">Google Chrome</a></li>
+<!-- /wp:list-item -->
+<!-- wp:list-item -->
+<li><a href="https://support.mozilla.org/hr/kb/" target="_blank" rel="noopener">Mozilla Firefox</a></li>
+<!-- /wp:list-item -->
+<!-- wp:list-item -->
+<li><a href="https://support.apple.com/hr-hr/guide/safari/sfri11471/mac" target="_blank" rel="noopener">Safari</a></li>
+<!-- /wp:list-item -->
+<!-- wp:list-item -->
+<li><a href="https://support.microsoft.com/hr-hr/microsoft-edge" target="_blank" rel="noopener">Microsoft Edge</a></li>
+<!-- /wp:list-item -->
+</ul>
+<!-- /wp:list -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Izmjene ove politike</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Politiku kolačića možemo povremeno ažurirati kako bismo je uskladili s promjenama na stranici ili propisima. Najnovija verzija uvijek je dostupna na ovoj stranici.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Kontakt</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Za pitanja o ovoj Politici kolačića javite se na <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a> ili putem <a href="/kontakt/">kontakt stranice</a>.</p>
+<!-- /wp:paragraph -->';
+
+	wp_insert_post( [
+		'post_title'   => 'Kolačići',
+		'post_name'    => 'kolacici',
+		'post_status'  => 'publish',
+		'post_type'    => 'page',
+		'post_content' => $content,
+	] );
+}, 27 );
+
+/**
+ * Kreiraj "Privatnost" (politika privatnosti) stranicu — editabilno u Gutenbergu.
+ */
+add_action( 'init', function () {
+	if ( get_page_by_path( 'privatnost' ) ) return;
+
+	$content = '<!-- wp:paragraph -->
+<p><em>Zadnje ažurirano: lipanj 2026.</em></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Ova Politika privatnosti objašnjava kako Koprivnička udruga za rekreativni sport (KURS) prikuplja, koristi i štiti osobne podatke u vezi s mrežnom stranicom <strong>kurskc.hr</strong>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Voditelj obrade</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p><strong>Koprivnička udruga za rekreativni sport (KURS)</strong><br>OIB: 84116319927<br>Adresa: Trg Zlate Bartl 4, 48000 Koprivnica<br>E-pošta: <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Koje podatke prikupljamo i zašto</h2>
+<!-- /wp:heading -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Sudionici natjecanja</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Radi organizacije i javnog prikaza natjecanja objavljujemo podatke o ekipama i igračima (ime i prezime, eventualnu fotografiju, broj dresa te natjecateljsku statistiku — golovi, kartoni i slično). Pravna osnova je legitimni interes udruge u vođenju i prikazu natjecanja, odnosno privola sudionika dana prijavom ekipe.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Urednici i administratori</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Za osobe koje uređuju sadržaj vodimo korisničke račune (ime i e-pošta) potrebne za pristup administraciji stranice.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Kontakt e-poštom</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Ako nam se javite e-poštom, obrađujemo vašu adresu i sadržaj poruke isključivo radi odgovora na vaš upit.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Tehnički podaci</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Poslužitelj može bilježiti standardne tehničke zapise (IP adresa, vrsta preglednika, vrijeme pristupa) radi sigurnosti i ispravnog rada stranice. Više o kolačićima pročitajte u <a href="/kolacici/">Politici kolačića</a>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Dijeljenje podataka</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Podatke ne prodajemo niti ustupamo trećim stranama u marketinške svrhe. Podaci mogu biti dostupni pružatelju usluge poslužitelja (hosting) u mjeri nužnoj za rad stranice te Googleu pri učitavanju fontova (prijenos IP adrese). Javno objavljeni natjecateljski podaci dostupni su svim posjetiteljima stranice.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Razdoblje čuvanja</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Osobne podatke čuvamo onoliko dugo koliko je potrebno za navedene svrhe. Natjecateljska evidencija (rezultati i statistike) čuva se i arhivira kao trajna povijest natjecanja udruge.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Vaša prava</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>U skladu s Općom uredbom o zaštiti podataka (GDPR) imate pravo na pristup svojim podacima, ispravak, brisanje, ograničenje obrade te prigovor na obradu. Zahtjev možete poslati na <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a>. Također imate pravo podnijeti pritužbu Agenciji za zaštitu osobnih podataka (AZOP).</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Izmjene ove politike</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Politiku privatnosti možemo povremeno ažurirati. Najnovija verzija uvijek je dostupna na ovoj stranici.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Kontakt</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Za sva pitanja o zaštiti podataka javite se na <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a>.</p>
+<!-- /wp:paragraph -->';
+
+	wp_insert_post( [
+		'post_title'   => 'Privatnost',
+		'post_name'    => 'privatnost',
+		'post_status'  => 'publish',
+		'post_type'    => 'page',
+		'post_content' => $content,
+	] );
+}, 28 );
+
+/**
+ * Kreiraj "Uvjeti korištenja" stranicu — editabilno u Gutenbergu.
+ * Slug mora biti "uvjeti-koristenja" (poveznica u footeru).
+ */
+add_action( 'init', function () {
+	if ( get_page_by_path( 'uvjeti-koristenja' ) ) return;
+
+	$content = '<!-- wp:paragraph -->
+<p><em>Zadnje ažurirano: lipanj 2026.</em></p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>Korištenjem mrežne stranice <strong>kurskc.hr</strong> prihvaćate ove Uvjete korištenja. Molimo da ih pažljivo pročitate.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Opće odredbe</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Stranicu kurskc.hr uređuje i njome upravlja Koprivnička udruga za rekreativni sport (KURS), OIB: 84116319927, sa sjedištem na adresi Trg Zlate Bartl 4, 48000 Koprivnica. Stranica je informativnog karaktera te služi za objavu vijesti, rasporeda, rezultata i tablica malonogometnih natjecanja u organizaciji udruge.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Točnost podataka</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Trudimo se da svi objavljeni podaci (rasporedi, rezultati, tablice, statistike) budu točni i ažurni, no ne jamčimo da su u svakom trenutku bez pogrešaka. Rasporedi i termini mogu se mijenjati. Udruga ne odgovara za eventualnu štetu nastalu oslanjanjem na objavljene podatke.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Intelektualno vlasništvo</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Sadržaj stranice (tekstovi, fotografije, logotipi, grafika i drugi materijali) vlasništvo je udruge KURS ili nositelja prava te je zaštićen propisima o autorskom pravu. Preuzimanje, umnožavanje ili objava sadržaja bez prethodnog dopuštenja nije dopušteno, osim dijeljenja poveznica na stranicu.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Ponašanje korisnika</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Korisnici se obvezuju stranicu koristiti u skladu sa zakonom i dobrim običajima te neće poduzimati radnje koje bi mogle ugroziti rad, sigurnost ili dostupnost stranice.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Poveznice na treće strane</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Stranica može sadržavati poveznice na vanjske stranice (primjerice društvene mreže ili sponzore). Udruga ne odgovara za sadržaj, pravila ni dostupnost tih stranica.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Zaštita podataka</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Obrada osobnih podataka uređena je <a href="/privatnost/">Politikom privatnosti</a>, a korištenje kolačića <a href="/kolacici/">Politikom kolačića</a>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Izmjene uvjeta</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Zadržavamo pravo izmjene ovih Uvjeta korištenja u bilo kojem trenutku. Izmjene stupaju na snagu objavom na ovoj stranici.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">Mjerodavno pravo i kontakt</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Na ove Uvjete primjenjuje se pravo Republike Hrvatske. Za sva pitanja javite se na <a href="mailto:kurskc@gmail.com">kurskc@gmail.com</a>.</p>
+<!-- /wp:paragraph -->';
+
+	wp_insert_post( [
+		'post_title'   => 'Uvjeti korištenja',
+		'post_name'    => 'uvjeti-koristenja',
+		'post_status'  => 'publish',
+		'post_type'    => 'page',
+		'post_content' => $content,
+	] );
+}, 29 );
+
+/**
+ * Jednokratno: dodaj adresu sjedišta u Privatnost / Uvjete / Kontakt (postojeće
+ * stranice). Surgički str_replace na poznatom sidru — ne dira ostatak sadržaja,
+ * preskače ako adresa već postoji, i izvrši se jednom (opcija kurs_addr_v1).
+ */
+add_action( 'init', function () {
+	if ( get_option( 'kurs_addr_v1' ) ) return;
+
+	$addr = 'Trg Zlate Bartl 4, 48000 Koprivnica';
+	$map  = [
+		'privatnost' => [
+			'OIB: 84116319927<br>E-pošta:',
+			'OIB: 84116319927<br>Adresa: ' . $addr . '<br>E-pošta:',
+		],
+		'uvjeti-koristenja' => [
+			'(KURS), OIB: 84116319927. Stranica',
+			'(KURS), OIB: 84116319927, sa sjedištem na adresi ' . $addr . '. Stranica',
+		],
+		'kontakt' => [
+			'<strong>OIB:</strong> 84116319927<br>📧',
+			'<strong>OIB:</strong> 84116319927<br>📍 <strong>Adresa:</strong> ' . $addr . '<br>📧',
+		],
+	];
+
+	$all_present = true;
+	foreach ( $map as $slug => $pair ) {
+		$page = get_page_by_path( $slug );
+		if ( ! $page ) { $all_present = false; continue; }              // još ne postoji → pokušaj idući put
+		if ( strpos( $page->post_content, $addr ) !== false ) continue;  // već ima adresu
+		$new = str_replace( $pair[0], $pair[1], $page->post_content );
+		if ( $new !== $page->post_content ) {
+			wp_update_post( [ 'ID' => $page->ID, 'post_content' => $new ] );
+		}
+	}
+	if ( $all_present ) update_option( 'kurs_addr_v1', 1 );
+}, 30 );
 
 /**
  * Relativno vrijeme na hrvatskom (npr. "prije 3 sata", "jučer", "22.6.2026.").

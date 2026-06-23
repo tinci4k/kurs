@@ -114,6 +114,10 @@ if ( class_exists( 'Kurs_Ticker' ) ) :
 			</button>
 		</form>
 
+		<button class="header-search-toggle" id="search-toggle" type="button" aria-label="Pretraži" aria-expanded="false">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
+		</button>
+
 		<button class="nav-toggle" id="nav-toggle" aria-label="Otvori izbornik" aria-expanded="false">
 			<span></span><span></span><span></span>
 		</button>
