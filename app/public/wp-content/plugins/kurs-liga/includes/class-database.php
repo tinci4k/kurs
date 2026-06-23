@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.1';
+	const DB_VERSION = '1.9';
 
 	public static function install(): void {
 		global $wpdb;
@@ -15,22 +15,26 @@ class Kurs_Database {
 
 		// Sezone natjecanja
 		dbDelta( "CREATE TABLE {$p}seasons (
-			id         INT UNSIGNED      NOT NULL AUTO_INCREMENT,
-			league     VARCHAR(100)      NOT NULL COMMENT 'Slobodan unos naziva lige',
-			name       VARCHAR(150)      NOT NULL,
-			year       SMALLINT UNSIGNED NOT NULL,
-			status     VARCHAR(20)       NOT NULL DEFAULT 'active',
-			created_at DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			id                 INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+			league             VARCHAR(100)      NOT NULL COMMENT 'Slobodan unos naziva lige',
+			name               VARCHAR(150)      NOT NULL,
+			year               SMALLINT UNSIGNED NOT NULL,
+			status             VARCHAR(20)       NOT NULL DEFAULT 'active',
+			locked             TINYINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT 'zaključana sezona = konačni podaci',
+			max_fouls_per_half TINYINT UNSIGNED  NOT NULL DEFAULT 5 COMMENT 'akumulirani prekršaji prije penala',
+			created_at         DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id),
 			KEY idx_status (status)
 		) $c;" );
 
 		// Divizije unutar sezone (KC Liga ima više: Glavna, Liga bez briga)
 		dbDelta( "CREATE TABLE {$p}divisions (
-			id         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-			season_id  INT UNSIGNED NOT NULL,
-			name       VARCHAR(100) NOT NULL,
-			sort_order TINYINT UNSIGNED NOT NULL DEFAULT 0,
+			id                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+			season_id         INT UNSIGNED NOT NULL,
+			name              VARCHAR(100) NOT NULL,
+			sort_order        TINYINT UNSIGNED NOT NULL DEFAULT 0,
+			has_playoff       TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '0 = samo skupina/liga, 1 = skupine + playoff',
+			advance_per_group TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT 'koliko ekipa iz svake grupe prolazi u playoff',
 			PRIMARY KEY (id),
 			KEY idx_season (season_id)
 		) $c;" );
@@ -48,9 +52,10 @@ class Kurs_Database {
 
 		// Grupe unutar grupne faze (Grupa A, Grupa B...)
 		dbDelta( "CREATE TABLE {$p}groups (
-			id       INT UNSIGNED NOT NULL AUTO_INCREMENT,
-			phase_id INT UNSIGNED NOT NULL,
-			name     VARCHAR(50)  NOT NULL,
+			id             INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+			phase_id       INT UNSIGNED    NOT NULL,
+			name           VARCHAR(50)     NOT NULL,
+			playoff_spots  TINYINT UNSIGNED NOT NULL DEFAULT 2,
 			PRIMARY KEY (id),
 			KEY idx_phase (phase_id)
 		) $c;" );
@@ -86,6 +91,8 @@ class Kurs_Database {
 			match_date   DATETIME,
 			round        TINYINT UNSIGNED,
 			status       VARCHAR(20) NOT NULL DEFAULT 'scheduled',
+			referee1     VARCHAR(100) DEFAULT NULL,
+			referee2     VARCHAR(100) DEFAULT NULL,
 			created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id),
 			KEY idx_group  (group_id),
@@ -98,12 +105,33 @@ class Kurs_Database {
 			match_id   INT UNSIGNED    NOT NULL,
 			team_id    BIGINT UNSIGNED NOT NULL,
 			player_id  BIGINT UNSIGNED,
-			event_type VARCHAR(20)     NOT NULL COMMENT 'goal|own_goal|yellow|red',
+			event_type VARCHAR(20)     NOT NULL COMMENT 'goal|penalty|own_goal|yellow_card|second_yellow|red_card|foul',
 			minute     TINYINT UNSIGNED,
+			half       TINYINT UNSIGNED COMMENT 'poluvrijeme (1|2) — za akumulirane prekršaje',
 			scored_for BIGINT UNSIGNED COMMENT 'za autogol: tim koji prima gol',
 			PRIMARY KEY (id),
 			KEY idx_match  (match_id),
 			KEY idx_player (player_id)
+		) $c;" );
+
+		// Playoff bracket utakmice
+		dbDelta( "CREATE TABLE {$p}playoff_matches (
+			id           INT UNSIGNED    NOT NULL AUTO_INCREMENT,
+			division_id  INT UNSIGNED    NOT NULL,
+			round        VARCHAR(20)     NOT NULL COMMENT 'qf|sf|final|3rd',
+			slot         TINYINT UNSIGNED NOT NULL COMMENT 'pozicija unutar runde (1,2,3,4)',
+			home_team_id BIGINT UNSIGNED DEFAULT NULL,
+			away_team_id BIGINT UNSIGNED DEFAULT NULL,
+			home_score   TINYINT UNSIGNED DEFAULT NULL,
+			away_score   TINYINT UNSIGNED DEFAULT NULL,
+			status       VARCHAR(20)     NOT NULL DEFAULT 'scheduled',
+			match_date   DATETIME        DEFAULT NULL,
+			home_label   VARCHAR(20)     DEFAULT NULL COMMENT 'npr. A1, QF1-W',
+			away_label   VARCHAR(20)     DEFAULT NULL,
+			match_id     BIGINT UNSIGNED DEFAULT NULL COMMENT 'FK → kurs_matches.id (zapisnik)',
+			PRIMARY KEY (id),
+			KEY idx_division (division_id),
+			KEY idx_round    (division_id, round)
 		) $c;" );
 
 		update_option( 'kurs_db_version', self::DB_VERSION );
@@ -115,9 +143,16 @@ class Kurs_Database {
 		if ( version_compare( $installed, self::DB_VERSION, '<' ) ) {
 			global $wpdb;
 			$p = $wpdb->prefix . KURS_PREFIX;
-			// v1.1: proširenje league stupca na VARCHAR(100)
-			$wpdb->query( "ALTER TABLE {$p}seasons MODIFY COLUMN league VARCHAR(100) NOT NULL" );
+
+			// dbDelta (install) idempotentno kreira tablice i DODAJE nove stupce
+			// koji nedostaju (npr. v1.2 groups.playoff_spots, v1.5 playoff_matches.match_id),
+			// jer su već dio CREATE TABLE definicija. Time izbjegavamo "ADD COLUMN IF NOT EXISTS"
+			// koji nije podržan u MySQL-u (samo MariaDB) i bacao je SQL grešku u debug.log.
 			self::install();
+
+			// v1.1 — promjena tipa postojećeg stupca (valjan MySQL; dbDelta ne mijenja
+			// uvijek pouzdano duljinu VARCHAR-a).
+			$wpdb->query( "ALTER TABLE {$p}seasons MODIFY COLUMN league VARCHAR(100) NOT NULL" );
 		}
 	}
 }

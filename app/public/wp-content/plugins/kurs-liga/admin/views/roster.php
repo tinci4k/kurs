@@ -122,12 +122,13 @@ $available = array_filter( $all_players, fn( $p ) => ! in_array( (int) $p->ID, $
 					    data-team-id="<?php echo $team_id; ?>"
 					    data-division-id="<?php echo $division_id; ?>"
 					    data-name="<?php echo esc_attr( $sq->player_name ); ?>"
-					    data-jersey="<?php echo (int) $sq->jersey_no; ?>">
+					    data-jersey="<?php echo (int) $sq->jersey_no; ?>"
+				    data-type="<?php echo esc_attr( kurs_player_type( (int) $sq->player_id ) ); ?>">
 						<td class="squad-cell-jersey" style="text-align:center;">
 							<span class="kurs-jersey"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '&mdash;'; ?></span>
 						</td>
 						<td class="squad-cell-name">
-							<strong><?php echo esc_html( $sq->player_name ); ?></strong>
+							<strong><?php echo esc_html( $sq->player_name ); ?></strong><?php if ( kurs_player_type( (int) $sq->player_id ) === 'goalkeeper' ) : ?> <span class="kurs-pos-tag kurs-pos-tag--gk">GLM</span><?php endif; ?>
 						</td>
 						<td class="squad-actions" style="text-align:center;">
 							<button class="button button-small kurs-btn-edit-squad"
@@ -177,6 +178,13 @@ $available = array_filter( $all_players, fn( $p ) => ! in_array( (int) $p->ID, $
 				<div class="kurs-form-col">
 					<div class="kurs-ac-wrap">
 						<input type="text" id="new-player-name" class="regular-text" placeholder="Ime i prezime igrača" autocomplete="off">
+					</div>
+					<div class="kurs-form-row" style="margin-top:.5rem;">
+						<label style="font-size:.85rem;white-space:nowrap;">Pozicija</label>
+						<select id="new-player-type" class="kurs-sel">
+							<option value="player">Igrač</option>
+							<option value="goalkeeper">Golman</option>
+						</select>
 					</div>
 					<div class="kurs-form-row" style="margin-top:.5rem;">
 						<label style="font-size:.85rem;white-space:nowrap;">Broj dresa</label>

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Head -50)"
+      "PowerShell(Head -50)",
+      "Bash(php -l \"C:\\\\Users\\\\Tinci\\\\Local Sites\\\\kurshr\\\\app\\\\public\\\\wp-content\\\\plugins\\\\kurs-liga\\\\admin\\\\class-admin.php\")"
     ]
   }
 }

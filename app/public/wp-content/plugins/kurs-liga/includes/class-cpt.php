@@ -19,6 +19,7 @@ class Kurs_CPT {
 				'not_found'     => 'Nema ekipa.',
 			],
 			'public'       => true,
+			'show_in_menu' => false, // uređuje se unutar KURS Liga plugina, ne kao zaseban izbornik
 			'menu_icon'    => 'dashicons-groups',
 			'supports'     => [ 'title', 'thumbnail', 'editor' ],
 			'has_archive'  => false,
@@ -36,6 +37,7 @@ class Kurs_CPT {
 				'not_found'     => 'Nema igrača.',
 			],
 			'public'       => true,
+			'show_in_menu' => false, // uređuje se unutar KURS Liga plugina, ne kao zaseban izbornik
 			'menu_icon'    => 'dashicons-admin-users',
 			'supports'     => [ 'title', 'thumbnail' ],
 			'has_archive'  => false,

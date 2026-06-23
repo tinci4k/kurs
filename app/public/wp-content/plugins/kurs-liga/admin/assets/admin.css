@@ -1,223 +1,918 @@
-/* KURS Liga — Admin Styles v1.0 */
+/* KURS Liga — Admin Styles v2.0 — Tribina design system */
 
-/* ── Layout ──────────────────────────────────────────────────────────────── */
-.kurs-wrap { max-width: 1400px; }
-.kurs-page-title .dashicons { vertical-align: middle; margin-right: .25rem; }
-.kurs-back { font-size: .75em; color: #646970; margin-right: .4rem; text-decoration: none; }
-.kurs-back:hover { color: #1a3a6b; text-decoration: none; }
+/* ── Google Fonts (loaded via PHP enqueue) ───────────────────────────────── */
 
-/* ── Two-col ─────────────────────────────────────────────────────────────── */
-.kurs-two-col {
-	display: grid;
-	grid-template-columns: 1fr 380px;
-	gap: 2rem;
-	margin-top: 1.5rem;
-	align-items: start;
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+	--ka-red:    #DA0F1E;
+	--ka-dark:   #111317;
+	--ka-dark2:  #1b1d22;
+	--ka-bg:     #F4F4EE;
+	--ka-white:  #fff;
+	--ka-border: #e2e2da;
+	--ka-muted:  #8a8a84;
+	--ka-orange: #F47B16;
+	--ka-gold:   #FDE206;
+	--ka-green:  #1F7A43;
+	--ka-blue:   #1a3a6b;
+	--font-body: 'Barlow', -apple-system, sans-serif;
+	--font-cond: 'Barlow Semi Condensed', -apple-system, sans-serif;
+	--font-mono: 'Space Mono', monospace;
 }
-@media (max-width: 1100px) { .kurs-two-col { grid-template-columns: 1fr; } }
 
-/* ── Cards ───────────────────────────────────────────────────────────────── */
+/* ── Base ────────────────────────────────────────────────────────────────── */
+.kurs-wrap {
+	max-width: 1600px;
+	font-family: var(--font-body);
+}
+.kurs-wrap *,
+.kurs-wrap *::before,
+.kurs-wrap *::after { box-sizing: border-box; }
+
+/* ── Page header ─────────────────────────────────────────────────────────── */
+.kurs-page-hd {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin: 12px 0 24px;
+}
+.kurs-page-hd h1 {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 28px;
+	text-transform: uppercase;
+	color: var(--ka-dark);
+	margin: 0;
+	line-height: 1;
+}
+.kurs-breadcrumb {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--ka-muted);
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	margin-bottom: 6px;
+}
+.kurs-breadcrumb a { color: var(--ka-muted); text-decoration: none; }
+.kurs-breadcrumb a:hover { color: var(--ka-dark); }
+.kurs-breadcrumb__sep { margin: 0 6px; opacity: .4; }
+.kurs-back {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 13px;
+	color: var(--ka-muted);
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+.kurs-back:hover { color: var(--ka-dark); text-decoration: none; }
+
+/* ── Stat cards grid (Dashboard) ─────────────────────────────────────────── */
+.kurs-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 14px;
+	margin-bottom: 24px;
+}
+@media (max-width: 1100px) { .kurs-stats-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 700px)  { .kurs-stats-grid { grid-template-columns: 1fr; } }
+
+.kurs-stat-card {
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 8px;
+	padding: 20px 22px 16px;
+	border-bottom: 4px solid var(--ka-border);
+}
+.kurs-stat-card__val {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 48px;
+	line-height: 1;
+	color: var(--ka-dark);
+	margin-bottom: 6px;
+}
+.kurs-stat-card__lbl {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: var(--ka-muted);
+}
+
+/* CTA buttons row */
+.kurs-cta-row {
+	display: flex;
+	gap: 10px;
+	flex-wrap: wrap;
+	margin-bottom: 28px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.kurs-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 10px 18px;
+	border-radius: 5px;
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 14px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	text-decoration: none;
+	cursor: pointer;
+	border: none;
+	transition: filter .15s, box-shadow .15s;
+	line-height: 1.1;
+}
+.kurs-btn:focus { outline: 2px solid var(--ka-red); outline-offset: 2px; }
+.kurs-btn--red {
+	background: var(--ka-red);
+	color: #fff !important;
+	box-shadow: 0 2px 8px rgba(218,15,30,.25);
+}
+.kurs-btn--red:hover { filter: brightness(1.08); text-decoration: none; }
+.kurs-btn--dark {
+	background: var(--ka-dark);
+	color: #fff !important;
+	box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.kurs-btn--dark:hover { filter: brightness(1.18); text-decoration: none; }
+.kurs-btn--outline {
+	background: var(--ka-white);
+	color: var(--ka-dark) !important;
+	border: 1.5px solid var(--ka-border);
+}
+.kurs-btn--outline:hover { background: var(--ka-bg); text-decoration: none; }
+.kurs-btn--sm {
+	padding: 6px 12px;
+	font-size: 12px;
+}
+.kurs-btn--ghost {
+	background: transparent;
+	color: var(--ka-muted) !important;
+	border: 1.5px solid var(--ka-border);
+	box-shadow: none;
+}
+.kurs-btn--ghost:hover { border-color: var(--ka-dark); color: var(--ka-dark) !important; text-decoration: none; }
+
+/* ── Dashboard two-panel row ──────────────────────────────────────────────── */
+.kurs-dash-panels {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+}
+@media (max-width: 900px) { .kurs-dash-panels { grid-template-columns: 1fr; } }
+
+/* ── Panel (generic) ──────────────────────────────────────────────────────── */
+.kurs-panel {
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 8px;
+	overflow: hidden;
+}
+.kurs-panel__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 14px 18px;
+	border-bottom: 1px solid var(--ka-border);
+}
+.kurs-panel__title {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 15px;
+	text-transform: uppercase;
+	color: var(--ka-dark);
+	margin: 0;
+}
+.kurs-panel__body { padding: 0; }
+.kurs-panel__empty {
+	padding: 28px;
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--ka-muted);
+	text-transform: uppercase;
+	letter-spacing: .04em;
+}
+
+/* ── Upcoming match row ───────────────────────────────────────────────────── */
+.kurs-upcoming-row {
+	display: grid;
+	grid-template-columns: 56px 1fr auto;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 18px;
+	border-bottom: 1px solid #f5f5ef;
+}
+.kurs-upcoming-row:last-child { border-bottom: 0; }
+.kurs-upcoming-row__time {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: var(--ka-muted);
+	text-transform: uppercase;
+	line-height: 1.4;
+	text-align: center;
+}
+.kurs-upcoming-row__match {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 14px;
+	color: var(--ka-dark);
+}
+.kurs-upcoming-row__div {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	color: var(--ka-muted);
+	margin-top: 2px;
+}
+
+/* ── Result row ───────────────────────────────────────────────────────────── */
+.kurs-result-row {
+	display: grid;
+	grid-template-columns: 1fr 70px auto;
+	align-items: center;
+	gap: 12px;
+	padding: 11px 18px;
+	border-bottom: 1px solid #f5f5ef;
+}
+.kurs-result-row:last-child { border-bottom: 0; }
+.kurs-result-row--review { background: #fdf6f6; }
+.kurs-result-row__match {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 13px;
+	color: var(--ka-dark);
+}
+.kurs-result-row__score {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 18px;
+	color: var(--ka-dark);
+	text-align: center;
+}
+.kurs-result-row__status {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	white-space: nowrap;
+}
+.kurs-status--ok   { color: var(--ka-green); }
+.kurs-status--warn { color: var(--ka-red); }
+
+/* ── Cards ────────────────────────────────────────────────────────────────── */
 .kurs-card {
-	background: #fff;
-	border: 1px solid #dcdcde;
-	border-radius: 6px;
-	padding: 1.25rem;
-	margin-bottom: 1rem;
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 14px;
 }
 .kurs-card__head {
 	display: flex;
 	align-items: flex-start;
 	justify-content: space-between;
-	margin-bottom: 1rem;
-	padding-bottom: .75rem;
-	border-bottom: 1px solid #f0f0f0;
+	margin-bottom: 14px;
+	padding-bottom: 12px;
+	border-bottom: 1px solid var(--ka-border);
 }
-.kurs-card__head h2 { margin: 0; font-size: 1.1rem; }
+.kurs-card__head h2, .kurs-card__head h3 {
+	margin: 0;
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 18px;
+	text-transform: uppercase;
+}
 .kurs-card__foot {
 	display: flex;
-	gap: .5rem;
-	margin-top: 1rem;
-	padding-top: .75rem;
-	border-top: 1px solid #f0f0f0;
+	gap: 8px;
+	margin-top: 14px;
+	padding-top: 12px;
+	border-top: 1px solid var(--ka-border);
+	flex-wrap: wrap;
 }
-
-/* ── Badges & Tags ───────────────────────────────────────────────────────── */
-.kurs-badge, .kurs-tag {
-	display: inline-block;
-	padding: 2px 10px;
-	border-radius: 20px;
-	font-size: .75rem;
-	font-weight: 600;
-	line-height: 1.5;
-}
-.kurs-badge--active   { background: #d4edda; color: #155724; }
-.kurs-badge--archived { background: #eee;    color: #888; }
-.kurs-tag--pan_ljetna { background: #fff3cd; color: #856404; }
-.kurs-tag--kc_liga    { background: #cce5ff; color: #004085; }
-
-/* ── Phase pills ─────────────────────────────────────────────────────────── */
-.kurs-phase-pill {
-	display: inline-block;
-	padding: 1px 8px;
-	border-radius: 3px;
-	font-size: .72rem;
-	font-weight: 600;
-	margin-left: .3rem;
-}
-.kurs-phase-pill--group   { background: #e8f4fd; color: #1a3a6b; }
-.kurs-phase-pill--playoff { background: #fff8e5; color: #7a5700; }
-
-/* ── Dashboard cards ─────────────────────────────────────────────────────── */
 .kurs-cards {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-	gap: 1.5rem;
-	margin-top: 1.5rem;
+	gap: 14px;
+	margin-bottom: 20px;
 }
-.kurs-card__stats { display: flex; gap: 2rem; margin: .6rem 0 .75rem; }
-.kurs-stat { text-align: center; }
-.kurs-stat__val { display: block; font-size: 2rem; font-weight: 700; color: #1a3a6b; line-height: 1; }
-.kurs-stat__lbl { font-size: .72rem; color: #888; text-transform: uppercase; letter-spacing: .04em; }
-.kurs-division-row { font-size: .875rem; margin: .35rem 0; color: #555; }
-.kurs-division-row strong { color: #1a3a6b; margin-right: .3rem; }
 
-/* ── Quick actions ───────────────────────────────────────────────────────── */
-.kurs-quick { margin-top: 2rem; }
-.kurs-quick__list { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .75rem; }
-.kurs-quick__btn {
-	display: inline-block;
-	padding: .45rem 1rem;
-	background: #1a3a6b;
-	color: #fff !important;
-	border-radius: 4px;
-	text-decoration: none;
-	font-size: .875rem;
-	font-weight: 600;
-	transition: background .15s;
+/* ── Wizard stepper ───────────────────────────────────────────────────────── */
+.kurs-wizard-wrap {
+	max-width: 1600px;
 }
-.kurs-quick__btn:hover { background: #122952; text-decoration: none; }
-.kurs-quick__btn.secondary { background: #f0f0f1; color: #333 !important; }
-.kurs-quick__btn.secondary:hover { background: #e0e0e0; }
-
-/* ── Tabs ────────────────────────────────────────────────────────────────── */
-.kurs-tabs {
+.kurs-stepper {
 	display: flex;
-	border-bottom: 2px solid #dcdcde;
-	margin: 1.5rem 0 0;
+	align-items: center;
+	gap: 0;
+	margin-bottom: 28px;
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 8px;
+	overflow: hidden;
 }
-.kurs-tab {
-	padding: .6rem 1.25rem;
-	color: #555;
+.kurs-step {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 14px 22px;
+	border-right: 1px solid var(--ka-border);
+	flex: 1;
 	text-decoration: none;
-	border-bottom: 2px solid transparent;
-	margin-bottom: -2px;
-	font-weight: 500;
-	font-size: .9rem;
+	transition: background .12s;
 }
-.kurs-tab:hover { color: #1a3a6b; text-decoration: none; }
-.kurs-tab.is-active { color: #1a3a6b; border-bottom-color: #1a3a6b; font-weight: 700; }
+.kurs-step:last-child { border-right: 0; }
+.kurs-step--done { background: #f7faf8; }
+.kurs-step--active { background: #fdf3f3; }
+.kurs-step--locked { background: #fafafa; pointer-events: none; }
+.kurs-step:hover:not(.kurs-step--locked):not(.kurs-step--active) { background: #f8f8f4; text-decoration: none; }
+
+.kurs-step__num {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-weight: 700;
+	flex-shrink: 0;
+	transition: background .12s;
+}
+.kurs-step--done   .kurs-step__num { background: var(--ka-green); color: #fff; }
+.kurs-step--active .kurs-step__num { background: var(--ka-red);   color: #fff; }
+.kurs-step--locked .kurs-step__num { background: #e7e5df; color: var(--ka-muted); }
+
+.kurs-step__label {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	line-height: 1.1;
+}
+.kurs-step--done   .kurs-step__label { color: var(--ka-green); }
+.kurs-step--active .kurs-step__label { color: var(--ka-red); }
+.kurs-step--locked .kurs-step__label { color: var(--ka-muted); }
+
+.kurs-step__sub {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	color: var(--ka-muted);
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	margin-top: 1px;
+}
+
+/* ── Wizard nav buttons ───────────────────────────────────────────────────── */
+.kurs-wizard-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-top: 24px;
+	padding-top: 20px;
+	border-top: 1px solid var(--ka-border);
+}
 
 /* ── Setup layout ────────────────────────────────────────────────────────── */
 .kurs-setup-layout {
 	display: grid;
-	grid-template-columns: 260px 1fr;
-	gap: 1.5rem;
-	margin-top: 1.5rem;
+	grid-template-columns: 280px 1fr;
+	gap: 20px;
 	align-items: start;
+	overflow: hidden;
 }
-.kurs-setup-sidebar { position: sticky; top: 40px; }
-.kurs-setup-main > .kurs-card { margin-bottom: 1rem; }
+.kurs-setup-sidebar {
+	position: sticky;
+	top: 40px;
+	min-width: 0;
+	width: 100%;
+	overflow: hidden;
+}
+.kurs-setup-main { min-width: 0; overflow: hidden; }
+.kurs-setup-sidebar .regular-text,
+.kurs-setup-sidebar input[type="text"],
+.kurs-setup-sidebar select {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
 @media (max-width: 900px) { .kurs-setup-layout { grid-template-columns: 1fr; } }
+
+/* ── Division card ───────────────────────────────────────────────────────── */
+.kurs-div-card {
+	background: var(--ka-white);
+	border: 1.5px solid var(--ka-border);
+	border-radius: 7px;
+	overflow: hidden;
+	margin-bottom: 10px;
+}
+.kurs-div-card__bar {
+	height: 4px;
+}
+.kurs-div-card__body {
+	padding: 14px 16px;
+}
+.kurs-div-card__name {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 17px;
+	text-transform: uppercase;
+	color: var(--ka-dark);
+}
+
+/* Format natjecanja (playoff da/ne + koliko prolazi) — na razini divizije */
+.kurs-div-format {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+	background: #f7f7f1;
+	border: 1px solid var(--ka-border);
+	border-radius: 7px;
+	padding: 8px 10px;
+	margin-bottom: 12px;
+}
+.kurs-div-format__lbl {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	color: var(--ka-muted);
+}
+.kurs-div-format select { font-size: 12px; }
+.kurs-div-format .kurs-div-advance { color: var(--ka-dark); }
+.kurs-div-format .kurs-div-advance input { width: 54px; }
+.kurs-div-card__meta {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	color: var(--ka-muted);
+	margin-top: 3px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+}
+.kurs-div-card__phases {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-top: 10px;
+}
+
+/* ── Phase pill ──────────────────────────────────────────────────────────── */
+.kurs-phase-pill {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 3px;
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+}
+.kurs-phase-pill--group   { background: #e8f4fd; color: #1a3a6b; }
+.kurs-phase-pill--playoff { background: #fff8e5; color: #7a5700; }
 
 /* ── Phase block ─────────────────────────────────────────────────────────── */
 .kurs-phase-block {
-	border-left: 3px solid #1a3a6b;
-	padding: .7rem 1rem;
-	margin: .75rem 0 0;
-	background: #f8f9fa;
-	border-radius: 0 4px 4px 0;
+	border-left: 3px solid var(--ka-border);
+	padding: 10px 14px;
+	margin: 10px 0 0;
+	background: #fafaf7;
+	border-radius: 0 5px 5px 0;
 }
-.kurs-phase-block__head { display: flex; align-items: center; gap: .4rem; margin-bottom: .5rem; }
-.kurs-phase-block__head h4 { margin: 0; font-size: .9rem; }
-
-/* ── Add phase ───────────────────────────────────────────────────────────── */
-.kurs-add-phase {
-	background: #f0f0f1;
-	border-radius: 4px;
-	padding: .55rem .75rem;
-	margin-top: .75rem;
+.kurs-phase-block__head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 8px;
 }
-.kurs-add-phase summary { cursor: pointer; color: #1a3a6b; font-weight: 600; font-size: .85rem; }
+.kurs-phase-block__head h4 {
+	margin: 0;
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 13px;
+	text-transform: uppercase;
+}
 
 /* ── Group chips ─────────────────────────────────────────────────────────── */
-.kurs-chips { display: flex; flex-wrap: wrap; gap: .4rem; min-height: 28px; }
+.kurs-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
 .kurs-chip {
 	display: inline-flex;
 	align-items: center;
-	gap: .25rem;
-	background: #1a3a6b;
+	gap: 4px;
+	background: var(--ka-dark);
 	color: #fff;
-	border-radius: 20px;
-	padding: .2rem .75rem;
-	font-size: .8rem;
-	font-weight: 600;
+	border-radius: 4px;
+	padding: 4px 10px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	font-weight: 700;
 }
 .kurs-chip__del {
 	background: none;
 	border: none;
-	color: rgba(255,255,255,.65);
+	color: rgba(255,255,255,.5);
 	cursor: pointer;
-	font-size: 1rem;
+	font-size: 14px;
 	line-height: 1;
 	padding: 0;
 }
 .kurs-chip__del:hover { color: #fff; }
 
+/* ── Playoff spots block ──────────────────────────────────────────────────── */
+.kurs-playoff-spots-block {
+	margin-top: 12px;
+	padding: 12px 14px;
+	background: #f0f0ea;
+	border-radius: 5px;
+	border: 1px solid var(--ka-border);
+}
+.kurs-playoff-spots-block__label {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: .05em;
+	color: var(--ka-muted);
+	margin-bottom: 10px;
+}
+.kurs-playoff-spots-list { display: flex; flex-direction: column; gap: 7px; }
+.kurs-spots-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+.kurs-spots-row__name {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 13px;
+	min-width: 60px;
+}
+.kurs-spots-row__val {
+	font-family: var(--font-cond);
+	font-weight: 900;
+	font-style: italic;
+	font-size: 18px;
+	width: 54px;
+	text-align: center;
+	color: var(--ka-red);
+	border: 1.5px solid var(--ka-border);
+	border-radius: 5px;
+	padding: 0 6px;
+	height: 30px;
+	background: var(--ka-white);
+	outline: none;
+	-moz-appearance: textfield;
+}
+.kurs-spots-row__val::-webkit-outer-spin-button,
+.kurs-spots-row__val::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.kurs-spots-row__val:focus { border-color: var(--ka-red); }
+.kurs-spots-row__of { font-family: var(--font-mono); font-size: 10px; color: var(--ka-muted); }
+.kurs-spots-row__status { font-family: var(--font-mono); font-size: 10px; }
+.kurs-spots-row__status--ok  { color: var(--ka-green); }
+.kurs-spots-row__status--err { color: var(--ka-red); }
+
+/* Ljestvica: crta za playoff cutoff */
+.kurs-standings tr.standings-playoff-cutoff td {
+	border-bottom: 2px dashed var(--ka-red) !important;
+}
+
+/* ── Color picker (dropdown) ─────────────────────────────────────────────── */
+.kurs-cp-wrap { position: relative; display: inline-block; }
+
+.kurs-cp-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 10px 5px 7px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 6px;
+	background: #fff;
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--ka-dark);
+	transition: border-color .15s;
+	white-space: nowrap;
+}
+.kurs-cp-trigger:hover { border-color: #999; }
+.kurs-cp-trigger__dot {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	border: 1.5px solid rgba(0,0,0,.18);
+	flex-shrink: 0;
+}
+.kurs-cp-trigger__caret {
+	font-size: 8px;
+	color: var(--ka-muted);
+	margin-left: 2px;
+}
+
+.kurs-cp-dropdown {
+	display: none;
+	position: fixed;
+	z-index: 999999;
+	background: #fff;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 10px;
+	box-shadow: 0 6px 24px rgba(0,0,0,.16);
+	padding: 12px;
+	width: 210px;
+}
+.kurs-cp-dropdown.is-open { display: block; }
+
+/* 6-stupčani grid swatcheva */
+.kurs-cp-presets {
+	display: grid;
+	grid-template-columns: repeat(6, 1fr);
+	gap: 7px;
+	margin-bottom: 10px;
+}
+.kurs-cp-swatch {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	cursor: pointer;
+	padding: 0;
+	transition: transform .12s, box-shadow .12s;
+	outline: none;
+	display: block;
+}
+.kurs-cp-swatch:hover { transform: scale(1.2); }
+.kurs-cp-swatch.is-active {
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ka-dark);
+}
+/* Bijela swatch — vidljivi border uvijek */
+.kurs-cp-swatch--white { border-color: #bbb !important; }
+.kurs-cp-swatch--white.is-active { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ka-dark); }
+
+.kurs-cp-divider {
+	border: none;
+	border-top: 1px solid var(--ka-border);
+	margin: 0 0 10px;
+}
+.kurs-cp-custom-label {
+	font-size: 10px;
+	color: var(--ka-muted);
+	text-transform: uppercase;
+	letter-spacing: .05em;
+	margin-bottom: 7px;
+	font-family: var(--font-mono);
+}
+.kurs-cp-custom-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.kurs-cp-wheel {
+	width: 34px;
+	height: 34px;
+	border-radius: 6px;
+	border: 1.5px solid var(--ka-border);
+	padding: 1px;
+	cursor: pointer;
+	background: transparent;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+.kurs-cp-wheel::-webkit-color-swatch-wrapper { padding: 0; border-radius: 4px; }
+.kurs-cp-wheel::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+.kurs-cp-hex {
+	flex: 1;
+	padding: 6px 8px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 5px;
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--ka-dark);
+	text-transform: uppercase;
+	min-width: 0;
+}
+.kurs-cp-hex:focus { border-color: var(--ka-dark); outline: none; }
+
+/* legacy (still used in season-setup squad pills etc.) */
+.kurs-color-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kurs-color-swatch {
+	width: 24px; height: 24px; border-radius: 50%;
+	border: 2px solid transparent; cursor: pointer; padding: 0;
+	transition: transform .1s; outline: none;
+}
+.kurs-color-swatch:hover { transform: scale(1.15); }
+.kurs-color-swatch.is-active { border-color: var(--ka-dark); box-shadow: 0 0 0 2px #fff, 0 0 0 3px var(--ka-dark); }
+.kurs-color-custom {
+	width: 24px; height: 24px; border-radius: 50%;
+	border: 2px solid var(--ka-border); padding: 0; cursor: pointer; background: transparent; overflow: hidden;
+}
+.kurs-color-custom::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; }
+.kurs-color-custom::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+/* ── Add phase toggle ────────────────────────────────────────────────────── */
+.kurs-add-phase {
+	background: #f5f5ef;
+	border-radius: 5px;
+	padding: 8px 12px;
+	margin-top: 10px;
+	border: 1px solid var(--ka-border);
+}
+.kurs-add-phase summary {
+	cursor: pointer;
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	color: var(--ka-dark);
+}
+
 /* ── Assign layout ───────────────────────────────────────────────────────── */
 .kurs-assign-layout {
 	display: grid;
-	grid-template-columns: 260px 1fr;
-	gap: 1.5rem;
-	margin-top: 1.5rem;
+	grid-template-columns: 240px 1fr;
+	gap: 20px;
 	align-items: start;
 }
 .kurs-team-pool {
-	background: #fff;
-	border: 1px solid #dcdcde;
-	border-radius: 6px;
-	padding: 1rem;
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 8px;
+	padding: 16px;
 	position: sticky;
 	top: 40px;
+	align-self: start;
 }
-.kurs-team-list { margin-top: .6rem; display: flex; flex-direction: column; gap: .3rem; }
+.kurs-team-pool h3 {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 15px;
+	text-transform: uppercase;
+	margin: 0 0 10px;
+}
+.kurs-team-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
 .kurs-team-pill {
 	display: flex;
 	align-items: center;
-	gap: .4rem;
-	padding: .3rem .5rem;
-	border: 1px solid #e5e5e5;
-	border-radius: 4px;
-	font-size: .82rem;
-	background: #fafafa;
+	gap: 6px;
+	padding: 5px 8px;
+	border: 1px solid var(--ka-border);
+	border-radius: 5px;
+	font-size: 13px;
+	background: #fafaf7;
 }
 .kurs-team-pill img { width: 24px; height: 24px; object-fit: cover; border-radius: 50%; flex-shrink: 0; }
+.kurs-avatar {
+	width: 24px; height: 24px;
+	background: var(--ka-dark); color: #fff;
+	border-radius: 50%;
+	display: inline-flex; align-items: center; justify-content: center;
+	font-size: 9px; font-weight: 700; flex-shrink: 0;
+	font-family: var(--font-mono);
+}
+.kurs-avatar--lg {
+	width: 34px; height: 34px; font-size: 11px;
+}
 
-/* ── Team autocomplete (dodjela ekipa u grupe) ───────────────────────────── */
-.kurs-team-ac-wrap {
-	position: relative;
-	width: 100%;
+/* ── New team form (pool sidebar) ────────────────────────────────────────── */
+.kurs-new-team-form {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--ka-border);
 }
-.kurs-team-ac-wrap .kurs-team-search {
-	width: 100%;
+.kurs-new-team-form h4 {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	color: var(--ka-muted);
+	margin: 0 0 6px;
+}
+.kurs-new-team-form input[type="text"] { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+.kurs-new-team-form .button { width: 100%; text-align: center; }
+
+/* ── Group columns ───────────────────────────────────────────────────────── */
+.kurs-groups-canvas h2 {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 18px;
+	text-transform: uppercase;
+	margin: 20px 0 8px;
+	border-bottom: 2px solid var(--ka-border);
+	padding-bottom: 6px;
+	color: var(--ka-dark);
+}
+.kurs-group-cols { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.kurs-group-col {
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 7px;
+	min-width: 220px;
+	flex: 1 1 220px;
+	max-width: 400px;
+	overflow: hidden;
+}
+.kurs-group-col__head {
+	background: var(--ka-dark);
+	color: #fff;
+	padding: 8px 12px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 14px;
+	text-transform: uppercase;
+}
+.kurs-group-col__head .kurs-muted { color: rgba(255,255,255,.5); font-weight: 400; font-size: 10px; }
+.kurs-group-col__teams { padding: 6px 8px; min-height: 32px; }
+.kurs-group-team {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 5px 7px;
+	border-radius: 4px;
+	font-size: 13px;
+	background: #f5f5ef;
+	margin-bottom: 3px;
+	border: 1px solid var(--ka-border);
+}
+.kurs-btn-rm {
+	background: none; border: none; color: #ccc; cursor: pointer;
+	font-size: 14px; line-height: 1; padding: 0; flex-shrink: 0;
+}
+.kurs-btn-rm:hover { color: var(--ka-red); }
+.kurs-group-col__add {
+	padding: 8px;
+	border-top: 1px solid var(--ka-border);
+	display: flex;
+	gap: 6px;
+	align-items: stretch;
+	background: #fafaf7;
+}
+.kurs-group-col__add .kurs-team-ac-wrap { flex: 1; min-width: 0; }
+.kurs-group-col__add .kurs-team-search {
+	width: 100% !important;
 	box-sizing: border-box;
+	font-size: 13px;
+	height: 36px;
+	padding: 0 10px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 5px;
+	font-family: var(--font-body);
+	background: var(--ka-white);
+	color: var(--ka-dark);
+	outline: none;
+	transition: border-color .15s;
 }
+.kurs-group-col__add .kurs-team-search:focus { border-color: var(--ka-red); }
+.kurs-btn-add-team {
+	flex-shrink: 0;
+	white-space: nowrap;
+	height: 36px;
+	padding: 0 14px;
+	background: var(--ka-red);
+	color: #fff;
+	border: none;
+	border-radius: 5px;
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	cursor: pointer;
+	transition: background .15s;
+	display: flex;
+	align-items: center;
+}
+.kurs-btn-add-team:hover { background: #b50d18; }
+
+/* ── Autocomplete ─────────────────────────────────────────────────────────── */
+.kurs-team-ac-wrap { position: relative; width: 100%; }
+.kurs-team-ac-wrap .kurs-team-search { width: 100%; box-sizing: border-box; }
 .kurs-team-ac-list {
 	position: absolute;
 	top: calc(100% + 2px);
-	left: 0;
-	right: 0;
+	left: 0; right: 0;
 	z-index: 9999;
-	background: #fff;
+	background: var(--ka-white);
 	border: 1px solid #c3c4c7;
 	border-radius: 0 0 5px 5px;
 	box-shadow: 0 4px 14px rgba(0,0,0,.12);
@@ -225,9 +920,9 @@
 	overflow-y: auto;
 }
 .kurs-team-ac-item {
-	padding: .38rem .65rem;
+	padding: 6px 10px;
 	cursor: pointer;
-	font-size: .82rem;
+	font-size: 13px;
 	border-bottom: 1px solid #f5f5f5;
 	white-space: nowrap;
 	overflow: hidden;
@@ -236,347 +931,1542 @@
 }
 .kurs-team-ac-item:last-child { border-bottom: none; }
 .kurs-team-ac-item:hover,
-.kurs-team-ac-item.is-focused { background: #f0f4ff; }
-
-/* ── Nova ekipa forma u pool sidebaru ────────────────────────────────────── */
-.kurs-new-team-form input[type="text"] { width: 100%; box-sizing: border-box; margin-bottom: .4rem; }
-.kurs-new-team-form .button { width: 100%; text-align: center; }
-.kurs-avatar {
-	width: 24px; height: 24px;
-	background: #1a3a6b; color: #fff;
-	border-radius: 50%;
-	display: inline-flex; align-items: center; justify-content: center;
-	font-size: .62rem; font-weight: 700; flex-shrink: 0;
-}
-
-/* ── Group columns (assign step) ─────────────────────────────────────────── */
-.kurs-groups-canvas h2 { margin-top: 1.5rem; font-size: 1.05rem; border-bottom: 1px solid #eee; padding-bottom: .4rem; }
-.kurs-group-cols { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
-.kurs-group-col {
-	background: #fff;
-	border: 1px solid #dcdcde;
-	border-radius: 6px;
-	min-width: 160px;
-	flex: 1;
-	max-width: 260px;
-}
-.kurs-group-col__head {
-	background: #1a3a6b; color: #fff;
-	padding: .5rem .75rem;
-	border-radius: 6px 6px 0 0;
-	display: flex; justify-content: space-between; align-items: center;
-	font-size: .875rem; font-weight: 700;
-}
-.kurs-group-col__head .kurs-muted { color: rgba(255,255,255,.65); font-weight: 400; font-size: .75rem; }
-.kurs-group-col__teams { padding: .4rem .5rem; min-height: 32px; }
-.kurs-group-team {
-	display: flex; justify-content: space-between; align-items: center;
-	padding: .25rem .4rem;
-	border-radius: 3px;
-	font-size: .82rem;
-	background: #eef2ff;
-	margin-bottom: .2rem;
-	border: 1px solid #d8e0ff;
-}
-.kurs-btn-rm {
-	background: none; border: none; color: #c00; cursor: pointer;
-	font-size: 1rem; line-height: 1; padding: 0; flex-shrink: 0;
-}
-.kurs-group-col__add {
-	padding: .4rem .5rem;
-	border-top: 1px solid #eee;
-	display: flex;
-	gap: .35rem;
-	align-items: flex-start;
-}
-.kurs-group-col__add .kurs-team-ac-wrap { flex: 1; min-width: 0; }
-.kurs-group-col__add .kurs-team-search  { font-size: .78rem; }
+.kurs-team-ac-item.is-focused { background: #f5f5ef; }
 
 /* ── Selector bar ────────────────────────────────────────────────────────── */
 .kurs-selector-bar {
-	background: #fff;
-	border: 1px solid #dcdcde;
-	border-radius: 6px;
-	padding: .8rem 1rem;
-	margin: 1.5rem 0;
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 7px;
+	padding: 12px 16px;
+	margin: 16px 0 20px;
 }
-.kurs-selector-bar form { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
-.kurs-selector-bar__label { font-weight: 600; font-size: .82rem; }
+.kurs-selector-bar form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kurs-selector-bar__label {
+	font-family: var(--font-cond);
+	font-weight: 700;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	color: var(--ka-muted);
+}
+
+/* ── Two-col layout ──────────────────────────────────────────────────────── */
+.kurs-two-col {
+	display: grid;
+	grid-template-columns: 1fr 380px;
+	gap: 20px;
+	align-items: start;
+}
+@media (max-width: 1100px) { .kurs-two-col { grid-template-columns: 1fr; } }
 
 /* ── Matches layout ──────────────────────────────────────────────────────── */
 .kurs-matches-layout {
 	display: grid;
 	grid-template-columns: 1fr 1fr;
-	gap: 2rem;
+	gap: 20px;
 	align-items: start;
 }
 @media (max-width: 1200px) { .kurs-matches-layout { grid-template-columns: 1fr; } }
 
-.kurs-panel { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 1.25rem; }
-.kurs-panel h2 { margin-top: 0; border-bottom: 1px solid #f0f0f0; padding-bottom: .6rem; margin-bottom: .75rem; }
+/* ── Matches list ────────────────────────────────────────────────────────── */
+/* ── Raspored — panel header ──────────────────────────────────────────────── */
+.kurs-sched-head { flex-wrap: wrap; gap: 8px; padding: 14px 18px; }
+.kurs-sched-head__actions { display: flex; align-items: center; gap: 8px; position: relative; }
+
+/* "Dodaj ručno" — checkbox toggle */
+.kurs-add-match-chk { display: none; }
+.kurs-add-match-drop {
+	display: none;
+	background: #f5f5ef;
+	border-top: 1.5px solid var(--ka-border);
+	padding: 14px 18px;
+	box-sizing: border-box;
+}
+.kurs-add-manual-chk:checked ~ .kurs-add-match-drop { display: block; }
+.kurs-add-match-grid { display: flex; flex-direction: column; gap: 10px; }
+.kurs-add-match-grid__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kurs-vs-sep {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	color: var(--ka-muted);
+	letter-spacing: .06em;
+	flex-shrink: 0;
+}
+.kurs-sel {
+	flex: 1;
+	height: 36px;
+	padding: 0 8px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 5px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	background: #fafaf7;
+	color: var(--ka-dark);
+}
+
+/* ── Stilizirani <select> — svi padajući izbornici u KURS adminu ──────────────
+   Native izgled zamijenjen vlastitim (caret + tokeni dizajna). Vrijedi za sve
+   <select> unutar .kurs-wrap (uklj. .kurs-sel); ne dira širinu/flex/JS ponašanje. */
+.kurs-wrap select,
+.kurs-wrap .kurs-sel {
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	height: 36px;
+	padding: 0 30px 0 11px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 6px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	line-height: 1.2;
+	color: var(--ka-dark);
+	background-color: #fff;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a8a84' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 11px center;
+	background-size: 11px;
+	cursor: pointer;
+	box-sizing: border-box;
+	transition: border-color .15s, box-shadow .15s;
+}
+.kurs-wrap select:hover,
+.kurs-wrap .kurs-sel:hover { border-color: #b9b9b0; }
+.kurs-wrap select:focus,
+.kurs-wrap .kurs-sel:focus {
+	border-color: var(--ka-red);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(218,15,30,.12);
+}
+.kurs-wrap select:disabled {
+	background-color: #f1f1ec;
+	color: var(--ka-muted);
+	cursor: not-allowed;
+	opacity: .85;
+}
+.kurs-wrap select[multiple] { background-image: none; padding-right: 11px; height: auto; }
+.kurs-field-wrap { display: flex; flex-direction: column; gap: 3px; }
+.kurs-field-label {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: .05em;
+	color: var(--ka-muted);
+}
+.kurs-field-input {
+	height: 34px;
+	padding: 0 10px;
+	border: 1.5px solid var(--ka-border) !important;
+	border-radius: 5px;
+	font-family: var(--font-body);
+	font-size: 13px;
+	background: var(--ka-white);
+	color: var(--ka-dark);
+	box-sizing: border-box;
+}
+.kurs-field-input--xs { width: 60px !important; }
+.kurs-field-input:focus { border-color: var(--ka-red) !important; outline: none; }
+
+/* ── Raspored — kola i utakmice ──────────────────────────────────────────── */
+.kurs-sched-body { padding: 0 0 8px; }
+.kurs-round-block { border-top: 1px solid #eeecea; }
+.kurs-round-block:first-child { border-top: none; }
+.kurs-round-hd {
+	display: flex;
+	align-items: center;
+	padding: 0 18px;
+	background: var(--ka-dark);
+}
+.kurs-round-hd__label {
+	font-family: var(--font-cond);
+	font-weight: 900;
+	font-style: italic;
+	font-size: 13px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: #fff;
+	padding: 7px 0;
+}
+.kurs-match {
+	padding: 0;
+	border-bottom: 1px solid #f0eeea;
+}
+.kurs-match:last-child { border-bottom: none; }
+.kurs-match__row {
+	display: grid;
+	grid-template-columns: 70px 1fr auto;
+	align-items: center;
+	gap: 0;
+	padding: 10px 18px;
+	min-height: 52px;
+}
+.kurs-match__dt {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 1px;
+	border-right: 1px solid #f0eeea;
+	padding-right: 14px;
+	margin-right: 14px;
+}
+.kurs-match__dt-day {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	font-weight: 700;
+	color: var(--ka-dark);
+	text-transform: uppercase;
+	letter-spacing: .03em;
+}
+.kurs-match__dt-time {
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 15px;
+	color: var(--ka-red);
+	line-height: 1;
+}
+.kurs-match__dt-none {
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: #ccc;
+}
+.kurs-match__teams { display: flex; align-items: center; gap: 10px; }
+.kurs-match__home { flex: 1; text-align: right; font-family: var(--font-cond); font-weight: 700; font-size: 15px; }
+.kurs-match__away { flex: 1; font-family: var(--font-cond); font-weight: 700; font-size: 15px; }
+.kurs-score {
+	background: var(--ka-dark);
+	color: #fff;
+	font-family: var(--font-cond);
+	font-weight: 900;
+	font-style: italic;
+	font-size: 17px;
+	padding: 4px 14px;
+	border-radius: 4px;
+	min-width: 66px;
+	text-align: center;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+.kurs-score--sched {
+	background: #eeecea;
+	color: var(--ka-muted);
+	font-family: var(--font-mono);
+	font-size: 11px;
+	font-weight: 700;
+	font-style: normal;
+	padding: 4px 10px;
+	border-radius: 4px;
+	min-width: 50px;
+	text-align: center;
+	flex-shrink: 0;
+}
+.kurs-match__actions { display: flex; align-items: center; gap: 5px; padding-left: 14px; }
+.kurs-result-form { display: flex; align-items: center; gap: 4px; }
+.kurs-si {
+	width: 52px !important;
+	height: 36px !important;
+	text-align: center !important;
+	font-size: 16px !important;
+	font-weight: 700 !important;
+	font-family: var(--font-cond) !important;
+	padding: 0 4px !important;
+	border: 2px solid var(--ka-border) !important;
+	border-radius: 5px !important;
+	background: var(--ka-white) !important;
+	color: var(--ka-dark) !important;
+	pointer-events: auto !important;
+	-webkit-user-select: text !important;
+	user-select: text !important;
+	cursor: text !important;
+	box-sizing: border-box !important;
+	-moz-appearance: textfield !important;
+}
+.kurs-si::-webkit-outer-spin-button,
+.kurs-si::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0 !important; }
+.kurs-del-match-form { display: inline; }
+.kurs-del-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 16px; line-height: 1; padding: 2px 4px; }
+.kurs-del-btn:hover { color: var(--ka-red); }
+.kurs-match--finished .kurs-match__home,
+.kurs-match--finished .kurs-match__away { color: var(--ka-dark); }
+
+/* ── Action buttons ──────────────────────────────────────────────────────── */
+.kurs-row-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.kurs-btn-edit   { color: var(--ka-blue) !important; border-color: var(--ka-blue) !important; }
+.kurs-btn-delete { color: var(--ka-red) !important; border-color: var(--ka-red) !important; }
+.kurs-btn-delete:hover { background: var(--ka-red) !important; color: #fff !important; }
+.kurs-btn-roster { color: var(--ka-green) !important; border-color: var(--ka-green) !important; }
+.kurs-btn-roster:hover { background: var(--ka-green) !important; color: #fff !important; }
+.kurs-btn-record { color: var(--ka-blue) !important; border-color: var(--ka-blue) !important; }
+.kurs-btn-record:hover { background: var(--ka-blue) !important; color: #fff !important; }
 
 /* ── Standings ───────────────────────────────────────────────────────────── */
 .kurs-standings { width: 100%; border-collapse: collapse; }
-.kurs-standings th,
-.kurs-standings td { padding: .4rem .5rem; text-align: center; border-bottom: 1px solid #f5f5f5; font-size: .85rem; }
-.kurs-standings thead th { font-size: .72rem; text-transform: uppercase; color: #888; background: #fafafa; font-weight: 600; }
-.kurs-standings .kurs-standings__name { text-align: left; }
-.kurs-standings .kurs-standings__pos  { color: #999; font-size: .8rem; width: 28px; }
-.kurs-standings .kurs-standings__pts  { font-size: .95rem; }
-.kurs-standings tr:hover td { background: #f9f9f9; }
-.kurs-standings__top td { background: #fffdf0; }
-.kurs-standings__top:hover td { background: #fffbe8; }
-
-/* ── Round header ────────────────────────────────────────────────────────── */
-.kurs-round-hd {
-	font-size: .72rem;
-	font-weight: 700;
+.kurs-standings th, .kurs-standings td {
+	padding: 6px 8px;
+	text-align: center;
+	border-bottom: 1px solid #f5f5ef;
+	font-size: 13px;
+}
+.kurs-standings thead th {
+	font-family: var(--font-mono);
+	font-size: 9px;
 	text-transform: uppercase;
 	letter-spacing: .06em;
-	color: #aaa;
-	padding: .55rem 0 .2rem;
-	margin-top: .4rem;
-	border-top: 1px solid #f0f0f0;
+	color: var(--ka-muted);
+	background: #fafaf7;
+	font-weight: 700;
 }
-.kurs-round-hd:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+.kurs-standings .kurs-standings__name { text-align: left; font-family: var(--font-cond); font-weight: 700; font-size: 14px; }
+.kurs-standings .kurs-standings__pos  { color: var(--ka-muted); font-size: 11px; width: 28px; }
+.kurs-standings .kurs-standings__pts  { font-family: var(--font-cond); font-weight: 800; font-size: 15px; }
+.kurs-standings tr:hover td { background: #f8f8f4; }
+.kurs-standings__top td { background: #fffdf0; }
 
-/* ── Match row ───────────────────────────────────────────────────────────── */
-.kurs-match { padding: .45rem 0; border-bottom: 1px solid #f5f5f5; }
-.kurs-match:last-child { border-bottom: none; }
-.kurs-match__teams { display: flex; align-items: center; gap: .5rem; }
-.kurs-match__home { flex: 1; text-align: right; font-weight: 600; font-size: .875rem; }
-.kurs-match__away { flex: 1; font-weight: 600; font-size: .875rem; }
-.kurs-score {
-	background: #1a3a6b; color: #fff;
-	font-weight: 800; font-size: 1rem;
-	padding: .15rem .65rem;
-	border-radius: 4px;
-	min-width: 58px;
-	text-align: center;
-	white-space: nowrap;
+/* ── Tags & Badges ───────────────────────────────────────────────────────── */
+.kurs-badge, .kurs-tag {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 3px;
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .04em;
+	line-height: 1.5;
 }
-.kurs-result-form { display: flex; align-items: center; gap: .3rem; }
-.kurs-si { width: 38px !important; text-align: center; font-size: .9rem; font-weight: 700; padding: .15rem; }
-.kurs-match__meta {
+.kurs-badge--active   { background: #d4edda; color: #155724; }
+.kurs-badge--archived { background: #eee;    color: var(--ka-muted); }
+.kurs-tag--pan_ljetna,
+.kurs-tag--league { background: #fff3e0; color: #8a4300; }
+.kurs-tag--kc_liga { background: #fdecea; color: #8a0008; }
+
+/* ── Forms ───────────────────────────────────────────────────────────────── */
+.kurs-form-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+.kurs-form-row .js-group-name {
+	flex: 1 1 120px;
+	min-width: 0;
+	width: auto !important;
+	box-sizing: border-box;
+}
+.kurs-form-col { display: flex; flex-direction: column; gap: 4px; }
+
+/* ── Notices ─────────────────────────────────────────────────────────────── */
+.kurs-muted { color: var(--ka-muted); font-size: 12px; margin: 0; }
+.kurs-notice {
+	background: #fffbeb;
+	border-left: 4px solid #F47B16;
+	padding: 10px 14px;
+	border-radius: 0 5px 5px 0;
+	margin: 12px 0;
+	font-size: 13px;
+}
+.kurs-notice strong { color: #7a5700; }
+/* ── Playoff bracket ─────────────────────────────────────────────────────── */
+.kurs-playoff-wrap { max-width: 1400px; }
+
+.kurs-bracket {
+	display: flex;
+	gap: 0;
+	align-items: flex-start;
+	overflow-x: auto;
+	padding-bottom: 16px;
+}
+
+.kurs-bracket__round {
+	flex: 1;
+	min-width: 240px;
+	max-width: 320px;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+}
+
+.kurs-bracket__round-label {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .12em;
+	color: var(--ka-muted);
+	padding: 0 8px 12px;
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	margin-top: .15rem;
-	padding-left: .1rem;
+	gap: 8px;
 }
-.kurs-match__date { font-size: .75rem; color: #aaa; }
-.kurs-del-match-form { display: inline; }
-.kurs-del-btn {
-	background: none; border: none; color: #ccc; cursor: pointer; font-size: .9rem; line-height: 1; padding: 0;
-}
-.kurs-del-btn:hover { color: #c00; }
-
-/* ── Add match form ──────────────────────────────────────────────────────── */
-.kurs-add-match { background: #f8f9fa; border-radius: 4px; padding: .6rem .75rem; margin-bottom: .75rem; border: 1px solid #e5e5e5; }
-.kurs-add-match summary { cursor: pointer; color: #1a3a6b; font-weight: 600; font-size: .85rem; }
-
-/* ── Action buttons ─────────────────────────────────────────────────────── */
-.kurs-row-actions { display: flex; gap: .3rem; align-items: center; flex-wrap: wrap; }
-.kurs-btn-edit   { color: #1a3a6b !important; border-color: #1a3a6b !important; }
-.kurs-btn-delete { color: #b32d2e !important; border-color: #b32d2e !important; }
-.kurs-btn-delete:hover { background: #b32d2e !important; color: #fff !important; }
-
-/* ── League tag (generic) ────────────────────────────────────────────────── */
-.kurs-tag--league { background: #f0f4ff; color: #1a3a6b; }
-.kurs-league-name { font-size: .875rem; color: #555; }
-
-/* ── Team avatar (large) ─────────────────────────────────────────────────── */
-.kurs-avatar--lg {
-	width: 36px; height: 36px;
-	background: #1a3a6b; color: #fff;
+.kurs-bracket__round-label::before {
+	content: '';
+	display: inline-block;
+	width: 8px;
+	height: 8px;
 	border-radius: 50%;
-	display: inline-flex; align-items: center; justify-content: center;
-	font-size: .75rem; font-weight: 700;
+	background: var(--ka-red);
+	flex-shrink: 0;
 }
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-.kurs-form-row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-top: .55rem; }
-.kurs-muted { color: #888; font-size: .83rem; margin: 0; }
-.kurs-notice {
-	background: #fff8e5;
-	border-left: 4px solid #e8b84b;
-	padding: .75rem 1rem;
-	border-radius: 0 4px 4px 0;
-	margin: 1rem 0;
+.kurs-bracket__matches {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-around;
+	flex: 1;
+	gap: 12px;
+	padding: 0 8px;
+	position: relative;
 }
-.kurs-notice strong { color: #856404; }
+
+/* Vertikalna linija koja spaja parove */
+.kurs-bracket__round:not(:last-child) .kurs-bracket__matches::after {
+	content: '';
+	position: absolute;
+	right: -1px;
+	top: 25%;
+	bottom: 25%;
+	width: 1px;
+	background: var(--ka-border);
+}
+
+.kurs-bracket__match {
+	background: var(--ka-white);
+	border: 1.5px solid var(--ka-border);
+	border-radius: 8px;
+	overflow: hidden;
+	position: relative;
+	transition: border-color .15s;
+}
+.kurs-bracket__match:hover { border-color: #bbb; }
+.kurs-bracket__match.is-finished { border-color: var(--ka-border); }
+
+.kurs-bracket__team {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 9px 10px;
+	border-bottom: 1px solid #f0f0ea;
+	transition: background .1s;
+}
+.kurs-bracket__team:last-of-type { border-bottom: none; }
+.kurs-bracket__team.is-winner { background: #f0faf3; }
+
+.kurs-bracket__team-badge { flex-shrink: 0; }
+.kurs-bracket__tbd {
+	width: 22px; height: 22px;
+	border-radius: 50%;
+	background: #e8e8e2;
+	display: flex; align-items: center; justify-content: center;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	color: #aaa;
+}
+.kurs-bracket__team-name {
+	flex: 1;
+	font-family: var(--font-cond);
+	font-size: 13px;
+	font-weight: 700;
+	font-style: italic;
+	text-transform: uppercase;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.kurs-bracket__team.is-winner .kurs-bracket__team-name { color: #1a7a3a; }
+
+.kurs-bracket__score {
+	font-family: var(--font-cond);
+	font-size: 16px;
+	font-weight: 900;
+	font-style: italic;
+	min-width: 20px;
+	text-align: center;
+	color: var(--ka-muted);
+	flex-shrink: 0;
+}
+.kurs-bracket__score.is-winner {
+	color: var(--ka-dark);
+	font-size: 18px;
+}
+
+.kurs-bracket__meta {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 5px 10px;
+	background: #fafaf7;
+	font-family: var(--font-mono);
+	font-size: 9px;
+	color: var(--ka-muted);
+	border-top: 1px solid #f0f0ea;
+}
+.kurs-bracket__meta-label { opacity: .6; }
+
+.kurs-bracket__actions {
+	padding: 6px 8px;
+	background: #f7f7f2;
+	border-top: 1px solid #f0f0ea;
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+}
+
+/* Edit panel */
+.kurs-pm-edit-panel {
+	padding: 12px;
+	background: #fafaf7;
+	border-top: 2px solid var(--ka-red);
+}
+.kurs-pm-score-row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+.kurs-pm-si {
+	width: 52px !important;
+	height: 38px !important;
+}
+
+/* Active edit button */
+.pm-edit-btn.is-active {
+	background: var(--ka-dark) !important;
+	color: #fff !important;
+	border-color: var(--ka-dark) !important;
+}
+
+/* Finale — naglašeniji */
+.kurs-bracket__round:last-child .kurs-bracket__match {
+	border-color: var(--ka-red);
+	border-width: 2px;
+}
+.kurs-bracket__round:last-child .kurs-bracket__round-label::before {
+	background: var(--ka-yellow);
+	box-shadow: 0 0 0 3px rgba(253,226,6,.3);
+}
+
+/* xs gumb */
+.kurs-btn--xs { padding: 3px 8px; font-size: 10px; }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
 .kurs-empty-state {
 	text-align: center;
-	padding: 3rem;
-	color: #888;
-	background: #fafafa;
-	border-radius: 6px;
-	border: 1px dashed #ddd;
-	margin-top: 1.5rem;
+	padding: 40px 24px;
+	color: var(--ka-muted);
+	background: #fafaf7;
+	border-radius: 7px;
+	border: 1px dashed var(--ka-border);
+	margin-top: 16px;
 }
-.kurs-empty-state p { font-size: 1rem; }
-.kurs-phase-label { font-size: .82rem; color: #666; margin: .4rem 0 .2rem; }
-.kurs-table th, .kurs-table td { vertical-align: middle; }
+.kurs-phase-label { font-size: 12px; color: var(--ka-muted); margin: 6px 0 3px; }
 
-/* ── Roster gumb (ekipe lista) ───────────────────────────────────────────── */
-.kurs-btn-roster { color: #1e6f26 !important; border-color: #1e6f26 !important; }
-.kurs-btn-roster:hover { background: #1e6f26 !important; color: #fff !important; }
-
-/* ── Logo u naslovu (roster stranica) ───────────────────────────────────── */
+/* ── Logo in titles ──────────────────────────────────────────────────────── */
 .kurs-team-logo-inline {
-	width: 36px; height: 36px;
+	width: 34px; height: 34px;
 	border-radius: 50%;
 	object-fit: cover;
 	vertical-align: middle;
-	margin-right: .35rem;
+	margin-right: 6px;
 }
 
-/* ── Selector bar (sezona/divizija odabir) ───────────────────────────────── */
-.kurs-selector-bar {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-	margin: 1rem 0 1.5rem;
-	background: #f0f4ff;
-	border: 1px solid #d0d9f5;
-	border-radius: 6px;
-	padding: .65rem 1rem;
+/* ── Team edit layout ────────────────────────────────────────────────────── */
+.kurs-team-edit-layout {
+	display: grid;
+	grid-template-columns: 340px 1fr;
+	gap: 16px;
+	align-items: start;
 }
-.kurs-selector-bar form { display: flex; align-items: center; gap: .5rem; }
-.kurs-selector-bar select { min-width: 280px; }
-.kurs-selector-bar__label { font-size: .85rem; color: #555; font-weight: 600; white-space: nowrap; }
+@media (max-width: 960px) { .kurs-team-edit-layout { grid-template-columns: 1fr; } }
 
-/* ── Roster layout (2-col: tablica + sidebar) ────────────────────────────── */
+/* ── Roster layout ───────────────────────────────────────────────────────── */
 .kurs-roster-layout {
 	display: grid;
-	grid-template-columns: 1fr 380px;
-	gap: 1.5rem;
+	grid-template-columns: 1fr 360px;
+	gap: 16px;
 	align-items: start;
 }
 @media (max-width: 960px) { .kurs-roster-layout { grid-template-columns: 1fr; } }
-
-/* ── Panel (roster tablica) ──────────────────────────────────────────────── */
-.kurs-panel {
-	background: #fff;
-	border: 1px solid #dcdcde;
-	border-radius: 6px;
-	padding: 1.25rem;
-}
-.kurs-panel__head {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	margin-bottom: .75rem;
-}
-.kurs-panel__head h2 { margin: 0; }
+.kurs-roster-sidebar { display: flex; flex-direction: column; gap: 0; }
 
 /* ── Roster tablica ──────────────────────────────────────────────────────── */
-.kurs-roster-table { margin-top: .5rem; }
-.kurs-roster-table td, .kurs-roster-table th { vertical-align: middle; }
+.kurs-roster-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-family: var(--font-body);
+	font-size: 13px;
+}
+.kurs-roster-table thead tr {
+	border-bottom: 2px solid var(--ka-border);
+}
+.kurs-roster-table th {
+	padding: 8px 14px;
+	font-family: var(--font-mono);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: var(--ka-muted);
+	font-weight: 400;
+	vertical-align: middle;
+	background: transparent;
+	border: none;
+}
+.kurs-roster-table td {
+	padding: 9px 14px;
+	vertical-align: middle;
+	border: none;
+	border-bottom: 1px solid #f2f2ec;
+}
+.kurs-roster-table tbody tr:last-child td { border-bottom: none; }
+.kurs-roster-table tbody tr:hover td { background: #fafaf6; }
+.kurs-roster-table tbody tr.is-editing td { background: #f4f6ff; }
+
+/* Dres badge */
 .kurs-jersey {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	width: 32px; height: 32px;
-	background: #1a3a6b;
+	width: 30px;
+	height: 30px;
+	background: var(--ka-dark);
 	color: #fff;
-	border-radius: 4px;
+	border-radius: 5px;
 	font-weight: 700;
-	font-size: .85rem;
+	font-size: 13px;
+	font-family: var(--font-mono);
 }
 
-/* ── Roster sidebar ──────────────────────────────────────────────────────── */
-.kurs-roster-sidebar { display: flex; flex-direction: column; gap: 0; }
-.kurs-form-col { display: flex; flex-direction: column; }
-.kurs-card--info h4 { font-size: .85rem; color: #555; }
-
-/* ── Autocomplete dropdown ───────────────────────────────────────────────── */
-.kurs-ac-wrap {
-	position: relative;
-	display: inline-block;
-	width: 100%;
+/* Unos broja dresa — „# + broj" badge (intuitivno, u duhu .kurs-jersey) */
+.kurs-jersey-field {
+	display: inline-flex;
+	align-items: stretch;
+	height: 36px;
+	border: 2px solid var(--ka-border);
+	border-radius: 6px;
+	background: var(--ka-white);
+	overflow: hidden;
+	transition: border-color .15s, box-shadow .15s;
 }
-.kurs-ac-wrap .regular-text { width: 100%; box-sizing: border-box; }
-.kurs-ac-list {
-	position: absolute;
-	top: calc(100% + 2px);
-	left: 0;
-	right: 0;
-	z-index: 9999;
-	background: #fff;
-	border: 1px solid #c3c4c7;
-	border-radius: 0 0 5px 5px;
-	box-shadow: 0 4px 14px rgba(0,0,0,.12);
-	max-height: 220px;
-	overflow-y: auto;
+.kurs-jersey-field:focus-within {
+	border-color: var(--ka-red);
+	box-shadow: 0 0 0 3px rgba(218,15,30,.10);
 }
-.kurs-ac-item {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: .42rem .75rem;
-	cursor: pointer;
-	font-size: .875rem;
-	border-bottom: 1px solid #f5f5f5;
-	transition: background .1s;
-}
-.kurs-ac-item:last-child { border-bottom: none; }
-.kurs-ac-item:hover,
-.kurs-ac-item.is-focused { background: #f0f4ff; }
-.kurs-ac-item.is-in-squad { opacity: .55; cursor: default; }
-.kurs-ac-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.kurs-ac-badge {
-	flex-shrink: 0;
-	font-size: .68rem;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: .03em;
-	background: #e8f5e9;
-	color: #1e6f26;
-	border-radius: 3px;
-	padding: .1rem .4rem;
-	margin-left: .5rem;
-}
-.kurs-ac-badge--in {
-	background: #f0f4ff;
-	color: #1a3a6b;
-}
-
-/* ── Duplikat modal ──────────────────────────────────────────────────────── */
-#kurs-dup-modal {
-	position: fixed;
-	inset: 0;
-	z-index: 100010;
+.kurs-jersey-field__hash {
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	width: 30px;
+	flex-shrink: 0;
+	background: var(--ka-dark);
+	color: var(--ka-gold);
+	font-family: var(--font-cond);
+	font-weight: 900;
+	font-style: italic;
+	font-size: 15px;
+	line-height: 1;
 }
-.kurs-modal-backdrop {
-	position: fixed;
-	inset: 0;
-	background: rgba(0,0,0,.45);
+.kurs-jersey-field input[type="number"] {
+	width: 52px;
+	height: 100%;
+	margin: 0 !important;
+	padding: 0 4px !important;
+	border: none !important;
+	outline: none !important;
+	box-shadow: none !important;
+	background: transparent !important;
+	text-align: center;
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-size: 17px;
+	color: var(--ka-dark);
+	-moz-appearance: textfield;
 }
-.kurs-modal-box {
-	position: relative;
-	z-index: 1;
-	background: #fff;
-	border-radius: 8px;
-	box-shadow: 0 8px 40px rgba(0,0,0,.25);
-	padding: 1.75rem 2rem;
-	max-width: 440px;
-	width: 90%;
-}
-.kurs-modal-title { margin: 0 0 .6rem; font-size: 1.1rem; }
-.kurs-modal-msg { margin: 0 0 .35rem; }
-.kurs-modal-actions {
-	display: flex;
-	gap: .5rem;
-	flex-wrap: wrap;
-	margin-top: 1.25rem;
-}
-.kurs-modal-actions .button { flex-shrink: 0; }
+.kurs-jersey-field input[type="number"]::-webkit-outer-spin-button,
+.kurs-jersey-field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.kurs-jersey-field input::placeholder { color: #c9c9c2; font-weight: 700; }
 
-/* ── Roster inline edit red ──────────────────────────────────────────────── */
-.kurs-roster-table tr.is-editing td { background: #fafbff; }
-.squad-edit-jersey { width: 52px !important; text-align: center; }
-.squad-edit-name   { width: 180px; }
+/* Inline edit inputi */
+.squad-edit-jersey {
+	width: 56px !important;
+	padding: 5px 6px !important;
+	text-align: center;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	border: 1.5px solid var(--ka-border) !important;
+	border-radius: 5px !important;
+	outline: none;
+}
+.squad-edit-jersey:focus { border-color: var(--ka-dark) !important; }
+.squad-edit-name {
+	width: 180px;
+	padding: 5px 8px !important;
+	border: 1.5px solid var(--ka-border) !important;
+	border-radius: 5px !important;
+	font-size: 13px;
+	outline: none;
+}
+.squad-edit-name:focus { border-color: var(--ka-dark) !important; }
+
+/* Akcije u rosteri */
+.squad-actions { white-space: nowrap; }
+.squad-actions .kurs-btn-edit-squad,
+.squad-actions .kurs-btn-rm-squad {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	height: 26px;
+	padding: 0 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-family: var(--font-body);
+	cursor: pointer;
+	transition: background .12s, color .12s;
+	line-height: 1;
+}
+.squad-actions .kurs-btn-edit-squad {
+	background: transparent;
+	border: 1.5px solid var(--ka-border);
+	color: var(--ka-dark);
+}
+.squad-actions .kurs-btn-edit-squad:hover { background: var(--ka-dark); color: #fff; border-color: var(--ka-dark); }
+.squad-actions .kurs-btn-rm-squad {
+	background: transparent;
+	border: 1.5px solid #ddd;
+	color: #c00;
+	font-size: 14px;
+	font-weight: 700;
+	min-width: 26px;
+}
+.squad-actions .kurs-btn-rm-squad:hover { background: #c00; color: #fff; border-color: #c00; }
+
+/* ── Match inline edit ───────────────────────────────────────────────────── */
+/* ── Inline edit forma ───────────────────────────────────────────────────── */
+.kurs-match-edit-form {
+	background: #f5f5ef;
+	border-top: 1px dashed var(--ka-border);
+	padding: 8px;
+}
+.kurs-match-edit-inner {
+	display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.kurs-match-edit-inner label { display: flex; align-items: center; gap: 4px; font-size: 12px; }
+.kurs-matches-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+/* ── Autocomplete (roster) ───────────────────────────────────────────────── */
+.kurs-ac-wrap { position: relative; display: inline-block; width: 100%; }
+.kurs-ac-wrap .regular-text { width: 100%; box-sizing: border-box; }
+.kurs-ac-list {
+	position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 9999;
+	background: var(--ka-white); border: 1px solid #c3c4c7;
+	border-radius: 0 0 5px 5px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+	max-height: 220px; overflow-y: auto;
+}
+.kurs-ac-item {
+	display: flex; align-items: center; justify-content: space-between;
+	padding: 6px 10px; cursor: pointer; font-size: 13px;
+	border-bottom: 1px solid #f5f5f5; transition: background .1s;
+}
+.kurs-ac-item:last-child { border-bottom: none; }
+.kurs-ac-item:hover, .kurs-ac-item.is-focused { background: #f5f5ef; }
+.kurs-ac-item.is-in-squad { opacity: .55; cursor: default; }
+.kurs-ac-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kurs-ac-badge {
+	flex-shrink: 0; font-size: 9px; font-weight: 700; text-transform: uppercase;
+	letter-spacing: .03em; background: #e8f5e9; color: var(--ka-green);
+	border-radius: 3px; padding: 1px 5px; margin-left: 6px;
+}
+.kurs-ac-badge--in { background: #eef2ff; color: var(--ka-blue); }
+
+/* ── Duplicate modal ─────────────────────────────────────────────────────── */
+#kurs-dup-modal { position: fixed; inset: 0; z-index: 100010; display: flex; align-items: center; justify-content: center; }
+.kurs-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.5); }
+.kurs-modal-box {
+	position: relative; z-index: 1;
+	background: var(--ka-white); border-radius: 8px;
+	box-shadow: 0 8px 40px rgba(0,0,0,.25);
+	padding: 28px 32px; max-width: 440px; width: 90%;
+}
+.kurs-modal-title { margin: 0 0 10px; font-family: var(--font-cond); font-weight: 800; font-size: 18px; }
+.kurs-modal-msg { margin: 0 0 6px; }
+.kurs-modal-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+
+
+/* ── Add match form ──────────────────────────────────────────────────────── */
+
+/* ── Zapisnik ────────────────────────────────────────────────────────────── */
+.kurs-record-wrap { max-width: 880px; }
+.kurs-record-topbar {
+	display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+}
+.kurs-record-topbar__actions { display: flex; gap: 8px; }
+.kurs-record-doc {
+	background: var(--ka-white);
+	border: 1px solid var(--ka-border);
+	border-radius: 10px;
+	overflow: hidden;
+}
+
+/* Hero */
+.kurs-record-hero {
+	background: var(--ka-dark);
+	color: #fff;
+}
+.kurs-record-hero__stripes {
+	display: flex;
+	height: 4px;
+}
+.kurs-record-hero__stripes span { flex: 1; }
+.kurs-record-hero__league {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: .1em;
+	color: rgba(255,255,255,.4);
+	text-align: center;
+	padding: 14px 20px 0;
+}
+.kurs-record-hero__league-sep { margin: 0 8px; opacity: .4; }
+.kurs-record-hero__body {
+	display: flex;
+	align-items: center;
+	padding: 24px 32px 28px;
+	position: relative;
+}
+/* Score apsolutno centriran na cijeloj širini */
+.kurs-record-hero__score {
+	position: absolute;
+	left: 50%;
+	transform: translateX(-50%);
+	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+/* Svaki tim zauzima jednu stranu, score ostaje fiksiran u centru */
+.kurs-record-hero__team {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	/* rezervira prostor da ne dođe ispod score-a */
+	min-width: 0;
+}
+.kurs-record-hero__team-name {
+	font-family: var(--font-cond);
+	font-size: 20px;
+	font-weight: 900;
+	font-style: italic;
+	text-transform: uppercase;
+	text-align: center;
+	color: #fff;
+	line-height: 1.1;
+}
+.kurs-record-hero__team-role {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: .1em;
+	color: rgba(255,255,255,.4);
+}
+.kurs-record-hero__score-nums {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	line-height: 1;
+}
+.kurs-record-hero__score-num {
+	font-family: var(--font-cond);
+	font-size: 68px;
+	font-weight: 900;
+	font-style: italic;
+	color: #fff;
+	min-width: 58px;
+	text-align: center;
+}
+.kurs-record-hero__score-sep {
+	font-family: var(--font-cond);
+	font-size: 52px;
+	font-weight: 900;
+	font-style: italic;
+	color: rgba(255,255,255,.2);
+	padding: 0 4px;
+}
+.kurs-record-hero__status {
+	display: inline-block;
+	margin-top: 8px;
+	padding: 3px 12px;
+	border-radius: 3px;
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+}
+.kurs-record-hero__status.is-finished { background: var(--ka-red); color: #fff; }
+.kurs-record-hero__status.is-live     { background: var(--ka-orange); color: #fff; }
+.kurs-record-hero__meta {
+	margin-top: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0;
+	font-family: var(--font-cond);
+	font-size: 14px;
+	font-weight: 700;
+	font-style: italic;
+	color: rgba(255,255,255,.5);
+	white-space: nowrap;
+}
+.kurs-record-hero__meta .kurs-match__dt-day,
+.kurs-record-hero__meta .kurs-match__dt-time {
+	color: rgba(255,255,255,.75);
+	font-size: 15px;
+}
+.kurs-record-hero__meta-sep { margin: 0 8px; opacity: .3; font-style: normal; }
+.kurs-record-hero__kolo {
+	font-family: var(--font-cond);
+	font-size: 14px;
+	font-weight: 700;
+	font-style: italic;
+	color: rgba(255,255,255,.5);
+}
+.kurs-record-hero__kolo strong { color: rgba(255,255,255,.75); }
+
+/* Ostatak dokumenta */
+.kurs-record-doc > .kurs-record-edit-details { margin: 16px 32px 0; }
+.kurs-record-doc > .kurs-record-section      { padding: 20px 32px 24px; }
+.kurs-record-doc > .kurs-record-section + .kurs-record-section {
+	border-top: 1px solid #ebebe5;
+	margin: 0 32px;
+	padding-left: 0;
+	padding-right: 0;
+}
+.kurs-record-doc > .kurs-record-section:last-of-type { padding-bottom: 24px; }
+.kurs-record-wrap { padding-bottom: 32px; }
+#wpfooter { display: none !important; }
+
+/* Uredi detalje */
+.kurs-record-edit-details {
+	background: #f5f5ef;
+	border: 1px dashed var(--ka-border);
+	border-radius: 5px;
+	padding: 8px 12px;
+	margin-bottom: 0;
+	font-size: 13px;
+}
+.kurs-record-edit-details summary {
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: var(--ka-muted);
+	list-style: none;
+}
+.kurs-record-edit-details summary::-webkit-details-marker { display: none; }
+.kurs-record-edit-details summary::before { content: '▸ '; }
+details[open].kurs-record-edit-details summary::before { content: '▾ '; }
+.kurs-record-edit-form { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 10px; }
+
+/* Sekcije */
+.kurs-record-section { }
+.kurs-record-section__title {
+	font-family: var(--font-mono);
+	font-weight: 700;
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: .1em;
+	color: var(--ka-muted);
+	margin: 0 0 12px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.kurs-record-section__title::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background: var(--ka-border);
+}
+
+/* Grupiranje golova i kartona po poluvremenu */
+.kurs-half-group { margin-bottom: 16px; }
+.kurs-half-group:last-child { margin-bottom: 0; }
+.kurs-half-group[hidden] { display: none; }
+.kurs-half-group__title {
+	font-family: var(--font-mono);
+	font-size: 10px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+	color: var(--ka-muted);
+	margin: 0 0 8px;
+	padding-bottom: 5px;
+	border-bottom: 1px dashed var(--ka-border);
+}
+
+/* Golovi */
+.kurs-event-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 7px 12px;
+	border-radius: 6px;
+	margin-bottom: 5px;
+	font-size: 13px;
+	border: 1px solid transparent;
+}
+.kurs-event--home {
+	background: #eef4ff;
+	border-color: #d6e4ff;
+}
+.kurs-event--away {
+	background: #fff5ee;
+	border-color: #fde0c8;
+}
+.kurs-event__min {
+	font-family: var(--font-mono);
+	font-weight: 700;
+	color: var(--ka-muted);
+	font-size: 11px;
+	width: 30px;
+	text-align: right;
+	flex: none;
+}
+.kurs-event__icon { width: 20px; text-align: center; font-size: 15px; flex: none; }
+.kurs-event__name { font-family: var(--font-cond); font-weight: 700; font-size: 14px; flex: 1; min-width: 0; }
+.kurs-event__og   { font-size: 11px; color: var(--ka-red); font-weight: 400; margin-left: 3px; }
+.kurs-event__team { font-family: var(--font-mono); font-size: 10px; color: var(--ka-muted); text-align: right; flex: none; white-space: nowrap; }
+/* Uredi / obriši — veće kvadratne ikone s hover pozadinom */
+.kurs-edit-event, .kurs-del-event {
+	flex: none; background: none; border: none; cursor: pointer; line-height: 1;
+	width: 28px; height: 28px; border-radius: 5px; font-size: 15px; padding: 0;
+	display: inline-flex; align-items: center; justify-content: center;
+	color: #9aa0aa; transition: background .12s, color .12s;
+}
+.kurs-edit-event:hover { background: rgba(0,0,0,.07); color: var(--ka-dark); }
+.kurs-del-event:hover  { background: rgba(218,15,30,.10); color: var(--ka-red); }
+
+/* Dodaj event */
+.kurs-add-event {
+	margin-top: 12px;
+	padding: 14px 16px;
+	background: #f5f5ef;
+	border-radius: 6px;
+	border: 1px solid var(--ka-border);
+}
+.kurs-add-event h4 {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: var(--ka-muted);
+	margin: 0 0 10px;
+}
+.kurs-add-event__row {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	flex-wrap: wrap;
+}
+.kurs-add-event__row select {
+	font-size: 13px;
+	height: 34px;
+	padding: 0 8px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 5px;
+	background: var(--ka-white);
+	font-family: var(--font-body);
+}
+.kurs-add-event__row input[type="number"] {
+	width: 70px;
+	height: 34px;
+	padding: 0 8px;
+	border: 1.5px solid var(--ka-border);
+	border-radius: 5px;
+	font-family: var(--font-mono);
+	font-size: 13px;
+	text-align: center;
+}
+
+/* Postave */
+.kurs-record-squads { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.kurs-record-squad .kurs-record-section__title {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.kurs-squad-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kurs-squad-table td { padding: 7px 8px; border-bottom: 1px solid #f0f0ea; }
+.kurs-squad-table tr:last-child td { border-bottom: none; }
+.kurs-squad-table tr:hover td { background: #fafaf7; }
+.kurs-squad-table tr:hover .kurs-sq-jersey { background: var(--ka-dark); }
+.kurs-sq-name { display: flex; align-items: center; gap: 6px; }
+.kurs-sq-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 3px; font-family: var(--font-cond); font-weight: 800; font-size: 10px; line-height: 1; }
+.kurs-sq-badge[hidden] { display: none; }
+.kurs-sq-badge--gk { background: #e6efe9; color: #1F7A43; }
+.kurs-sq-badge--cap { background: var(--ka-dark); color: #fff; }
+.kurs-sq-actions { text-align: right; white-space: nowrap; width: 1%; }
+.kurs-sq-cap, .kurs-sq-absent { background: none; border: 1px solid var(--ka-border); border-radius: 4px; cursor: pointer; font-size: 12px; line-height: 1; padding: 3px 6px; color: var(--ka-muted); margin-left: 4px; }
+.kurs-sq-cap:hover { border-color: var(--ka-dark); color: var(--ka-dark); }
+.kurs-sq-absent:hover { border-color: var(--ka-red); color: var(--ka-red); }
+.kurs-sq-row.is-absent td { opacity: .5; }
+.kurs-sq-row.is-absent .kurs-sq-name { text-decoration: line-through; }
+.kurs-sq-row.is-absent .kurs-sq-absent { border-color: var(--ka-red); color: var(--ka-red); opacity: 1; }
+.kurs-sq-jersey {
+	width: 36px;
+	font-family: var(--font-mono);
+	font-weight: 700;
+	color: #fff;
+	background: var(--ka-dark);
+	text-align: center;
+	font-size: 11px;
+	border-radius: 3px;
+	padding: 3px 0;
+}
+
+/* Zaključi formu */
+.kurs-record-section--finish-wrap {
+	background: var(--ka-white);
+	padding: 20px 32px 28px !important;
+}
+.kurs-record-section--finish {
+	background: #f5f5ef;
+	border-radius: 6px;
+	border: 1px solid var(--ka-border);
+	text-align: center;
+	padding: 16px 20px 20px;
+}
+.kurs-record-section--finish .kurs-record-section__title {
+	justify-content: center;
+}
+.kurs-record-section--finish .kurs-record-section__title::after { display: none; }
+
+.kurs-finish-row {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 18px;
+	padding: 16px 0 12px;
+}
+.kurs-finish-row__home,
+.kurs-finish-row__away {
+	flex: 1;
+	font-family: var(--font-cond);
+	font-weight: 800;
+	font-style: italic;
+	font-size: 16px;
+	text-transform: uppercase;
+	max-width: 180px;
+}
+.kurs-finish-row__home { text-align: right; }
+.kurs-finish-row__away { text-align: left; }
+.kurs-finish-score {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+.kurs-finish-score__sep {
+	font-family: var(--font-cond);
+	font-weight: 900;
+	font-size: 26px;
+	color: var(--ka-muted);
+	line-height: 1;
+}
+
+.kurs-finish-meta {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	padding: 6px 14px;
+	background: transparent;
+	border-radius: 5px;
+	border: 1px solid var(--ka-border);
+}
+.kurs-finish-auto-label {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: .05em;
+	color: #5a9a5a;
+}
+.kurs-finish-auto-label--manual { color: var(--ka-orange); }
+
+/* Readonly score input */
+.kurs-si[readonly] {
+	background: #efefea !important;
+	color: var(--ka-dark) !important;
+	border-color: #d8d8d0 !important;
+	cursor: default !important;
+}
+@keyframes kurs-score-flash {
+	0%   { background: #fff3cd; border-color: var(--ka-orange); }
+	100% { background: #efefea; border-color: #d8d8d0; }
+}
+.kurs-si--updated[readonly] { animation: kurs-score-flash .7s ease-out forwards; }
+
+/* Zaključena utakmica — status + otključaj */
+.kurs-record-section--finished {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+}
+.kurs-finished-status {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+}
+.kurs-finished-status__badge {
+	display: inline-block;
+	padding: 4px 10px;
+	background: #1a7a3a;
+	color: #fff;
+	border-radius: 4px;
+	font-family: var(--font-mono);
+	font-size: 9px;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: .08em;
+	white-space: nowrap;
+}
+.kurs-finished-status__score {
+	font-family: var(--font-cond);
+	font-size: 15px;
+	font-weight: 700;
+	font-style: italic;
+	color: var(--ka-dark);
+}
+.kurs-finished-status__score strong {
+	font-size: 18px;
+	margin: 0 6px;
+}
+.kurs-reopen-form { flex-shrink: 0; }
+
+/* Gumb zaključi */
+.kurs-finish-submit {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	text-align: center;
+	padding-top: 14px;
+}
+
+.kurs-record-sigs { display: none; }
+
+/* ── @media print (B&W) ──────────────────────────────────────────────────── */
+@media print {
+	#adminmenuwrap, #adminmenuback, #wpadminbar, #wpfooter, .notice, .no-print { display: none !important; }
+	#wpcontent, #wpbody-content { margin: 0 !important; padding: 0 !important; }
+	body { background: #fff !important; color: #000 !important; }
+
+	/* Hero — B&W */
+	.kurs-record-hero {
+		background: #fff !important;
+		border-bottom: 2px solid #000 !important;
+		color: #000 !important;
+	}
+	.kurs-record-hero__stripes { display: none !important; }
+	.kurs-record-hero__league { color: #555 !important; }
+	.kurs-record-hero__team-name,
+	.kurs-record-hero__score-num { color: #000 !important; }
+	.kurs-record-hero__score-sep { color: #999 !important; }
+	.kurs-record-hero__status { background: #000 !important; color: #fff !important; }
+	.kurs-record-hero__meta,
+	.kurs-record-hero__meta .kurs-match__dt-day,
+	.kurs-record-hero__meta .kurs-match__dt-time { color: #444 !important; }
+	.kurs-record-hero__kolo,
+	.kurs-record-hero__kolo strong { color: #444 !important; }
+	.kurs-record-hero__team-role { color: #666 !important; }
+
+	/* Doc */
+	.kurs-record-doc { border: none !important; box-shadow: none !important; }
+	.kurs-record-doc > :not(.kurs-record-hero) { padding: 0 !important; }
+
+	/* Events */
+	.kurs-event--home, .kurs-event--away { border-left-color: #000 !important; background: #f5f5f5 !important; }
+	.kurs-event--away { background: #ebebeb !important; }
+
+	/* Jersey badge */
+	.kurs-sq-jersey { background: #000 !important; color: #fff !important; }
+
+	/* Signatures */
+	.kurs-record-sigs {
+		display: grid !important;
+		grid-template-columns: 1fr 1fr 1fr;
+		gap: 48px; margin-top: 64px; padding-top: 28px;
+		border-top: 1px solid #ccc; font-size: 13px;
+	}
+	.kurs-sig-line { margin-top: 48px; border-bottom: 1.5px solid #000; }
+	.print-only { display: block !important; }
+	@page { margin: 2cm; }
+}
+
+/* ── Flatpickr — KURS tema ────────────────────────────────────────────────── */
+.flatpickr-calendar {
+	font-family: var(--font-body) !important;
+	border: 1.5px solid var(--ka-border) !important;
+	border-radius: 8px !important;
+	box-shadow: 0 8px 28px rgba(0,0,0,.14) !important;
+	background: var(--ka-white) !important;
+}
+.flatpickr-months {
+	background: var(--ka-dark) !important;
+	border-radius: 6px 6px 0 0 !important;
+	padding: 4px 0 !important;
+}
+.flatpickr-months .flatpickr-month,
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+	color: #fff !important;
+	fill: #fff !important;
+}
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg { fill: var(--ka-red) !important; }
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+	background: transparent !important;
+	color: #fff !important;
+	font-family: var(--font-cond) !important;
+	font-weight: 800 !important;
+	font-style: italic !important;
+	font-size: 16px !important;
+	text-transform: uppercase !important;
+}
+.flatpickr-current-month input.cur-year {
+	color: #fff !important;
+	font-family: var(--font-cond) !important;
+	font-weight: 700 !important;
+	font-size: 15px !important;
+}
+.flatpickr-weekdays { background: var(--ka-dark) !important; }
+span.flatpickr-weekday {
+	background: var(--ka-dark) !important;
+	color: rgba(255,255,255,.5) !important;
+	font-family: var(--font-mono) !important;
+	font-size: 9px !important;
+	text-transform: uppercase !important;
+	letter-spacing: .06em !important;
+}
+.flatpickr-day {
+	font-family: var(--font-body) !important;
+	font-size: 13px !important;
+	border-radius: 4px !important;
+	color: var(--ka-dark) !important;
+}
+.flatpickr-day:hover, .flatpickr-day.prevMonthDay:hover, .flatpickr-day.nextMonthDay:hover {
+	background: #f0f0ea !important;
+	border-color: transparent !important;
+}
+.flatpickr-day.selected, .flatpickr-day.selected:hover {
+	background: var(--ka-red) !important;
+	border-color: var(--ka-red) !important;
+	color: #fff !important;
+	font-weight: 700 !important;
+}
+.flatpickr-day.today { border-color: var(--ka-red) !important; font-weight: 700; }
+.flatpickr-day.today:hover { background: var(--ka-red) !important; color: #fff !important; }
+.flatpickr-day.flatpickr-disabled, .flatpickr-day.prevMonthDay, .flatpickr-day.nextMonthDay {
+	color: #bbb !important;
+}
+/* Sat/minuta birač */
+.flatpickr-time {
+	border-top: 1px solid var(--ka-border) !important;
+	background: #fafaf7 !important;
+}
+.flatpickr-time input {
+	font-family: var(--font-cond) !important;
+	font-weight: 800 !important;
+	font-style: italic !important;
+	font-size: 20px !important;
+	color: var(--ka-dark) !important;
+	background: transparent !important;
+}
+.flatpickr-time input:focus { color: var(--ka-red) !important; }
+.flatpickr-time .flatpickr-time-separator { color: var(--ka-muted) !important; font-weight: 700; }
+.flatpickr-time .arrowUp:hover, .flatpickr-time .arrowDown:hover { background: #f0f0ea !important; }
+/* Input stil */
+input.kurs-datepicker {
+	font-family: var(--font-body) !important;
+	font-size: 13px !important;
+	height: 32px !important;
+	padding: 0 10px !important;
+	border: 1.5px solid var(--ka-border) !important;
+	border-radius: 5px !important;
+	background: var(--ka-white) !important;
+	color: var(--ka-dark) !important;
+	outline: none !important;
+	transition: border-color .15s !important;
+	box-sizing: border-box !important;
+}
+input.kurs-datepicker:focus { border-color: var(--ka-red) !important; }
+
+
+/* ══ Zapisnik: akcijski gumbi (GOL / KARTON / PREKRŠAJ) ═════════════════════ */
+.kurs-record-actions { padding-top: 18px; }
+.kurs-action-btns {
+	display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px;
+}
+.kurs-action-btn {
+	display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+	min-height: 96px; padding: 16px 10px; border: none; border-radius: 12px; cursor: pointer;
+	font-family: var(--font-cond); transition: transform .08s ease, filter .15s ease;
+}
+.kurs-action-btn:hover  { filter: brightness(1.08); }
+.kurs-action-btn:active { transform: translateY(1px) scale(.99); }
+.kurs-action-btn__ico {
+	display: flex; align-items: center; justify-content: center;
+	width: 36px; height: 36px; border-radius: 50%; font-size: 19px; line-height: 1;
+}
+.kurs-action-btn__lbl {
+	font-weight: 900; font-style: italic; font-size: 18px; letter-spacing: .04em; text-transform: uppercase;
+}
+.kurs-action-btn--gol { background: #DA0F1E; color: #fff; }
+.kurs-action-btn--gol .kurs-action-btn__ico { background: rgba(255,255,255,.22); }
+.kurs-action-btn--karton { background: #111317; color: #fff; border-bottom: 4px solid #FDE206; }
+.kurs-action-btn--karton .kurs-action-btn__ico { background: #FDE206; color: #111317; }
+.kurs-action-btn--prekrsaj { background: #111317; color: #fff; border-bottom: 4px solid #F47B16; }
+.kurs-action-btn--prekrsaj .kurs-action-btn__ico { background: rgba(244,123,22,.22); color: #F47B16; }
+
+/* ── Akumulirani prekršaji (live brojač) ──────────────────────────────────── */
+.kurs-fouls { border: 1.5px solid var(--ka-border); border-radius: 10px; padding: 14px 16px; background: var(--ka-white); }
+.kurs-fouls__hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.kurs-fouls__title { font-family: var(--font-cond); font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: .03em; }
+.kurs-fouls__max { font-family: var(--font-mono); font-size: 10px; color: var(--ka-muted); text-transform: none; letter-spacing: 0; margin-left: 4px; }
+.kurs-half-toggle {
+	font-family: var(--font-mono); font-size: 11px; cursor: pointer;
+	background: var(--ka-dark); color: #fff; border: none; border-radius: 6px; padding: 6px 12px;
+}
+.kurs-half-toggle:hover { filter: brightness(1.25); }
+.kurs-half-toggle__action { opacity: .7; }
+.kurs-fouls__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.kurs-foul-team {
+	display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px;
+	padding: 8px 10px; border: 1px solid var(--ka-border); border-radius: 8px;
+}
+.kurs-foul-team__name { font-family: var(--font-cond); font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kurs-foul-cell {
+	display: flex; flex-direction: column; align-items: center; min-width: 46px;
+	padding: 4px 6px; border-radius: 6px; background: #f3f3ee;
+}
+.kurs-foul-cell__h { font-family: var(--font-mono); font-size: 8px; text-transform: uppercase; color: var(--ka-muted); letter-spacing: .04em; }
+.kurs-foul-cell__n { font-family: var(--font-cond); font-weight: 900; font-size: 18px; line-height: 1; }
+.kurs-foul-cell.is-warn  { background: #FFF3CD; }
+.kurs-foul-cell.is-warn  .kurs-foul-cell__n { color: #9a7400; }
+.kurs-foul-cell.is-penal { background: #DA0F1E; }
+.kurs-foul-cell.is-penal .kurs-foul-cell__h,
+.kurs-foul-cell.is-penal .kurs-foul-cell__n { color: #fff; }
+.kurs-fouls__legend { margin: 12px 0 0; font-size: 11px; color: var(--ka-muted); line-height: 1.45; }
+
+/* ── Zapisnik — mobilni prikaz ───────────────────────────────────────────── */
+@media (max-width: 782px) {
+	/* Prekršaji: jedna ekipa po retku da naziv stane cijeli */
+	.kurs-fouls__grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+	.kurs-record-doc > .kurs-record-section { padding: 16px 14px 18px; }
+	.kurs-record-doc > .kurs-record-edit-details { margin: 14px 14px 0; }
+	.kurs-record-hero__league { padding: 12px 14px 0; }
+	/* Semafor: složi okomito (domaćin / rezultat / gost) — bez preklapanja */
+	.kurs-record-hero__body { flex-direction: column; align-items: center; gap: 12px; padding: 18px 14px 22px; position: static; }
+	.kurs-record-hero__score { position: static; transform: none; }
+	.kurs-record-hero__team { flex: none; gap: 8px; }
+	.kurs-record-hero__team > div:first-child { width: 54px !important; height: 54px !important; }
+	.kurs-record-hero__team-name { font-size: 18px; }
+	.kurs-record-hero__score-num { font-size: 52px; min-width: 42px; }
+	.kurs-record-hero__score-sep { font-size: 40px; }
+	.kurs-record-hero__meta { flex-wrap: wrap; white-space: normal; font-size: 12px; gap: 2px 0; }
+	/* Zaključi utakmicu — manje paddinga, više prostora za nazive ekipa */
+	.kurs-record-section--finish-wrap { padding: 14px 12px 18px !important; }
+	.kurs-record-section--finish { padding: 14px 12px 16px; }
+	.kurs-finish-row { gap: 8px; padding: 12px 0 10px; }
+	.kurs-finish-row__home, .kurs-finish-row__away { font-size: 14px; max-width: none; }
+}
+
+/* ── Zapisnik modali (GOL / KARTON / PREKRŠAJ) ────────────────────────────── */
+.kurs-rec-modal { position: fixed; inset: 0; z-index: 100010; display: flex; align-items: center; justify-content: center; }
+.kurs-rec-modal[hidden] { display: none; }
+.kurs-modal-field { margin-bottom: 12px; }
+.kurs-modal-field > label { display: block; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: var(--ka-muted); margin-bottom: 5px; }
+.kurs-modal-field select, .kurs-modal-field input { width: 100%; box-sizing: border-box; }
+.kurs-modal-row { display: grid; grid-template-columns: 1fr 92px; gap: 10px; }
+.kurs-modal-sub { margin: 0 0 14px; font-size: 12px; color: var(--ka-muted); }
+.kurs-modal-err { margin: 0 0 6px; color: #c00; font-size: 12px; }
+.kurs-team-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.kurs-team-opt {
+	padding: 9px 8px; border: 1.5px solid var(--ka-border); border-radius: 7px; background: var(--ka-white);
+	font-family: var(--font-cond); font-weight: 700; font-size: 13px; cursor: pointer;
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kurs-team-opt.is-active { border-color: var(--ka-red); background: var(--ka-red); color: #fff; }
+
+/* Poluvrijeme toggle u gol/karton modalu */
+.kurs-half-toggle-modal { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.kurs-half-opt {
+	padding: 9px 8px; border: 1.5px solid var(--ka-border); border-radius: 7px; background: var(--ka-white);
+	font-family: var(--font-cond); font-weight: 700; font-size: 13px; cursor: pointer; color: var(--ka-dark);
+	overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kurs-half-opt:hover { border-color: var(--ka-muted); }
+.kurs-half-opt.is-active { border-color: var(--ka-dark); background: var(--ka-dark); color: #fff; }
+
+/* Oznaka pozicije igrača (golman) u rosteru */
+.kurs-pos-tag {
+	display: inline-block; font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+	text-transform: uppercase; letter-spacing: .04em; padding: 1px 5px; border-radius: 3px;
+	vertical-align: middle; margin-left: 4px;
+}
+.kurs-pos-tag--gk { background: #FDE206; color: #111317; }
+
+/* Službene osobe (trener / predstavnik) — navode se ISPOD igrača (flex order) */
+.kurs-record-squad { display: flex; flex-direction: column; }
+.kurs-officials {
+	order: 9; display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0 0;
+	padding-top: 10px; border-top: 1px dashed var(--ka-border);
+	font-family: var(--font-cond); font-size: 12px; color: var(--ka-muted);
+}
+.kurs-officials strong { color: var(--ka-dark); font-weight: 700; }
+/* Suci */
+.kurs-refs-form { max-width: 620px; }
+.kurs-refs-inputs { display: flex; gap: 10px; }
+.kurs-ref-input { flex: 1 1 0; min-width: 0; height: 38px; padding: 0 12px; border: 1.5px solid var(--ka-border); border-radius: 6px; font-family: var(--font-body); font-size: 13px; background: var(--ka-white); }
+.kurs-ref-input:focus { border-color: var(--ka-dark); outline: none; }
+.kurs-ref-input[readonly] { background: #f1f1ec; color: #555; cursor: default; }
+.kurs-refs-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.kurs-ref-msg { font-family: var(--font-mono); font-size: 11px; color: #2e7d32; }
+
+/* Baner ekipe — placeholder kad nema slike */
+.kurs-banner-empty {
+	display: flex; align-items: center; justify-content: center;
+	height: 90px; border: 1.5px dashed var(--ka-border); border-radius: 6px;
+	color: var(--ka-muted); font-family: var(--font-mono); font-size: 11px;
+	text-transform: uppercase; letter-spacing: .05em; background: #fafaf7;
+}
+/* Lista banera (sponzori) — slika + link + ukloni, po redu */
+#kurs-banner-list { display: flex; flex-direction: column; gap: 10px; }
+.kurs-banner-row { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--ka-border); border-radius: 8px; background: #fafaf7; }
+.kurs-banner-row__img { width: 120px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid var(--ka-border); flex: none; background: #fff; }
+.kurs-banner-row__link { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1.5px solid var(--ka-border); border-radius: 6px; font-family: var(--font-body); font-size: 13px; background: #fff; }
+.kurs-banner-row__link:focus { border-color: var(--ka-dark); outline: none; }
+.kurs-banner-remove { flex: none; width: 28px; height: 28px; border: 1px solid var(--ka-border); border-radius: 5px; background: #fff; color: var(--ka-muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.kurs-banner-remove:hover { border-color: var(--ka-red); color: var(--ka-red); }
+.kurs-prekrsaj-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kurs-prekrsaj-team {
+	display: flex; flex-direction: column; align-items: center; gap: 6px;
+	padding: 18px 10px; border: 1.5px solid var(--ka-border); border-radius: 10px;
+	background: var(--ka-white); cursor: pointer; transition: filter .12s, border-color .12s;
+}
+.kurs-prekrsaj-team:hover  { border-color: #F47B16; }
+.kurs-prekrsaj-team:active { transform: translateY(1px); }
+.kurs-prekrsaj-team__name { font-family: var(--font-cond); font-weight: 800; font-size: 14px; text-align: center; }
+.kurs-prekrsaj-team__cnt  { font-family: var(--font-cond); font-weight: 900; font-size: 28px; line-height: 1; color: #F47B16; }
+.kurs-prekrsaj-col { display: flex; flex-direction: column; gap: 6px; }
+.kurs-prekrsaj-col .kurs-prekrsaj-team { flex: 1; }
+.kurs-prekrsaj-minus {
+	border: 1.5px solid var(--ka-border); background: var(--ka-white); border-radius: 8px;
+	padding: 6px; font-family: var(--font-cond); font-size: 20px; font-weight: 800; line-height: 1;
+	cursor: pointer; color: var(--ka-muted); transition: border-color .12s, color .12s;
+}
+.kurs-prekrsaj-minus:hover  { border-color: #DA0F1E; color: #DA0F1E; }
+.kurs-prekrsaj-minus:active { transform: translateY(1px); }

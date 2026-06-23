@@ -27,6 +27,44 @@ class Kurs_Season {
 		) ?: [];
 	}
 
+	/** Je li liga (slug ili slobodan naziv) "Pan ljetna"? Sve ostalo = KC. */
+	public static function is_pan_league( string $league ): bool {
+		return stripos( $league, 'pan' ) !== false;
+	}
+
+	/** Sve sezone jedne lige (KC ili Pan), najnovije prvo (year DESC, id DESC). */
+	public static function for_league( bool $is_pan ): array {
+		return array_values( array_filter(
+			self::all(),
+			fn( $s ) => self::is_pan_league( (string) $s->league ) === $is_pan
+		) );
+	}
+
+	/**
+	 * Aktualna sezona lige za prikaz u izborniku: prva AKTIVNA s najvišom godinom,
+	 * a ako nijedna nije aktivna — najnovija. Tako nova sezona (kad je označiš
+	 * "Aktivna") automatski postaje aktualna pod tim izbornikom.
+	 */
+	public static function current_for_league( bool $is_pan ): ?object {
+		$seasons = self::for_league( $is_pan ); // već sortirano year DESC
+		foreach ( $seasons as $s ) {
+			if ( $s->status === 'active' ) return $s;
+		}
+		return $seasons[0] ?? null;
+	}
+
+	/** Je li sezona zaključana (konačni podaci)? */
+	public static function is_locked( int $id ): bool {
+		$s = self::get( $id );
+		return $s && ! empty( $s->locked );
+	}
+
+	/** Zaključaj/otključaj sezonu. */
+	public static function set_locked( int $id, bool $locked ): void {
+		global $wpdb;
+		$wpdb->update( self::t( 'seasons' ), [ 'locked' => $locked ? 1 : 0 ], [ 'id' => $id ] );
+	}
+
 	public static function get( int $id ): ?object {
 		global $wpdb;
 		return $wpdb->get_row(
@@ -37,10 +75,11 @@ class Kurs_Season {
 	public static function create( array $data ): int|false {
 		global $wpdb;
 		$ok = $wpdb->insert( self::t( 'seasons' ), [
-			'league' => sanitize_text_field( $data['league'] ),
-			'name'   => sanitize_text_field( $data['name'] ),
-			'year'   => absint( $data['year'] ),
-			'status' => 'active',
+			'league'             => sanitize_text_field( $data['league'] ),
+			'name'               => sanitize_text_field( $data['name'] ),
+			'year'               => absint( $data['year'] ),
+			'status'             => 'active',
+			'max_fouls_per_half' => isset( $data['max_fouls_per_half'] ) ? max( 1, absint( $data['max_fouls_per_half'] ) ) : 5,
 		] );
 		return $ok ? (int) $wpdb->insert_id : false;
 	}
@@ -50,6 +89,9 @@ class Kurs_Season {
 		$clean = [];
 		foreach ( [ 'name', 'year', 'status', 'league' ] as $k ) {
 			if ( isset( $data[ $k ] ) ) $clean[ $k ] = sanitize_text_field( $data[ $k ] );
+		}
+		if ( isset( $data['max_fouls_per_half'] ) ) {
+			$clean['max_fouls_per_half'] = max( 1, absint( $data['max_fouls_per_half'] ) );
 		}
 		if ( $clean ) $wpdb->update( self::t( 'seasons' ), $clean, [ 'id' => $id ] );
 	}
@@ -81,14 +123,39 @@ class Kurs_Season {
 		);
 	}
 
-	public static function create_division( int $season_id, string $name, int $order = 0 ): int|false {
+	public static function create_division( int $season_id, string $name, int $order = 0, int $has_playoff = 1, int $advance = 2 ): int|false {
 		global $wpdb;
 		$ok = $wpdb->insert( self::t( 'divisions' ), [
-			'season_id'  => $season_id,
-			'name'       => sanitize_text_field( $name ),
-			'sort_order' => $order,
+			'season_id'         => $season_id,
+			'name'              => sanitize_text_field( $name ),
+			'sort_order'        => $order,
+			'has_playoff'       => $has_playoff ? 1 : 0,
+			'advance_per_group' => max( 0, $advance ),
 		] );
 		return $ok ? (int) $wpdb->insert_id : false;
+	}
+
+	/**
+	 * Postavi format divizije: ima li playoff i koliko ekipa prolazi iz svake grupe.
+	 * Vrijednost se propagira na sve grupe (groups.playoff_spots) — 0 kad nema playoffa —
+	 * pa postojeća logika generiranja bracketa i isticanja u ljestvici radi nepromijenjena.
+	 */
+	public static function update_division_format( int $div_id, int $has_playoff, int $advance ): void {
+		global $wpdb;
+		$has_playoff = $has_playoff ? 1 : 0;
+		$advance     = max( 0, $advance );
+		$wpdb->update( self::t( 'divisions' ), [
+			'has_playoff'       => $has_playoff,
+			'advance_per_group' => $advance,
+		], [ 'id' => $div_id ] );
+
+		$spots = $has_playoff ? $advance : 0;
+		$g  = self::t( 'groups' );
+		$ph = self::t( 'phases' );
+		$wpdb->query( $wpdb->prepare(
+			"UPDATE $g g JOIN $ph ph ON ph.id = g.phase_id SET g.playoff_spots = %d WHERE ph.division_id = %d",
+			$spots, $div_id
+		) );
 	}
 
 	public static function delete_division( int $id ): void {
@@ -141,11 +208,29 @@ class Kurs_Season {
 
 	public static function create_group( int $phase_id, string $name ): int|false {
 		global $wpdb;
+		// Naslijedi broj prolaznika iz divizije (0 ako se ne igra playoff)
+		$ph  = self::t( 'phases' );
+		$dv  = self::t( 'divisions' );
+		$div = $wpdb->get_row( $wpdb->prepare(
+			"SELECT dv.has_playoff, dv.advance_per_group FROM $ph ph JOIN $dv dv ON dv.id = ph.division_id WHERE ph.id = %d",
+			$phase_id
+		) );
+		$spots = ( $div && $div->has_playoff ) ? (int) $div->advance_per_group : 0;
 		$ok = $wpdb->insert( self::t( 'groups' ), [
-			'phase_id' => $phase_id,
-			'name'     => sanitize_text_field( $name ),
+			'phase_id'      => $phase_id,
+			'name'          => sanitize_text_field( $name ),
+			'playoff_spots' => $spots,
 		] );
 		return $ok ? (int) $wpdb->insert_id : false;
+	}
+
+	public static function update_group_playoff_spots( int $group_id, int $spots ): void {
+		global $wpdb;
+		$wpdb->update(
+			self::t( 'groups' ),
+			[ 'playoff_spots' => max( 0, $spots ) ],
+			[ 'id' => $group_id ]
+		);
 	}
 
 	public static function delete_group( int $id ): void {
