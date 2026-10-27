@@ -3,7 +3,7 @@
  * Profil igrača (dizajn F) — karijera po sezonama i divizijama.
  */
 if ( ! class_exists( 'Kurs_Season' ) || ! class_exists( 'Kurs_Match' ) ) {
-	wp_redirect( home_url( '/igraci/' ) );
+	wp_redirect( home_url( '/' ) ); // nema arhive /igraci/
 	exit;
 }
 
@@ -15,36 +15,40 @@ $player_id = (int) get_the_ID();
 $player    = get_post( $player_id );
 $thumb     = get_the_post_thumbnail_url( $player_id, 'large' );
 
-/* ── Karijera: sve sezone × divizije × ekipe ─────────────── */
+/* ── Karijera: sve sezone × lige × ekipe (roster ekipe koja je u toj ligi) ─────────────── */
 $career = $wpdb->get_results( $wpdb->prepare(
-	"SELECT
-	   s.id     AS season_id,
-	   s.name   AS season_name,
-	   s.year   AS season_year,
-	   d.id     AS division_id,
-	   d.name   AS division_name,
-	   s.league AS league,
-	   sq.team_id,
-	   t.post_title AS team_name,
-	   sq.jersey_no,
-	   COUNT(DISTINCT CASE WHEN m.status = 'finished' AND (m.home_team_id = sq.team_id OR m.away_team_id = sq.team_id) THEN m.id END) AS matches_played,
-	   SUM(CASE WHEN e.event_type IN ('goal','penalty')           AND e.player_id = %d THEN 1 ELSE 0 END) AS goals,
-	   SUM(CASE WHEN e.event_type = 'yellow_card'                 AND e.player_id = %d THEN 1 ELSE 0 END) AS yellows,
-	   SUM(CASE WHEN e.event_type IN ('red_card','second_yellow') AND e.player_id = %d THEN 1 ELSE 0 END) AS reds
+	"SELECT s.id AS season_id, s.name AS season_name, s.year AS season_year,
+	        d.id AS division_id, d.name AS division_name, s.league AS league,
+	        sq.team_id, t.post_title AS team_name, sq.jersey_no
 	 FROM   {$p}squads sq
 	 JOIN   {$p}divisions d  ON d.id  = sq.division_id
 	 JOIN   {$p}seasons   s  ON s.id  = d.season_id
 	 JOIN   {$wpdb->posts} t ON t.ID  = sq.team_id
-	 LEFT JOIN {$p}group_teams gt ON gt.team_id = sq.team_id
-	 LEFT JOIN {$p}groups      g  ON g.id = gt.group_id
-	 LEFT JOIN {$p}phases      ph ON ph.id = g.phase_id AND ph.division_id = sq.division_id
-	 LEFT JOIN {$p}matches      m  ON m.group_id = g.id AND m.status = 'finished'
-	 LEFT JOIN {$p}match_events e  ON e.match_id = m.id AND e.player_id = %d AND e.team_id = sq.team_id
 	 WHERE  sq.player_id = %d
-	 GROUP  BY s.id, d.id, sq.team_id
+	   AND  EXISTS ( SELECT 1 FROM {$p}group_teams gt JOIN {$p}groups g ON g.id = gt.group_id JOIN {$p}phases ph ON ph.id = g.phase_id
+	                 WHERE gt.team_id = sq.team_id AND ph.division_id = sq.division_id )
 	 ORDER  BY s.year DESC, s.id DESC, d.sort_order ASC, d.id ASC",
-	$player_id, $player_id, $player_id, $player_id, $player_id
+	$player_id
 ) );
+/* Brojke strogo po ligi (skupine + playoff): nastupi = završene utakmice ekipe bez onih na kojima je igrač bio odsutan */
+foreach ( $career as $cr ) {
+	$cr->matches_played = $cr->goals = $cr->yellows = $cr->reds = 0;
+	$mids = Kurs_Match::team_match_ids( (int) $cr->team_id, (int) $cr->division_id );
+	if ( ! $mids ) continue;
+	$ev = $wpdb->get_row( $wpdb->prepare(
+		"SELECT SUM(event_type IN ('goal','penalty'))           AS goals,
+		        SUM(event_type = 'yellow_card')                 AS yellows,
+		        SUM(event_type IN ('red_card','second_yellow')) AS reds,
+		        COUNT(DISTINCT CASE WHEN event_type = 'absent' THEN match_id END) AS absent
+		 FROM   {$p}match_events
+		 WHERE  player_id = %d AND team_id = %d AND match_id IN (" . implode( ',', $mids ) . ')',
+		$player_id, (int) $cr->team_id
+	) );
+	$cr->matches_played = count( $mids ) - (int) $ev->absent;
+	$cr->goals          = (int) $ev->goals;
+	$cr->yellows        = (int) $ev->yellows;
+	$cr->reds           = (int) $ev->reds;
+}
 
 $current     = $career ? $career[0] : null;
 $cur_sid     = $current ? (int) $current->season_id : 0;
@@ -112,7 +116,7 @@ function igrac_div_chip( string $league, string $division ): array {
 <div class="pf">
 
 	<!-- Breadcrumb -->
-	<div class="pf-crumb"><a href="<?php echo esc_url( home_url( '/igraci/' ) ); ?>">Igrači</a> / <?php echo esc_html( $player->post_title ); ?></div>
+	<div class="pf-crumb"><?php if ( $current ) : ?><a href="<?php echo esc_url( kurs_team_url( (int) $current->team_id, (int) $current->division_id ) ); ?>"><?php echo esc_html( $current->team_name ); ?></a> / <?php endif; ?><?php echo esc_html( $player->post_title ); ?></div>
 
 	<!-- Hero -->
 	<div class="pf-hero">
@@ -125,7 +129,7 @@ function igrac_div_chip( string $league, string $division ): array {
 			<h1 class="pf-name"><?php echo esc_html( $player->post_title ); ?></h1>
 			<?php if ( $current ) : ?>
 			<div class="pf-team">
-				<a href="<?php echo esc_url( get_permalink( (int) $current->team_id ) ); ?>">
+				<a href="<?php echo esc_url( kurs_team_url( (int) $current->team_id, (int) $current->division_id ) ); ?>">
 					<?php echo igrac_crest( (int) $current->team_id, 26, 10 ); ?>
 					<span class="pf-team__name"><?php echo esc_html( $current->team_name ); ?></span>
 				</a>
@@ -173,7 +177,7 @@ function igrac_div_chip( string $league, string $division ): array {
 				<div class="pf-row pf-row--data<?php echo $cont ? ' pf-row--cont' : ''; ?>">
 					<div class="pf-season<?php echo $cont ? ' pf-season--mut' : ''; ?>"><?php echo esc_html( $row->season_name ); ?></div>
 					<div class="pf-team-cell">
-						<a href="<?php echo esc_url( get_permalink( (int) $row->team_id ) ); ?>">
+						<a href="<?php echo esc_url( kurs_team_url( (int) $row->team_id, (int) $row->division_id ) ); ?>">
 							<?php echo igrac_crest( (int) $row->team_id, 22, 9 ); ?>
 							<span><?php echo esc_html( $row->team_name ); ?></span>
 						</a>

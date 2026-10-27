@@ -75,6 +75,100 @@ document.addEventListener('DOMContentLoaded', function () {
 		try { document.execCommand('copy'); } catch (e) {}
 		document.body.removeChild(ta);
 	}
+	/* ── Selecti koji odmah šalju formu (npr. Za medije: sezona/kolo) ── */
+	document.querySelectorAll('select[data-autosubmit]').forEach(function (sel) {
+		sel.addEventListener('change', function () { if (sel.form) sel.form.submit(); });
+	});
+
+	/* ── Za medije: kartice, kopiranje HTML-a/teksta, PNG ─────────── */
+	var mediaKit = document.querySelector('.media-kit');
+	if (mediaKit) {
+		var mediaFlash = function (btn, cls) {
+			btn.classList.remove('is-busy');
+			btn.classList.add(cls || 'is-done');
+			clearTimeout(btn._mkT);
+			btn._mkT = setTimeout(function () { btn.classList.remove('is-done', 'is-failed'); }, 2200);
+		};
+		mediaKit.querySelectorAll('[data-media-tab]').forEach(function (tab) {
+			tab.addEventListener('click', function () {
+				var key = tab.getAttribute('data-media-tab');
+				mediaKit.querySelectorAll('[data-media-tab]').forEach(function (t) {
+					var on = t === tab; t.classList.toggle('is-active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+				});
+				mediaKit.querySelectorAll('[data-media-panel]').forEach(function (p) {
+					var on = p.getAttribute('data-media-panel') === key; p.classList.toggle('is-active', on); p.hidden = !on;
+				});
+			});
+		});
+		var code = mediaKit.querySelector('.media-code');
+		if (code) code.addEventListener('focus', function () { code.select(); });
+
+		mediaKit.querySelectorAll('[data-media-copy]').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var kind = btn.getAttribute('data-media-copy');
+				var src  = document.getElementById('media-src-' + kind);
+				var text = src ? src.value : '';
+				var done = function () { mediaFlash(btn); };
+				var fallback = function () { kurskcFallbackCopy(text); done(); };
+				// HTML: text/plain = kod (za blok „Prilagođeni HTML"), text/html = oblikovani sadržaj (vizualni uređivač)
+				if (kind === 'html' && window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+					navigator.clipboard.write([new ClipboardItem({
+						'text/plain': new Blob([text], { type: 'text/plain' }),
+						'text/html':  new Blob([text], { type: 'text/html' })
+					})]).then(done, fallback);
+				} else if (navigator.clipboard && navigator.clipboard.writeText) {
+					navigator.clipboard.writeText(text).then(done, fallback);
+				} else {
+					fallback();
+				}
+			});
+		});
+
+		/* PNG: html-to-image (crta preglednik kroz SVG foreignObject — točno kao na ekranu;
+		   html2canvas je Barlow tekst crtao pomaknut). Web fontovi s Google Fontsa se
+		   moraju ugraditi kao data: URL, inače slika padne na Arial → dohvati jednom
+		   samo latin + latin-ext varijante (hrvatski znakovi). */
+		var mediaFontCSS = null;
+		var getMediaFontCSS = function () {
+			if (mediaFontCSS) return mediaFontCSS;
+			var link = document.getElementById('kurskc-fonts-css');
+			if (!link || !window.fetch) return Promise.resolve('');
+			mediaFontCSS = fetch(link.href).then(function (r) { return r.text(); }).then(function (css) {
+				var blocks = css.split(/(?=\/\*\s*[\w-]+\s*\*\/)/).filter(function (b) { return /\/\*\s*latin(-ext)?\s*\*\//.test(b); });
+				return Promise.all(blocks.map(function (b) {
+					var m = b.match(/url\((https:[^)]+)\)/);
+					if (!m) return '';
+					return fetch(m[1]).then(function (r) { return r.blob(); }).then(function (blob) {
+						return new Promise(function (ok) {
+							var fr = new FileReader();
+							fr.onload = function () { ok(b.replace(m[1], fr.result)); };
+							fr.onerror = function () { ok(''); };
+							fr.readAsDataURL(blob);
+						});
+					});
+				})).then(function (parts) { return parts.join('\n'); });
+			}).catch(function () { return ''; });
+			return mediaFontCSS;
+		};
+		mediaKit.querySelectorAll('[data-media-png]').forEach(function (btn) {
+			btn.addEventListener('click', function () {
+				var el = document.getElementById(btn.getAttribute('data-media-png'));
+				if (!el || !window.htmlToImage) { mediaFlash(btn, 'is-failed'); return; }
+				btn.classList.add('is-busy');
+				var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
+				Promise.all([getMediaFontCSS(), ready]).then(function (res) {
+					return window.htmlToImage.toPng(el, { pixelRatio: 2, backgroundColor: '#ffffff', fontEmbedCSS: res[0] });
+				}).then(function (url) {
+					var a = document.createElement('a');
+					a.download = (btn.getAttribute('data-media-name') || 'kurs-rezultati') + '.png';
+					a.href = url;
+					document.body.appendChild(a); a.click(); a.remove();
+					mediaFlash(btn);
+				}).catch(function () { mediaFlash(btn, 'is-failed'); });
+			});
+		});
+	}
+
 	document.querySelectorAll('[data-copy-link]').forEach(function (btn) {
 		btn.addEventListener('click', function () {
 			var url = btn.getAttribute('data-copy-link');

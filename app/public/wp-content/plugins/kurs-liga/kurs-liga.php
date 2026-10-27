@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURS_VERSION', '1.14.2' );
+define( 'KURS_VERSION', '1.18.1' );
 define( 'KURS_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'KURS_URL',     plugin_dir_url( __FILE__ ) );
 define( 'KURS_PREFIX',  'kurs_' );
@@ -25,6 +25,7 @@ require_once KURS_DIR . 'includes/class-cpt.php';
 require_once KURS_DIR . 'includes/class-season.php';
 require_once KURS_DIR . 'includes/class-match.php';
 require_once KURS_DIR . 'includes/class-ticker.php';
+require_once KURS_DIR . 'includes/class-rounds.php';
 require_once KURS_DIR . 'includes/class-roles.php';
 
 new Kurs_CPT();

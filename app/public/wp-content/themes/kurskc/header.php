@@ -74,6 +74,7 @@ if ( class_exists( 'Kurs_Ticker' ) ) :
 				</a>
 				<div class="nav-dd" role="menu" aria-label="KC Liga — brzi pristup">
 					<a href="<?php echo esc_url( home_url( '/kc-liga/?tab=tablica#liga' ) ); ?>" role="menuitem">Tablica</a>
+					<a href="<?php echo esc_url( home_url( '/kc-liga/?tab=kola#kola' ) ); ?>" role="menuitem">Po kolima</a>
 					<a href="<?php echo esc_url( home_url( '/kc-liga/?tab=raspored#liga' ) ); ?>" role="menuitem">Raspored</a>
 					<a href="<?php echo esc_url( home_url( '/kc-liga/?tab=statistika#liga' ) ); ?>" role="menuitem">Statistika</a>
 				</div>
@@ -87,6 +88,7 @@ if ( class_exists( 'Kurs_Ticker' ) ) :
 				</a>
 				<div class="nav-dd" role="menu" aria-label="Pan Ljetna — brzi pristup">
 					<a href="<?php echo esc_url( home_url( '/pan-ljetna/?tab=tablica#liga' ) ); ?>" role="menuitem">Tablica</a>
+					<a href="<?php echo esc_url( home_url( '/pan-ljetna/?tab=kola#kola' ) ); ?>" role="menuitem">Po kolima</a>
 					<a href="<?php echo esc_url( home_url( '/pan-ljetna/?tab=raspored#liga' ) ); ?>" role="menuitem">Raspored</a>
 					<a href="<?php echo esc_url( home_url( '/pan-ljetna/?tab=statistika#liga' ) ); ?>" role="menuitem">Statistika</a>
 				</div>

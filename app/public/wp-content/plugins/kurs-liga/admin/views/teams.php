@@ -63,7 +63,7 @@ if ( $action === 'edit' && $edit_id ) {
 	$edit_team = get_post( $edit_id );
 	if ( ! $edit_team || $edit_team->post_type !== 'kurs_ekipa' ) wp_die( 'Ekipa ne postoji.' );
 
-	// Roster podaci (isti kao roster.php)
+	// Igrači ekipe po ligi (roster = igrač × ekipa × liga)
 	$division_id = absint( $_GET['division_id'] ?? 0 );
 	$contexts    = Kurs_Season::get_team_contexts( $edit_id );
 	$active_ctx  = null;
@@ -74,6 +74,8 @@ if ( $action === 'edit' && $edit_id ) {
 		$division_id = (int) $contexts[0]->division_id;
 		$active_ctx  = $contexts[0];
 	}
+	// Forme (osnovno, logo, baneri, slika) vraćaju na istu ligu — inače se gube odabrani roster i „Natrag na ligu".
+	$keep_div  = ! empty( $_GET['division_id'] ) ? "&division_id={$division_id}" : '';
 	$squad     = $division_id ? Kurs_Season::get_squad( $edit_id, $division_id ) : [];
 	$squad_ids = array_map( 'intval', array_column( $squad, 'player_id' ) );
 	$all_players = get_posts( [ 'post_type' => 'kurs_igrac', 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC', 'post_status' => 'publish' ] );
@@ -89,19 +91,22 @@ if ( $action === 'edit' && $edit_id ) {
 	global $wpdb;
 	$cap_players = $wpdb->get_results( $wpdb->prepare(
 		"SELECT DISTINCT sq.player_id, p.post_title AS name
-		 FROM {$wpdb->prefix}kurs_squads sq
+		 FROM {$wpdb->prefix}" . KURS_PREFIX . "squads sq
 		 JOIN {$wpdb->posts} p ON p.ID = sq.player_id
 		 WHERE sq.team_id = %d AND p.post_status = 'publish'
 		 ORDER BY p.post_title ASC",
 		$edit_id
 	) );
 
-	$back_url = admin_url( 'admin.php?page=kurs-teams' . ( ! empty( $_GET['updated'] ) ? '&updated=1' : '' ) );
+	/* Ako je otvoreno iz lige (division_id), „natrag" vodi na kartu Ekipe te sezone */
+	$ctx_season = $active_ctx ? (int) $active_ctx->season_id : 0;
 	?>
 	<div class="wrap kurs-wrap">
 
 		<div class="kurs-breadcrumb">
-			<a href="<?php echo admin_url( 'admin.php?page=kurs-teams' ); ?>">Ekipe</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-dashboard' ) ); ?>">KURS Liga</a>
+			<span class="kurs-breadcrumb__sep">/</span>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>">Ekipe i igrači</a>
 			<span class="kurs-breadcrumb__sep">/</span>
 			<?php echo esc_html( $edit_team->post_title ); ?>
 		</div>
@@ -109,9 +114,23 @@ if ( $action === 'edit' && $edit_id ) {
 		<div class="kurs-page-hd">
 			<div style="display:flex;align-items:center;gap:14px;">
 				<?php echo kurs_team_badge_html( $edit_id, 42 ); ?>
-				<h1 style="margin:0;"><?php echo esc_html( $edit_team->post_title ); ?></h1>
+				<div>
+					<h1 style="margin:0;"><?php echo esc_html( $edit_team->post_title ); ?></h1>
+					<div class="kurs-team-ctx">
+						<?php if ( $contexts ) : foreach ( array_slice( $contexts, 0, 4 ) as $ctx ) : ?>
+						<a class="kurs-league-tag kurs-league-tag--<?php echo Kurs_Season::is_pan_league( (string) $ctx->league ) ? 'pan' : ( stripos( $ctx->division_name, 'briga' ) !== false ? 'lbb' : 'kc' ); ?>"
+						   href="<?php echo esc_url( Kurs_Admin::hub_url( (int) $ctx->season_id, 'ekipe' ) ); ?>"><?php echo esc_html( $ctx->season_name . ' · ' . $ctx->division_name ); ?></a>
+						<?php endforeach; else : ?>
+						<span class="kurs-muted">Ne igra ni u jednoj ligi</span>
+						<?php endif; ?>
+					</div>
+				</div>
 			</div>
-			<a href="<?php echo admin_url( 'admin.php?page=kurs-teams' ); ?>" class="kurs-btn kurs-btn--ghost kurs-btn--sm">&larr; Natrag na ekipe</a>
+			<?php if ( $ctx_season && ! empty( $_GET['division_id'] ) ) : ?>
+			<a href="<?php echo esc_url( Kurs_Admin::hub_url( $ctx_season, 'ekipe' ) ); ?>" class="kurs-btn kurs-btn--ghost kurs-btn--sm">&larr; Natrag na ligu</a>
+			<?php else : ?>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>" class="kurs-btn kurs-btn--ghost kurs-btn--sm">&larr; Sve ekipe</a>
+			<?php endif; ?>
 		</div>
 
 		<?php if ( ! empty( $_GET['updated'] ) ) : ?>
@@ -131,7 +150,7 @@ if ( $action === 'edit' && $edit_id ) {
 							<?php wp_nonce_field( 'kurs_edit_team' ); ?>
 							<input type="hidden" name="kurs_action" value="edit_team">
 							<input type="hidden" name="team_id"     value="<?php echo $edit_id; ?>">
-							<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}&updated=1" ) ); ?>">
+							<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}{$keep_div}&updated=1" ) ); ?>">
 							<div class="kurs-form-col" style="gap:14px;">
 								<div>
 									<label class="kurs-field-label" style="display:block;margin-bottom:4px;">Naziv ekipe</label>
@@ -204,7 +223,7 @@ if ( $action === 'edit' && $edit_id ) {
 									<?php wp_nonce_field( 'kurs_remove_logo_' . $edit_id ); ?>
 									<input type="hidden" name="kurs_action" value="remove_team_logo">
 									<input type="hidden" name="team_id"     value="<?php echo $edit_id; ?>">
-									<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}" ) ); ?>">
+									<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}{$keep_div}" ) ); ?>">
 									<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm"
 									        onclick="return confirm('Ukloniti logo?')">&#215; Ukloni</button>
 								</form>
@@ -225,7 +244,7 @@ if ( $action === 'edit' && $edit_id ) {
 							<?php wp_nonce_field( 'kurs_save_banners_' . $edit_id ); ?>
 							<input type="hidden" name="kurs_action" value="save_team_banners">
 							<input type="hidden" name="team_id"     value="<?php echo $edit_id; ?>">
-							<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}" ) ); ?>">
+							<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}{$keep_div}" ) ); ?>">
 
 							<div id="kurs-banner-list">
 								<?php foreach ( $banners as $bn ) : ?>
@@ -271,7 +290,7 @@ if ( $action === 'edit' && $edit_id ) {
 							<?php wp_nonce_field( 'kurs_remove_photo_' . $edit_id ); ?>
 							<input type="hidden" name="kurs_action" value="remove_team_photo">
 							<input type="hidden" name="team_id"     value="<?php echo $edit_id; ?>">
-							<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}" ) ); ?>">
+							<input type="hidden" name="redirect_to" value="<?php echo esc_attr( admin_url( "admin.php?page=kurs-teams&action=edit&id={$edit_id}{$keep_div}" ) ); ?>">
 							<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm" onclick="return confirm('Ukloniti sliku momčadi?')">&#215; Ukloni</button>
 						</form>
 						<?php endif; ?>
@@ -285,7 +304,7 @@ if ( $action === 'edit' && $edit_id ) {
 			<div>
 				<div class="kurs-panel">
 					<div class="kurs-panel__head">
-						<h3 class="kurs-panel__title">Igrači</h3>
+						<h3 class="kurs-panel__title">Igrači <span class="kurs-muted" style="font-weight:400;font-style:normal;font-size:11px;text-transform:none;">— popis se vodi po ligi i sezoni</span></h3>
 						<?php if ( ! empty( $contexts ) ) : ?>
 						<form method="get" style="display:flex;gap:6px;align-items:center;">
 							<input type="hidden" name="page"   value="kurs-teams">
@@ -305,10 +324,14 @@ if ( $action === 'edit' && $edit_id ) {
 
 					<?php if ( empty( $contexts ) ) : ?>
 					<div style="padding:16px 18px;">
-						<p class="kurs-muted">Ekipa još nije raspoređena ni u jednu grupu.</p>
-						<a href="<?php echo admin_url( 'admin.php?page=kurs-seasons' ); ?>" class="kurs-btn kurs-btn--outline kurs-btn--sm">
-							Sezone → Postavi ligu
+						<p class="kurs-muted">Igrači se upisuju za ligu u kojoj ekipa igra. Ekipa još nije ni u jednoj ligi — uvrsti je na stranici natjecanja → kartica Ekipe.</p>
+						<div style="display:flex;gap:6px;flex-wrap:wrap;">
+						<?php foreach ( Kurs_Admin::HUBS as $hslug => $hleague ) : ?>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=' . $hslug . '&tab=ekipe' ) ); ?>" class="kurs-btn kurs-btn--outline kurs-btn--sm">
+							<?php echo esc_html( Kurs_Season::competition( $hleague )['label'] ?? '' ); ?> → Ekipe
 						</a>
+						<?php endforeach; ?>
+						</div>
 					</div>
 					<?php elseif ( ! $division_id ) : ?>
 					<div style="padding:16px 18px;">
@@ -316,7 +339,7 @@ if ( $action === 'edit' && $edit_id ) {
 					</div>
 					<?php else : ?>
 
-					<!-- Skriveni kontekst za JS (isti kao roster.php) -->
+					<!-- Skriveni kontekst za JS (roster) -->
 					<div id="kurs-roster-ctx"
 					     data-team-id="<?php echo $edit_id; ?>"
 					     data-division-id="<?php echo $division_id; ?>"
@@ -430,7 +453,7 @@ if ( $action === 'edit' && $edit_id ) {
 		</div>
 	</div>
 
-	<!-- Duplikat modal (kopija iz roster.php) -->
+	<!-- Duplikat modal (igrač istog imena već postoji) -->
 	<div id="kurs-dup-modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="kurs-dup-title">
 		<div class="kurs-modal-backdrop" id="kurs-dup-backdrop"></div>
 		<div class="kurs-modal-box">
@@ -448,7 +471,12 @@ if ( $action === 'edit' && $edit_id ) {
 	return; // Izlaz — ne prikazuj listu ispod
 }
 
+
 // ── LISTA EKIPA ─────────────────────────────────────────────────────────────
+// Ekipa (klub) je zajednički registar: upisuje se jednom i može igrati u više
+// sezona i natjecanja. Uz svaku piše gdje igra u AKTUALNIM sezonama.
+global $wpdb;
+$p     = $wpdb->prefix . KURS_PREFIX;
 $teams = get_posts( [
 	'post_type'      => 'kurs_ekipa',
 	'posts_per_page' => -1,
@@ -456,17 +484,46 @@ $teams = get_posts( [
 	'order'          => 'ASC',
 	'post_status'    => 'publish',
 ] );
+
+$current_ids = array_filter( array_map( fn( $l ) => (int) ( Kurs_Season::current_for_league( Kurs_Season::is_pan_league( $l ) )->id ?? 0 ), Kurs_Admin::HUBS ) );
+$where_now   = []; // team_id => [ row … ] (aktualne sezone)
+$seasons_ago = []; // team_id => broj ranijih sezona
+foreach ( $wpdb->get_results(
+	"SELECT DISTINCT gt.team_id, s.id AS season_id, s.name AS season_name, s.league, d.name AS div_name, g.name AS group_name,
+	        ( SELECT COUNT(*) FROM {$p}groups g2 WHERE g2.phase_id = g.phase_id ) AS group_count
+	 FROM {$p}group_teams gt
+	 JOIN {$p}groups g ON g.id = gt.group_id JOIN {$p}phases ph ON ph.id = g.phase_id
+	 JOIN {$p}divisions d ON d.id = ph.division_id JOIN {$p}seasons s ON s.id = d.season_id
+	 ORDER BY s.year DESC, s.id DESC"
+) as $r ) {
+	if ( in_array( (int) $r->season_id, $current_ids, true ) ) $where_now[ (int) $r->team_id ][] = $r;
+	else $seasons_ago[ (int) $r->team_id ][ (int) $r->season_id ] = true;
+}
+$players = [];
+// Igrači u aktivnim sezonama (ne zbroj kroz sve godine)
+foreach ( $wpdb->get_results( "SELECT sq.team_id, COUNT(DISTINCT sq.player_id) AS n FROM {$p}squads sq
+	JOIN {$p}divisions d ON d.id = sq.division_id JOIN {$p}seasons s ON s.id = d.season_id
+	WHERE s.status = 'active' GROUP BY sq.team_id" ) as $r ) $players[ (int) $r->team_id ] = (int) $r->n;
+
+$filter  = sanitize_key( $_GET['filter'] ?? '' );
+$n_now   = count( array_filter( $teams, fn( $t ) => ! empty( $where_now[ $t->ID ] ) ) );
+$n_free  = count( $teams ) - $n_now;
+$shown   = array_filter( $teams, fn( $t ) => $filter === 'aktualne' ? ! empty( $where_now[ $t->ID ] ) : ( $filter === 'bez' ? empty( $where_now[ $t->ID ] ) : true ) );
+$f_url   = fn( string $f ) => admin_url( 'admin.php?page=kurs-teams' . ( $f ? '&filter=' . $f : '' ) );
 ?>
 <div class="wrap kurs-wrap">
 
 	<div class="kurs-breadcrumb">
-		<a href="<?php echo admin_url( 'admin.php?page=kurs-dashboard' ); ?>">KURS Liga</a>
-		<span class="kurs-breadcrumb__sep">/</span>
-		Ekipe
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-dashboard' ) ); ?>">KURS Liga</a>
+		<span class="kurs-breadcrumb__sep">/</span> Ekipe i igrači
 	</div>
-	<div class="kurs-page-hd">
-		<h1>Ekipe</h1>
-	</div>
+	<div class="kurs-page-hd"><h1>Ekipe i igrači</h1></div>
+
+	<p class="kurs-hub-intro">
+		Ovo je <strong>popis svih klubova</strong>. Ekipa se upisuje jednom i može igrati više sezona i u oba natjecanja.
+		U ligu je uvrštavaš na stranici natjecanja (<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-kc&tab=ekipe' ) ); ?>">KC Liga → Ekipe</a>,
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-pan&tab=ekipe' ) ); ?>">Pan Ljetna liga → Ekipe</a>), a igrače uređuješ unutar ekipe — za svaku ligu posebno.
+	</p>
 
 	<?php if ( ! empty( $_GET['added'] ) ) : ?>
 	<div class="kurs-notice kurs-notice--ok">&#10003; Ekipa je dodana.</div>
@@ -474,6 +531,11 @@ $teams = get_posts( [
 	<div class="kurs-notice kurs-notice--ok">&#10003; Ekipa je ažurirana.</div>
 	<?php elseif ( ! empty( $_GET['deleted'] ) ) : ?>
 	<div class="kurs-notice kurs-notice--ok">&#10003; Ekipa je obrisana.</div>
+	<?php elseif ( ! empty( $_GET['exists'] ) && get_post_type( absint( $_GET['exists'] ) ) === 'kurs_ekipa' ) : ?>
+	<div class="notice notice-warning is-dismissible"><p>Ekipa „<?php echo esc_html( get_the_title( absint( $_GET['exists'] ) ) ); ?>" već postoji — nije dodana ponovno.
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams&action=edit&id=' . absint( $_GET['exists'] ) ) ); ?>">Otvori je &rarr;</a></p></div>
+	<?php elseif ( ! empty( $_GET['in_use'] ) ) : ?>
+	<div class="notice notice-error is-dismissible"><p>Ekipa ima <?php echo (int) $_GET['in_use']; ?> utakmica i ne može se obrisati — to bi pokvarilo ljestvice i zapisnike. Možeš joj promijeniti naziv.</p></div>
 	<?php endif; ?>
 
 	<div class="kurs-two-col">
@@ -482,38 +544,49 @@ $teams = get_posts( [
 		<div>
 			<div class="kurs-panel">
 				<div class="kurs-panel__head">
-					<h3 class="kurs-panel__title">Sve ekipe</h3>
-					<span style="font-family:var(--font-mono);font-size:9px;color:var(--ka-muted);text-transform:uppercase;">
-						<?php echo count( $teams ); ?> ukupno
-					</span>
+					<nav class="kurs-hub-sub kurs-hub-sub--inline" aria-label="Filter">
+						<a href="<?php echo esc_url( $f_url( '' ) ); ?>" class="<?php echo $filter === '' ? 'is-active' : ''; ?>">Sve <span><?php echo count( $teams ); ?></span></a>
+						<a href="<?php echo esc_url( $f_url( 'aktualne' ) ); ?>" class="<?php echo $filter === 'aktualne' ? 'is-active' : ''; ?>">Igraju sada <span><?php echo (int) $n_now; ?></span></a>
+						<a href="<?php echo esc_url( $f_url( 'bez' ) ); ?>" class="<?php echo $filter === 'bez' ? 'is-active' : ''; ?>">Bez lige <span><?php echo (int) $n_free; ?></span></a>
+					</nav>
 				</div>
 
-				<?php if ( empty( $teams ) ) : ?>
-				<div class="kurs-panel__empty">Nema ekipa. Dodaj prvu ekipu &rarr;</div>
+				<?php if ( empty( $shown ) ) : ?>
+				<div class="kurs-panel__empty"><?php echo $teams ? 'Nema ekipa za ovaj filter.' : 'Nema ekipa. Dodaj prvu ekipu →'; ?></div>
 				<?php else : ?>
 				<div class="kurs-panel__body" style="padding:0;">
-				<?php foreach ( $teams as $t ) : ?>
-				<div style="display:grid;grid-template-columns:48px 1fr auto;align-items:center;padding:10px 18px;border-bottom:1px solid #f5f5ef;gap:12px;">
+				<?php foreach ( $shown as $t ) :
+					$now_rows = $where_now[ $t->ID ] ?? [];
+					$ago      = count( $seasons_ago[ $t->ID ] ?? [] );
+				?>
+				<div class="kurs-team-row">
+					<div class="kurs-logo-cell" id="logo-cell-<?php echo $t->ID; ?>"><?php echo kurs_team_badge_html( $t->ID, 40 ); ?></div>
 
-					<div class="kurs-logo-cell" id="logo-cell-<?php echo $t->ID; ?>">
-						<?php echo kurs_team_badge_html( $t->ID, 40 ); ?>
+					<div class="kurs-team-row__main">
+						<a class="kurs-team-row__name" href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams&action=edit&id=' . $t->ID ) ); ?>"><?php echo esc_html( $t->post_title ); ?></a>
+						<div class="kurs-team-row__where">
+							<?php foreach ( $now_rows as $r ) :
+								$cls = Kurs_Season::is_pan_league( (string) $r->league ) ? 'pan' : ( stripos( $r->div_name, 'briga' ) !== false ? 'lbb' : 'kc' );
+							?>
+							<a class="kurs-league-tag kurs-league-tag--<?php echo $cls; ?>" href="<?php echo esc_url( Kurs_Admin::hub_url( (int) $r->season_id, 'ekipe' ) ); ?>"
+							   title="<?php echo esc_attr( $r->season_name ); ?>"><?php echo esc_html( $r->div_name . ( (int) $r->group_count > 1 ? ' · ' . $r->group_name : '' ) ); ?></a>
+							<?php endforeach; ?>
+							<?php if ( ! $now_rows ) : ?><span class="kurs-team-row__free">Ne igra u aktualnim sezonama</span><?php endif; ?>
+							<?php if ( $ago ) : ?><span class="kurs-muted">· ranije <?php echo (int) $ago; ?> <?php echo $ago === 1 ? 'sezona' : ( $ago < 5 ? 'sezone' : 'sezona' ); ?></span><?php endif; ?>
+						</div>
 					</div>
 
-					<div style="font-family:var(--font-cond);font-weight:800;font-size:15px;">
-						<?php echo esc_html( $t->post_title ); ?>
-					</div>
+					<div class="kurs-team-row__players" title="Igrači u rosterima aktivnih sezona"><?php echo (int) ( $players[ $t->ID ] ?? 0 ); ?> <span>igrača</span></div>
 
 					<div style="display:flex;gap:5px;align-items:center;">
-						<a href="<?php echo admin_url( 'admin.php?page=kurs-teams&action=edit&id=' . $t->ID ); ?>"
-						   class="kurs-btn kurs-btn--outline kurs-btn--sm" title="Uredi ekipu">
-							&#9998; Uredi
-						</a>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams&action=edit&id=' . $t->ID ) ); ?>"
+						   class="kurs-btn kurs-btn--outline kurs-btn--sm" title="Uredi ekipu i igrače">&#9998; Uredi</a>
 						<form method="post" style="display:inline;"
 						      onsubmit="return confirm('Sigurno želiš obrisati ekipu &quot;<?php echo esc_js( $t->post_title ); ?>&quot;?');">
 							<?php wp_nonce_field( 'kurs_delete_team' ); ?>
 							<input type="hidden" name="kurs_action" value="delete_team">
 							<input type="hidden" name="team_id"     value="<?php echo (int) $t->ID; ?>">
-							<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm"
+							<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm" title="Obriši ekipu"
 							        style="color:#c00 !important;border-color:#c00 !important;">&times;</button>
 						</form>
 					</div>
@@ -528,7 +601,7 @@ $teams = get_posts( [
 		<div>
 			<div class="kurs-panel">
 				<div class="kurs-panel__head">
-					<h3 class="kurs-panel__title">Dodaj ekipu</h3>
+					<h3 class="kurs-panel__title">Nova ekipa</h3>
 				</div>
 				<div class="kurs-panel__body" style="padding:18px;">
 					<form method="post">
@@ -547,6 +620,7 @@ $teams = get_posts( [
 							<button type="submit" class="kurs-btn kurs-btn--red">+ Dodaj ekipu</button>
 						</div>
 					</form>
+					<p class="kurs-muted" style="margin:12px 0 0;font-size:12px;">Nakon dodavanja uvrsti je u ligu na stranici natjecanja → Ekipe. Logo, trenera i igrače uređuješ klikom na „Uredi".</p>
 				</div>
 			</div>
 		</div>

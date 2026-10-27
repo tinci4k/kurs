@@ -412,6 +412,12 @@
 @media (max-width: 900px) { .kurs-setup-layout { grid-template-columns: 1fr; } }
 
 /* ── Division card ───────────────────────────────────────────────────────── */
+/* Postavi ligu — sažetak automatske strukture (kartica po ligi) */
+.kurs-structure { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 0 0 18px; }
+.kurs-structure .kurs-div-card { margin: 0; }
+.kurs-structure .kurs-div-card__name { display: flex; align-items: center; gap: 8px; }
+.kurs-round-warn { margin-left: auto; font-family: var(--font-body); font-size: 11px; font-weight: 600; color: #8a4300; background: #fff3e0; border-radius: 4px; padding: 2px 8px; font-style: normal; text-transform: none; }
+
 .kurs-div-card {
 	background: var(--ka-white);
 	border: 1.5px solid var(--ka-border);
@@ -1296,6 +1302,8 @@
 	font-size: 13px;
 }
 .kurs-notice strong { color: #7a5700; }
+.kurs-notice--ok  { background: #eef7f1; border-left-color: var(--ka-green); }
+.kurs-notice--err { background: #fdeeee; border-left-color: var(--ka-red); }
 /* ── Playoff bracket ─────────────────────────────────────────────────────── */
 .kurs-playoff-wrap { max-width: 1400px; }
 
@@ -1431,6 +1439,7 @@
 	border-top: 1px solid #f0f0ea;
 }
 .kurs-bracket__meta-label { opacity: .6; }
+.kurs-bracket__pen { font-weight: 700; color: var(--ka-dark); }
 
 .kurs-bracket__actions {
 	padding: 6px 8px;
@@ -1457,6 +1466,8 @@
 	width: 52px !important;
 	height: 38px !important;
 }
+.kurs-pm-pen-row { margin-top: 6px; }
+.kurs-pm-pen-row .kurs-pm-si { height: 30px !important; }
 
 /* Active edit button */
 .pm-edit-btn.is-active {
@@ -1978,49 +1989,6 @@ details[open].kurs-record-edit-details summary::before { content: '▾ '; }
 .kurs-edit-event:hover { background: rgba(0,0,0,.07); color: var(--ka-dark); }
 .kurs-del-event:hover  { background: rgba(218,15,30,.10); color: var(--ka-red); }
 
-/* Dodaj event */
-.kurs-add-event {
-	margin-top: 12px;
-	padding: 14px 16px;
-	background: #f5f5ef;
-	border-radius: 6px;
-	border: 1px solid var(--ka-border);
-}
-.kurs-add-event h4 {
-	font-family: var(--font-mono);
-	font-size: 9px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: .06em;
-	color: var(--ka-muted);
-	margin: 0 0 10px;
-}
-.kurs-add-event__row {
-	display: flex;
-	gap: 6px;
-	align-items: center;
-	flex-wrap: wrap;
-}
-.kurs-add-event__row select {
-	font-size: 13px;
-	height: 34px;
-	padding: 0 8px;
-	border: 1.5px solid var(--ka-border);
-	border-radius: 5px;
-	background: var(--ka-white);
-	font-family: var(--font-body);
-}
-.kurs-add-event__row input[type="number"] {
-	width: 70px;
-	height: 34px;
-	padding: 0 8px;
-	border: 1.5px solid var(--ka-border);
-	border-radius: 5px;
-	font-family: var(--font-mono);
-	font-size: 13px;
-	text-align: center;
-}
-
 /* Postave */
 .kurs-record-squads { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
 .kurs-record-squad .kurs-record-section__title {
@@ -2496,8 +2464,44 @@ input.kurs-datepicker:focus { border-color: var(--ka-red) !important; }
 .kurs-banner-row__img { width: 120px; height: 48px; object-fit: cover; border-radius: 4px; border: 1px solid var(--ka-border); flex: none; background: #fff; }
 .kurs-banner-row__link { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1.5px solid var(--ka-border); border-radius: 6px; font-family: var(--font-body); font-size: 13px; background: #fff; }
 .kurs-banner-row__link:focus { border-color: var(--ka-dark); outline: none; }
-.kurs-banner-remove { flex: none; width: 28px; height: 28px; border: 1px solid var(--ka-border); border-radius: 5px; background: #fff; color: var(--ka-muted); font-size: 16px; line-height: 1; cursor: pointer; }
-.kurs-banner-remove:hover { border-color: var(--ka-red); color: var(--ka-red); }
+.kurs-banner-remove, .kurs-ref-remove { flex: none; width: 28px; height: 28px; border: 1px solid var(--ka-border); border-radius: 5px; background: #fff; color: var(--ka-muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.kurs-banner-remove:hover, .kurs-ref-remove:hover { border-color: var(--ka-red); color: var(--ka-red); }
+
+/* Prijenos ekipa iz prethodne sezone (kartica Ekipe) */
+.kurs-carry { margin: 0 0 18px; }
+.kurs-carry > summary { cursor: pointer; list-style: none; }
+.kurs-carry > summary::-webkit-details-marker { display: none; }
+.kurs-carry > summary .kurs-panel__title::after { content: ' ▸'; color: var(--ka-muted); font-style: normal; }
+.kurs-carry[open] > summary .kurs-panel__title::after { content: ' ▾'; }
+.kurs-carry:not([open]) > summary { border-bottom: 0; }
+.kurs-carry__body { padding: 14px 18px 16px; }
+.kurs-carry__intro { margin: 0 0 12px; font-size: 12.5px; }
+.kurs-carry__rows { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 6px 18px; }
+.kurs-carry__row { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 170px; gap: 8px; align-items: center; padding: 5px 0; border-bottom: 1px solid #f0f0ea; }
+.kurs-carry__name { font-family: var(--font-cond); font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kurs-carry__was { font-family: var(--font-mono); font-size: 10px; color: var(--ka-muted); white-space: nowrap; }
+.kurs-carry__sel { width: 100%; }
+.kurs-carry__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 14px; }
+.kurs-carry__foot label { font-size: 13px; }
+.kurs-carry__quick { display: flex; gap: 6px; margin-right: auto; }
+.kurs-carry__note { margin: 10px 0 0; font-size: 11px; }
+@media (max-width: 600px) {
+	.kurs-carry__rows { grid-template-columns: 1fr; }
+	.kurs-carry__row { grid-template-columns: 22px minmax(0, 1fr) 140px; }
+	.kurs-carry__was { display: none; }
+}
+
+/* Suci sezone (Postavke natjecanja) — redovi Ime / Prezime */
+.kurs-btn[hidden] { display: none; }
+.kurs-ref-count { min-width: 24px; padding: 2px 8px; border-radius: 10px; background: var(--ka-bg); border: 1px solid var(--ka-border); font-family: var(--font-mono); font-size: 11px; text-align: center; color: var(--ka-dark); }
+.kurs-ref-rows { display: flex; flex-direction: column; gap: 6px; }
+.kurs-ref-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 28px; gap: 8px; align-items: center; }
+.kurs-ref-row__input { min-width: 0; height: 34px; padding: 0 10px; border: 1.5px solid var(--ka-border); border-radius: 6px; font-family: var(--font-body); font-size: 13px; background: var(--ka-white); }
+.kurs-ref-row__input:focus { border-color: var(--ka-dark); outline: none; }
+.kurs-ref-empty { margin: 0; padding: 14px; border: 1.5px dashed var(--ka-border); border-radius: 6px; text-align: center; color: var(--ka-muted); font-size: 12px; }
+.kurs-ref-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.kurs-ref-save { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ka-border); }
+.kurs-ref-dirty { font-family: var(--font-mono); font-size: 11px; color: var(--ka-orange); }
 .kurs-prekrsaj-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .kurs-prekrsaj-team {
 	display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -2517,3 +2521,234 @@ input.kurs-datepicker:focus { border-color: var(--ka-red) !important; }
 }
 .kurs-prekrsaj-minus:hover  { border-color: #DA0F1E; color: #DA0F1E; }
 .kurs-prekrsaj-minus:active { transform: translateY(1px); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STRANICA NATJECANJA (season-hub.php) — KC Liga / Pan Ljetna liga
+   ═══════════════════════════════════════════════════════════════════════════ */
+.kurs-hub { --hub-accent: var(--ka-red); }
+.kurs-hub-hd {
+	display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+	margin: 10px 0 0; padding: 18px 22px; background: var(--ka-dark); color: #fff;
+	border-radius: 10px 10px 0 0; border-bottom: 4px solid var(--hub-accent);
+}
+.kurs-hub-hd__id { display: flex; align-items: center; gap: 16px; }
+.kurs-hub-hd__id svg { flex: none; }
+.kurs-hub-hd h1 {
+	font-family: var(--font-cond); font-weight: 800; font-style: italic; font-size: 32px; line-height: 1;
+	text-transform: uppercase; color: #fff; margin: 0; padding: 0;
+}
+.kurs-hub-hd__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 7px; }
+.kurs-hub-hd__season { font-family: var(--font-cond); font-weight: 700; font-size: 16px; color: #e7e7e2; }
+.kurs-hub-hd__divs { font-family: var(--font-mono); font-size: 10px; color: #9a9ca4; text-transform: uppercase; letter-spacing: .04em; }
+.kurs-hub-hd__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kurs-hub-hd .kurs-btn--outline { background: transparent; color: #fff !important; border-color: #3a3c43; }
+.kurs-hub-hd .kurs-btn--outline:hover { background: #23252b; border-color: #55575f; }
+.kurs-hub-hd .kurs-btn--ghost { color: #c9cac4 !important; border-color: transparent; }
+.kurs-hub-hd .kurs-btn--ghost:hover { color: #fff !important; border-color: #55575f; }
+.kurs-hub-season-pick select {
+	min-width: 190px; height: 34px; background-color: #23252b !important; color: #fff !important;
+	border: 1px solid #3a3c43 !important; font-family: var(--font-cond); font-weight: 700; font-size: 14px;
+}
+
+.kurs-hub-tabs {
+	display: flex; gap: 2px; background: var(--ka-white); border: 1px solid var(--ka-border); border-top: 0;
+	border-radius: 0 0 10px 10px; padding: 0 12px; margin-bottom: 20px; overflow-x: auto;
+}
+.kurs-hub-tab {
+	display: inline-flex; align-items: center; gap: 7px; padding: 14px 14px 12px; white-space: nowrap;
+	font-family: var(--font-cond); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .03em;
+	color: var(--ka-muted); text-decoration: none; border-bottom: 3px solid transparent;
+}
+.kurs-hub-tab:hover { color: var(--ka-dark); }
+.kurs-hub-tab.is-active { color: var(--ka-dark); font-weight: 800; border-bottom-color: var(--hub-accent); }
+.kurs-hub-tab:focus { box-shadow: none; outline: 2px solid var(--hub-accent); outline-offset: -2px; }
+.kurs-hub-tab__count {
+	font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--ka-muted);
+	background: var(--ka-bg); border-radius: 10px; padding: 1px 7px;
+}
+.kurs-hub-tab.is-active .kurs-hub-tab__count { background: var(--ka-dark); color: #fff; }
+.kurs-hub-locked {
+	margin: -8px 0 18px; padding: 10px 14px; border-radius: 6px; background: #111317; color: #FDE206;
+	font-size: 13px;
+}
+.kurs-hub-locked a { color: #fff; }
+.kurs-hub-intro { max-width: 860px; margin: 0 0 16px; font-size: 13.5px; line-height: 1.6; color: #55575e; }
+
+/* Podnavigacija (liga / skupina / playoff; filteri) */
+.kurs-hub-sub { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 16px; }
+.kurs-hub-sub a {
+	display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 20px;
+	background: var(--ka-white); border: 1.5px solid var(--ka-border); color: var(--ka-dark); text-decoration: none;
+	font-family: var(--font-cond); font-weight: 700; font-size: 14px; text-transform: uppercase;
+}
+.kurs-hub-sub a:hover { border-color: var(--ka-dark); }
+.kurs-hub-sub a.is-active { background: var(--ka-dark); border-color: var(--ka-dark); color: #fff; }
+.kurs-hub-sub a span { font-family: var(--font-mono); font-size: 10px; opacity: .65; }
+.kurs-hub-sub__po.is-active { background: var(--ka-gold) !important; border-color: var(--ka-gold) !important; color: var(--ka-dark) !important; }
+.kurs-hub-sub--inline { margin: 0; }
+.kurs-hub-sub--inline a { padding: 5px 12px; font-size: 13px; }
+
+/* Pregled: koraci */
+.kurs-hub-steps {
+	list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 8px;
+	grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.kurs-hub-step a {
+	display: flex; align-items: flex-start; gap: 10px; height: 100%; padding: 12px 14px; border-radius: 8px;
+	background: var(--ka-white); border: 1px solid var(--ka-border); text-decoration: none; color: var(--ka-dark);
+	transition: border-color .12s, box-shadow .12s;
+}
+.kurs-hub-step a:hover { border-color: #c9c9c0; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+.kurs-hub-step__ico {
+	flex: none; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+	font-family: var(--font-cond); font-weight: 800; font-size: 14px; background: var(--ka-bg); color: var(--ka-muted);
+}
+.kurs-hub-step__txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kurs-hub-step__lbl { font-family: var(--font-cond); font-weight: 800; font-size: 14px; text-transform: uppercase; }
+.kurs-hub-step__sub { font-size: 12px; color: var(--ka-muted); line-height: 1.35; }
+.kurs-hub-step.is-done .kurs-hub-step__ico { background: var(--ka-green); color: #fff; }
+.kurs-hub-step.is-todo a { border-color: var(--hub-accent); box-shadow: inset 3px 0 0 var(--hub-accent); }
+.kurs-hub-step.is-todo .kurs-hub-step__ico { background: var(--hub-accent); color: #fff; }
+.kurs-hub-step.is-todo .kurs-hub-step__sub { color: var(--ka-dark); font-weight: 600; }
+.kurs-hub-step.is-live .kurs-hub-step__ico { background: var(--ka-gold); color: var(--ka-dark); }
+.kurs-hub-step.is-wait a { opacity: .6; }
+
+/* Pregled: lige */
+.kurs-hub-leagues { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.kurs-hub-league {
+	background: var(--ka-white); border: 1px solid var(--ka-border); border-top: 4px solid var(--lg, var(--hub-accent));
+	border-radius: 8px; padding: 16px 18px; display: flex; flex-direction: column;
+}
+.kurs-hub-league__hd { display: flex; align-items: center; gap: 12px; }
+.kurs-hub-league__hd h3 { margin: 0; font-family: var(--font-cond); font-weight: 800; font-style: italic; font-size: 20px; text-transform: uppercase; color: var(--ka-dark); }
+.kurs-hub-league__hd .kurs-muted { font-size: 12px; }
+.kurs-hub-league__prog { margin: 14px 0 10px; }
+.kurs-hub-league__bar { height: 8px; border-radius: 4px; background: var(--ka-bg); overflow: hidden; }
+.kurs-hub-league__bar span { display: block; height: 100%; background: var(--lg, var(--hub-accent)); border-radius: 4px; }
+.kurs-hub-league__prog-txt { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; font-size: 12.5px; }
+.kurs-hub-league__prog-txt strong { font-family: var(--font-cond); font-weight: 800; font-size: 14px; text-transform: uppercase; }
+.kurs-hub-league__facts { margin: 0 0 12px; display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.kurs-hub-league__facts div { display: grid; grid-template-columns: 110px 1fr; gap: 8px; font-size: 13px; }
+.kurs-hub-league__facts dt { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; color: var(--ka-muted); padding-top: 2px; }
+.kurs-hub-league__facts dd { margin: 0; font-weight: 600; color: var(--ka-dark); }
+.kurs-hub-league__facts .is-warn dt, .kurs-hub-league__facts .is-warn dd { color: var(--ka-red); }
+.kurs-hub-league__foot { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid #f0f0ea; }
+
+/* Pregled / nadzorna ploča: popisi utakmica */
+.kurs-hub-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 16px; align-items: start; }
+.kurs-panel--warn { border-color: #f0b7bb; }
+.kurs-panel--warn .kurs-panel__head { background: #fff4f4; }
+.kurs-panel--warn .kurs-panel__title { color: var(--ka-red); }
+.kurs-panel--danger { border-color: #f0c9cb; }
+.kurs-hub-match {
+	display: grid; grid-template-columns: 112px 1fr auto; align-items: center; gap: 12px;
+	padding: 10px 18px; border-bottom: 1px solid #f3f3ed; text-decoration: none; color: inherit;
+}
+.kurs-hub-match:last-child { border-bottom: 0; }
+.kurs-hub-match--link:hover { background: #fafaf6; }
+.kurs-hub-match__when { font-family: var(--font-mono); font-size: 10.5px; color: var(--ka-muted); text-transform: uppercase; }
+.kurs-hub-match__teams { font-family: var(--font-cond); font-weight: 700; font-size: 14.5px; color: var(--ka-dark); line-height: 1.25; }
+.kurs-hub-match__meta { font-family: var(--font-mono); font-size: 10px; color: var(--ka-muted); margin-top: 2px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kurs-hub-match__score { font-family: var(--font-cond); font-weight: 900; font-style: italic; font-size: 19px; color: var(--ka-dark); white-space: nowrap; }
+
+/* Ekipe: oznaka lige (KC / Liga bez briga / Pan) */
+.kurs-league-tag {
+	display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 10px; white-space: nowrap;
+	font-family: var(--font-cond); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: .02em;
+	text-decoration: none; background: #fde7e8; color: #a50c17;
+}
+a.kurs-league-tag:hover { filter: brightness(.95); }
+.kurs-league-tag--lbb { background: #f6ecd8; color: #7c5512; }
+.kurs-league-tag--pan { background: #fdebdc; color: #b3570c; }
+
+/* Ekipe: popis klubova u ligi s brojem igrača; popis svih ekipa s gumbima „uvrsti u…" */
+.kurs-assign-layout { grid-template-columns: 300px 1fr; }
+.kurs-group-team { gap: 7px; justify-content: flex-start; }
+.kurs-group-team > span { flex: 1; min-width: 0; }
+.kurs-group-team__roster {
+	flex: none; font-family: var(--font-mono); font-size: 10px; text-decoration: none; color: var(--ka-dark);
+	background: var(--ka-white); border: 1px solid var(--ka-border); border-radius: 10px; padding: 1px 7px;
+}
+.kurs-group-team__roster:hover { border-color: var(--ka-dark); }
+.kurs-group-team__roster.is-empty { color: var(--ka-red); border-color: #f0b7bb; }
+.kurs-team-list { max-height: 560px; overflow-y: auto; padding-right: 2px; }
+.kurs-team-pill { flex-wrap: wrap; row-gap: 5px; }
+.kurs-team-pill__name { flex: 1; min-width: 0; font-weight: 600; }
+.kurs-team-pill__go { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 30px; width: 100%; }
+.kurs-pool-assign {
+	border: 1px solid var(--ka-border); background: var(--ka-white); border-radius: 4px; cursor: pointer;
+	padding: 2px 8px; font-family: var(--font-cond); font-weight: 700; font-size: 11.5px; text-transform: uppercase; color: var(--ka-dark);
+}
+.kurs-pool-assign:hover { background: var(--ka-dark); border-color: var(--ka-dark); color: #fff; }
+.kurs-team-pill.is-assigned { background: transparent; opacity: .55; }
+.kurs-team-pill.is-assigned .kurs-team-pill__go { display: none; }
+.kurs-team-pill.is-assigned .kurs-team-pill__name::after { content: " ✓"; color: var(--ka-green); }
+.kurs-hub-next {
+	display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+	margin-top: 18px; padding: 14px 18px; border-radius: 8px; background: var(--ka-white); border: 1px solid var(--ka-border);
+}
+.kurs-hub-next > div:first-child { display: flex; flex-direction: column; gap: 3px; font-size: 13px; }
+.kurs-hub-next strong { font-family: var(--font-cond); font-weight: 800; font-size: 15px; text-transform: uppercase; }
+.kurs-hub-team-row { display: flex; align-items: center; gap: 8px; padding: 7px 18px; text-decoration: none; color: var(--ka-dark); }
+.kurs-hub-team-row span { flex: 1; }
+.kurs-hub-team-row em { font-style: normal; font-family: var(--font-mono); font-size: 10px; color: var(--ka-muted); }
+.kurs-hub-team-row:hover { background: #fafaf6; }
+
+/* Postavke sezone */
+.kurs-hub-settings { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .kurs-hub-settings { grid-template-columns: 1fr; } }
+
+/* Nadzorna ploča: natjecanja */
+.kurs-comp-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.kurs-comp-card { background: var(--ka-white); border: 1px solid var(--ka-border); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; }
+.kurs-comp-card__hd {
+	display: flex; align-items: center; gap: 14px; padding: 18px 20px; background: var(--ka-dark); color: #fff;
+	text-decoration: none; border-bottom: 4px solid var(--ka-red);
+}
+.kurs-comp-card--pan .kurs-comp-card__hd { border-bottom-color: var(--ka-orange); }
+.kurs-comp-card__hd:hover { background: #1b1d22; color: #fff; }
+.kurs-comp-card__hd > span { display: flex; flex-direction: column; gap: 4px; }
+.kurs-comp-card__name { font-family: var(--font-cond); font-weight: 800; font-style: italic; font-size: 26px; line-height: 1; text-transform: uppercase; }
+.kurs-comp-card__season { font-family: var(--font-mono); font-size: 11px; color: #a7a9b0; }
+.kurs-comp-card__body { padding: 14px 20px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.kurs-comp-card__div { display: flex; flex-direction: column; gap: 1px; font-size: 13px; }
+.kurs-comp-card__div strong { font-family: var(--font-cond); font-weight: 800; font-size: 15px; text-transform: uppercase; color: var(--ka-dark); }
+.kurs-comp-card__foot { display: flex; gap: 6px; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid #f0f0ea; background: #fafaf6; }
+
+/* Sve sezone */
+.kurs-season-row {
+	display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid #f3f3ed;
+	text-decoration: none; color: var(--ka-dark);
+}
+.kurs-season-row:last-child { border-bottom: 0; }
+.kurs-season-row:hover { background: #fafaf6; }
+.kurs-season-row__name { font-family: var(--font-cond); font-weight: 800; font-size: 15px; }
+.kurs-season-row__tags { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+.kurs-season-row__go { font-family: var(--font-cond); font-weight: 700; font-size: 12px; text-transform: uppercase; color: var(--ka-muted); }
+.kurs-season-row:hover .kurs-season-row__go { color: var(--ka-dark); }
+
+/* Ekipe i igrači */
+.kurs-team-row {
+	display: grid; grid-template-columns: 48px 1fr auto auto; align-items: center; gap: 12px;
+	padding: 10px 18px; border-bottom: 1px solid #f5f5ef;
+}
+.kurs-team-row__main { min-width: 0; }
+.kurs-team-row__name { font-family: var(--font-cond); font-weight: 800; font-size: 15px; color: var(--ka-dark); text-decoration: none; }
+.kurs-team-row__name:hover { color: var(--ka-red); }
+.kurs-team-row__where { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; margin-top: 3px; font-size: 11px; }
+.kurs-team-row__free { font-family: var(--font-mono); font-size: 10px; color: var(--ka-red); text-transform: uppercase; }
+.kurs-team-row__players { font-family: var(--font-cond); font-weight: 800; font-size: 18px; text-align: right; color: var(--ka-dark); white-space: nowrap; }
+.kurs-team-row__players span { font-family: var(--font-mono); font-size: 9px; font-weight: 400; color: var(--ka-muted); text-transform: uppercase; }
+.kurs-team-ctx { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+
+@media (max-width: 782px) {
+	.kurs-hub-hd { padding: 14px 16px; }
+	.kurs-hub-hd h1 { font-size: 26px; }
+	.kurs-hub-tab { padding: 12px 10px 10px; font-size: 14px; }
+	.kurs-hub-lists { grid-template-columns: 1fr; }
+	.kurs-hub-match { grid-template-columns: 1fr auto; padding: 10px 14px; }
+	.kurs-hub-match__when { grid-column: 1 / -1; }
+	.kurs-team-row { grid-template-columns: 40px 1fr auto; }
+	.kurs-team-row__players { display: none; }
+	.kurs-comp-cards { grid-template-columns: 1fr; }
+}

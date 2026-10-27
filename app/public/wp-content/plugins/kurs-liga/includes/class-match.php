@@ -10,6 +10,31 @@ class Kurs_Match {
 
 	// ── Utakmice ──────────────────────────────────────────────────────────────
 
+	/**
+	 * SQL podupit s id-jevima utakmica lige (divizije): skupine + playoff zapisnici (group_id=0).
+	 * Za „WHERE m.id IN ( … )" — utakmice se nikad ne filtriraju po ligi samo preko skupina.
+	 */
+	public static function division_match_ids_sql( int $division_id ): string {
+		global $wpdb;
+		return $wpdb->prepare(
+			'SELECT mm.id FROM ' . self::t( 'matches' ) . ' mm
+			 WHERE mm.group_id IN ( SELECT g.id FROM ' . self::t( 'groups' ) . ' g JOIN ' . self::t( 'phases' ) . ' ph ON ph.id = g.phase_id WHERE ph.division_id = %d )
+			    OR mm.id IN ( SELECT pm.match_id FROM ' . self::t( 'playoff_matches' ) . ' pm WHERE pm.division_id = %d AND pm.match_id IS NOT NULL )',
+			$division_id, $division_id
+		);
+	}
+
+	/** Id-jevi završenih utakmica ekipe u ligi (skupine + playoff). */
+	public static function team_match_ids( int $team_id, int $division_id ): array {
+		global $wpdb;
+		return array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
+			'SELECT m.id FROM ' . self::t( 'matches' ) . " m
+			 WHERE m.status = 'finished' AND ( m.home_team_id = %d OR m.away_team_id = %d )
+			   AND m.id IN ( " . self::division_match_ids_sql( $division_id ) . ' )',
+			$team_id, $team_id
+		) ) );
+	}
+
 	public static function get( int $id ): ?object {
 		global $wpdb;
 		return $wpdb->get_row(
@@ -51,6 +76,47 @@ class Kurs_Match {
 		] );
 		if ( $ok ) do_action( 'kurs_data_changed' );
 		return $ok ? (int) $wpdb->insert_id : false;
+	}
+
+	/**
+	 * Jednokružni raspored skupine (svatko sa svakim jednom), metoda kruga.
+	 * Neparan broj ekipa → „bye" (ekipa pauzira to kolo), pa 9 ekipa = 9 kola po 4 utakmice.
+	 * Postojeći parovi se preskaču, pa je sigurno pokrenuti ponovno. Vraća broj novih utakmica.
+	 */
+	public static function generate_round_robin( int $group_id ): int {
+		$ids = array_values( array_map( fn( $t ) => (int) $t->team_id, Kurs_Season::get_group_teams( $group_id ) ) );
+		if ( count( $ids ) < 2 ) return 0;
+
+		$existing = [];
+		foreach ( self::get_by_group( $group_id ) as $m ) {
+			$existing[ min( $m->home_team_id, $m->away_team_id ) . '_' . max( $m->home_team_id, $m->away_team_id ) ] = true;
+		}
+
+		if ( count( $ids ) % 2 === 1 ) $ids[] = 0; // bye
+		$count    = count( $ids );
+		$half     = $count / 2;
+		$rotation = array_slice( $ids, 1 );
+		$created  = 0;
+
+		for ( $round = 1; $round <= $count - 1; $round++ ) {
+			$rt = array_merge( [ $ids[0] ], $rotation );
+			for ( $i = 0; $i < $half; $i++ ) {
+				$h = $rt[ $i ];
+				$a = $rt[ $count - 1 - $i ];
+				if ( $h === 0 || $a === 0 ) continue;
+				$k = min( $h, $a ) . '_' . max( $h, $a );
+				if ( isset( $existing[ $k ] ) ) continue;
+				// Izmjenjuj domaćina da prva ekipa ne bude uvijek „doma"
+				if ( $i === 0 && $round % 2 === 0 ) [ $h, $a ] = [ $a, $h ];
+				self::create( $group_id, $h, $a, null, $round );
+				$existing[ $k ] = true;
+				$created++;
+			}
+			// Rotiraj: zadnji element ide na početak
+			$last = array_pop( $rotation );
+			array_unshift( $rotation, $last );
+		}
+		return $created;
 	}
 
 	public static function finish( int $id, int $home_score, int $away_score ): void {
@@ -252,7 +318,11 @@ class Kurs_Match {
 	// ── Tablica bodova ────────────────────────────────────────────────────────
 	// Računamo dynamično iz završenih utakmica. Pobjeda = 3, Remi = 1, Poraz = 0.
 
-	public static function get_standings( int $group_id ): array {
+	/**
+	 * @param int|null $max_round Ako je zadan, ljestvica „nakon N. kola" — broje se samo
+	 *                            odigrane utakmice kola ≤ N (i kartoni iz njih, za fair-play).
+	 */
+	public static function get_standings( int $group_id, ?int $max_round = null ): array {
 		global $wpdb;
 
 		$teams = $wpdb->get_results(
@@ -266,13 +336,15 @@ class Kurs_Match {
 		);
 		if ( ! $teams ) return [];
 
+		$round_sql = $max_round ? $wpdb->prepare( ' AND m.round <= %d', $max_round ) : '';
+
 		$matches = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT home_team_id, away_team_id, home_score, away_score
-				 FROM '  . self::t( 'matches' ) . '
-				 WHERE group_id = %d AND status = %s',
+				'SELECT m.home_team_id, m.away_team_id, m.home_score, m.away_score
+				 FROM '  . self::t( 'matches' ) . ' m
+				 WHERE m.group_id = %d AND m.status = %s',
 				$group_id, 'finished'
-			)
+			) . $round_sql
 		);
 
 		// Kartoni po ekipi za fair-play (kriterij 7)
@@ -283,10 +355,9 @@ class Kurs_Match {
 				        SUM( e.event_type = %s ) AS red
 				 FROM '  . self::t( 'match_events' ) . ' e
 				 JOIN '  . self::t( 'matches' )      . ' m ON m.id = e.match_id
-				 WHERE m.group_id = %d AND m.status = %s
-				 GROUP BY e.team_id',
+				 WHERE m.group_id = %d AND m.status = %s',
 				'yellow_card', 'red_card', $group_id, 'finished'
-			)
+			) . $round_sql . ' GROUP BY e.team_id'
 		);
 		$card_pts = []; // niži = bolji (3 boda žuti, 10 crveni)
 		foreach ( $cards as $c ) {
@@ -429,7 +500,7 @@ class Kurs_Match {
 		return $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT e.player_id, p.post_title AS player_name,
-				        t.post_title AS team_name, COUNT(*) AS goals
+				        MAX( e.team_id ) AS team_id, t.post_title AS team_name, COUNT(*) AS goals
 				 FROM '      . self::t( 'match_events' ) . ' e
 				 JOIN '      . self::t( 'matches' )      . ' m  ON m.id  = e.match_id
 				 JOIN '      . self::t( 'groups' )       . ' g  ON g.id  = m.group_id

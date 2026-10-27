@@ -29,84 +29,56 @@ jQuery( function ( $ ) {
 	const url   = KursAjax.url;
 	const nonce = KursAjax.nonce;
 
+	// Zaključana sezona: server odbija izmjenu (code season_locked) — javi zašto se ništa nije dogodilo.
+	$( document ).ajaxSuccess( function ( e, xhr ) {
+		const r = xhr.responseJSON;
+		if ( r && r.success === false && r.data && r.data.code === 'season_locked' ) alert( r.data.message );
+	} );
+
 	// Kontekst stranice (team_id + division_id iz roster stranice)
 	const $ctx       = $( '#kurs-roster-ctx' );
 	const TEAM_ID     = $ctx.length ? parseInt( $ctx.data( 'team-id' ) )     : 0;
 	const DIVISION_ID = $ctx.length ? parseInt( $ctx.data( 'division-id' ) ) : 0;
 
 	// ══════════════════════════════════════════════════════════════════════════
-	// Liga setup: Grupe
-	// ══════════════════════════════════════════════════════════════════════════
-
-	$( document ).on( 'click', '.js-add-group', function ( e ) {
-		e.preventDefault();
-		const $mgr     = $( this ).closest( '.kurs-groups-mgr' );
-		const phase_id = $mgr.data( 'phase-id' );
-		const $inp     = $mgr.find( '.js-group-name' );
-		const name     = $inp.val().trim();
-		if ( ! name ) { $inp.focus(); return; }
-
-		const $btn = $( this ).prop( 'disabled', true ).text( '...' );
-		$.post( url, { action: 'kurs_add_group', nonce, phase_id, name } ).done( res => {
-			if ( res.success ) {
-				$mgr.find( '.kurs-chips' ).append(
-					`<span class="kurs-chip"><span>${h( res.data.name )}</span>` +
-					`<button class="kurs-chip__del" data-group-id="${res.data.id}">&times;</button></span>`
-				);
-				$inp.val( '' ).focus();
-			}
-		} ).always( () => $btn.prop( 'disabled', false ).text( '+ Dodaj grupu' ) );
-	} );
-
-	$( document ).on( 'click', '.kurs-chip__del', function () {
-		const $chip    = $( this ).closest( '.kurs-chip' );
-		const group_id = $( this ).data( 'group-id' );
-		if ( ! confirm( 'Obriši grupu i sve utakmice u njoj?' ) ) return;
-		$.post( url, { action: 'kurs_del_group', nonce, group_id } ).done( res => {
-			if ( res.success ) $chip.remove();
-		} );
-	} );
-
-	// ══════════════════════════════════════════════════════════════════════════
-	// Playoff spots spinner
-	// ══════════════════════════════════════════════════════════════════════════
-
-	let spotsTimer = null;
-
-	function savePlayoffSpots( $row ) {
-		const group_id = $row.data( 'group-id' );
-		const spots    = parseInt( $row.find( '.kurs-spots-row__val' ).val() ) || 0;
-		const $status  = $row.find( '.kurs-spots-row__status' );
-
-		$status.text( '…' ).removeClass( 'kurs-spots-row__status--ok kurs-spots-row__status--err' );
-
-		$.post( url, { action: 'kurs_update_playoff_spots', nonce, group_id, spots } )
-			.done( res => {
-				if ( res.success ) {
-					const saved = res.data.spots;
-					$row.find( '.kurs-spots-row__val' ).val( saved );
-					$status.text( '✓' ).addClass( 'kurs-spots-row__status--ok' );
-				} else {
-					$status.text( '✗' ).addClass( 'kurs-spots-row__status--err' );
-				}
-			} )
-			.fail( () => $status.text( '✗' ).addClass( 'kurs-spots-row__status--err' ) )
-			.always( () => setTimeout( () => $status.text( '' ).removeClass( 'kurs-spots-row__status--ok kurs-spots-row__status--err' ), 2000 ) );
-	}
-
-	$( document ).on( 'input', '.kurs-spots-row__val', function () {
-		const $row = $( this ).closest( '.kurs-spots-row' );
-		clearTimeout( spotsTimer );
-		spotsTimer = setTimeout( () => savePlayoffSpots( $row ), 600 );
-	} );
-
-	// ══════════════════════════════════════════════════════════════════════════
 	// Liga setup: Dodjela ekipa grupama
 	// ══════════════════════════════════════════════════════════════════════════
 
+	/* Uvrsti ekipu u ligu/skupinu (iz pretrage u stupcu ili gumbom u popisu ekipa) */
+	function assignTeam( group_id, team_id, $btn ) {
+		const $col = $( `.kurs-group-col[data-group-id="${group_id}"]` );
+		if ( $btn ) $btn.prop( 'disabled', true );
+		return $.post( url, { action: 'kurs_assign_team', nonce, group_id, team_id } ).done( res => {
+			if ( res.success ) {
+				const d = res.data;
+				$col.find( '.kurs-group-col__teams' ).append(
+					`<div class="kurs-group-team" data-team-id="${d.team_id}">` +
+					( d.badge || '' ) +
+					`<span>${h( d.team_name )}</span>` +
+					( d.roster ? `<a class="kurs-group-team__roster" href="${d.roster}" title="Igrači ekipe u ovoj ligi">0 igr.</a>` : '' ) +
+					`<button class="kurs-btn-rm" data-group-id="${group_id}" data-team-id="${d.team_id}" title="Makni iz lige">&times;</button>` +
+					`</div>`
+				);
+				updateGroupCount( $col );
+				markPool( d.team_id, true );
+			} else {
+				alert( ( res.data && res.data.message ) || 'Ekipu nije moguće dodati.' );
+			}
+		} ).always( () => { if ( $btn ) $btn.prop( 'disabled', false ); } );
+	}
+
+	/* Popis ekipa (lijevo): označi koje su već u nekoj ligi ove sezone */
+	function markPool( team_id, assigned ) {
+		const $pill = $( `.kurs-team-pill[data-team-id="${team_id}"]` );
+		if ( ! $pill.length ) return;
+		const inAny = assigned || $( `.kurs-group-col .kurs-group-team[data-team-id="${team_id}"]` ).length > 0;
+		$pill.toggleClass( 'is-assigned', inAny );
+		const $free = $( '#kurs-pool-free-count' );
+		if ( $free.length ) $free.text( $( '.kurs-team-pill:not(.is-assigned)' ).length );
+	}
+
 	$( document ).on( 'click', '.kurs-btn-add-team', function () {
 		const $col     = $( this ).closest( '.kurs-group-col' );
-		const group_id = $col.data( 'group-id' );
 		const $hidden  = $col.find( '.kurs-team-selected-id' );
 		const team_id  = $hidden.val();
 
@@ -114,25 +86,17 @@ jQuery( function ( $ ) {
 			$col.find( '.kurs-team-search' ).focus();
 			return;
 		}
-
-		const $btn = $( this ).prop( 'disabled', true );
-		$.post( url, { action: 'kurs_assign_team', nonce, group_id, team_id } ).done( res => {
+		assignTeam( $col.data( 'group-id' ), team_id, $( this ) ).done( res => {
 			if ( res.success ) {
-				$col.find( '.kurs-group-col__teams' ).append(
-					`<div class="kurs-group-team" data-team-id="${res.data.team_id}">` +
-					`<span>${h( res.data.team_name )}</span>` +
-					`<button class="kurs-btn-rm" data-group-id="${group_id}" data-team-id="${res.data.team_id}">&times;</button>` +
-					`</div>`
-				);
-				updateGroupCount( $col );
-				// Resetiraj autocomplete polja
 				$col.find( '.kurs-team-search' ).val( '' );
 				$hidden.val( '' );
 				closeTeamAC();
-			} else {
-				alert( 'Ekipa je već u ovoj grupi.' );
 			}
-		} ).always( () => $btn.prop( 'disabled', false ) );
+		} );
+	} );
+
+	$( document ).on( 'click', '.kurs-pool-assign', function () {
+		assignTeam( $( this ).data( 'group-id' ), $( this ).closest( '.kurs-team-pill' ).data( 'team-id' ), $( this ) );
 	} );
 
 	// ══════════════════════════════════════════════════════════════════════════
@@ -245,7 +209,8 @@ jQuery( function ( $ ) {
 		const group_id = $( this ).data( 'group-id' );
 		const team_id  = $( this ).data( 'team-id' );
 		$.post( url, { action: 'kurs_remove_team', nonce, group_id, team_id } ).done( res => {
-			if ( res.success ) { $row.remove(); updateGroupCount( $col ); }
+			if ( res.success ) { $row.remove(); updateGroupCount( $col ); markPool( team_id, false ); }
+			else alert( ( res.data && res.data.message ) || 'Ekipu nije moguće maknuti.' );
 		} );
 	} );
 
@@ -275,14 +240,17 @@ jQuery( function ( $ ) {
 			if ( res.success ) {
 				const { team_id, name: team_name } = res.data;
 
-				// Dodaj u pool prikaz
+				// Dodaj u popis ekipa (na vrh, s gumbima za uvrštavanje u ligu/skupinu)
 				const initials = team_name.substring( 0, 2 ).toUpperCase();
-				$( '#kurs-team-pool-list' ).append(
+				const tpl      = document.getElementById( 'kurs-pool-assign-tpl' );
+				$( '#kurs-team-pool-list' ).prepend(
 					`<div class="kurs-team-pill" data-team-id="${team_id}">` +
 					`<span class="kurs-avatar">${h( initials )}</span>` +
-					`<span>${h( team_name )}</span>` +
+					`<span class="kurs-team-pill__name">${h( team_name )}</span>` +
+					`<span class="kurs-team-pill__go">${tpl ? tpl.innerHTML : ''}</span>` +
 					`</div>`
 				);
+				markPool( team_id, false );
 
 				// Dodaj u window.KursTeams da autocomplete odmah vidi novu ekipu
 				if ( typeof window.KursTeams !== 'undefined' ) {
@@ -290,9 +258,8 @@ jQuery( function ( $ ) {
 					window.KursTeams.sort( ( a, b ) => a.name.localeCompare( b.name, 'hr' ) );
 				}
 
-				// Ažuriraj brojač u naslovu poola
-				const currentCount = parseInt( $( '#pool-count' ).text() ) || 0;
-				$( '#pool-count' ).text( '(' + ( currentCount + 1 ) + ')' );
+				// Nova ekipa je u poolu bez lige → brojač „Bez lige u ovoj sezoni"
+				$( '#kurs-pool-free-count' ).text( ( parseInt( $( '#kurs-pool-free-count' ).text() ) || 0 ) + 1 );
 
 				$( '#new-team-name-setup' ).val( '' );
 				$msg.text( '✓ ' + team_name + ' kreirana.' ).css( 'color', '#1e6f26' );
@@ -433,6 +400,87 @@ jQuery( function ( $ ) {
 	$( document ).on( 'click', '.kurs-banner-remove', function () {
 		$( this ).closest( '.kurs-banner-row' ).remove();
 	} );
+
+	// Prijenos ekipa iz prethodne sezone (kartica Ekipe): sve kao prošle sezone / nijedna
+	$( document ).on( 'click', '.kurs-carry [data-carry]', function () {
+		const none = $( this ).data( 'carry' ) === 'none';
+		$( this ).closest( 'form' ).find( '.kurs-carry__sel' ).each( function () {
+			$( this ).val( none ? '0' : String( $( this ).data( 'default' ) ) );
+		} );
+	} );
+
+	// ══════════════════════════════════════════════════════════════════════════
+	// Suci sezone (Stranica natjecanja → Postavke) — redovi Ime / Prezime
+	// ══════════════════════════════════════════════════════════════════════════
+
+	const $refRows = $( '#kurs-ref-rows' );
+	if ( $refRows.length ) {
+		let refsDirty = false;
+		const refKey  = ( ime, prezime ) => ( ime + ' ' + prezime ).trim().toLowerCase();
+
+		function addRef( ime = '', prezime = '' ) {
+			const $row = $( $( '#kurs-ref-row-tpl' ).html() ).appendTo( $refRows );
+			const $in  = $row.find( 'input' );
+			$in.eq( 0 ).val( ime );
+			$in.eq( 1 ).val( prezime );
+			return $row;
+		}
+		// Suci prethodne sezone kojih ovdje još nema
+		function importable() {
+			const have = $refRows.find( '.kurs-ref-row' ).map( function () {
+				const $in = $( this ).find( 'input' );
+				return refKey( $in.eq( 0 ).val(), $in.eq( 1 ).val() );
+			} ).get();
+			return ( $( '#kurs-ref-import' ).data( 'refs' ) || [] ).filter( r => ! have.includes( refKey( r.ime, r.prezime ) ) );
+		}
+		function refreshImport() {
+			const n = importable().length;
+			$( '#kurs-ref-import' ).prop( 'hidden', ! n ).find( '.kurs-ref-import__n' ).text( '(' + n + ')' );
+		}
+		function refsChanged() {
+			const n = $refRows.children( '.kurs-ref-row' ).length;
+			$( '#kurs-ref-count' ).text( n );
+			$( '#kurs-ref-empty' ).prop( 'hidden', n > 0 );
+			$( '#kurs-ref-dirty' ).prop( 'hidden', false );
+			refsDirty = true;
+			refreshImport();
+		}
+
+		$( '#kurs-ref-add' ).on( 'click', function () {
+			addRef().find( 'input' ).first().trigger( 'focus' );
+			refsChanged();
+		} );
+		$refRows.on( 'click', '.kurs-ref-remove', function () {
+			$( this ).closest( '.kurs-ref-row' ).remove();
+			refsChanged();
+		} );
+		$refRows.on( 'input', 'input', refsChanged );
+
+		// Enter: Ime → Prezime → sljedeći (ili novi) redak, umjesto slanja forme
+		$refRows.on( 'keydown', 'input', function ( e ) {
+			if ( e.key !== 'Enter' ) return;
+			e.preventDefault();
+			const $row = $( this ).closest( '.kurs-ref-row' );
+			const $in  = $row.find( 'input' );
+			if ( this === $in[0] ) { $in.eq( 1 ).trigger( 'focus' ); return; }
+			let $next = $row.next( '.kurs-ref-row' );
+			if ( ! $next.length ) {
+				if ( ! $in.eq( 0 ).val().trim() && ! $in.eq( 1 ).val().trim() ) return; // prazan zadnji redak
+				$next = addRef();
+				refsChanged();
+			}
+			$next.find( 'input' ).first().trigger( 'focus' );
+		} );
+
+		$( '#kurs-ref-import' ).on( 'click', function () {
+			importable().forEach( r => addRef( r.ime, r.prezime ) );
+			refsChanged();
+		} );
+		refreshImport();
+
+		$( '#kurs-refs-editor' ).on( 'submit', () => { refsDirty = false; } );
+		$( window ).on( 'beforeunload', () => ( refsDirty ? true : undefined ) );
+	}
 
 	$( document ).on( 'click', '.kurs-photo-btn', function ( e ) {
 		e.preventDefault();
@@ -629,7 +677,7 @@ jQuery( function ( $ ) {
 					$( '#squad-jersey' ).val( '' );
 					refreshExistingPanel();
 				} else {
-					alert( res.data || 'Greška.' );
+					if ( ! ( res.data && res.data.code === 'season_locked' ) ) alert( res.data || 'Greška.' );
 				}
 			} ).always( () => $btn.prop( 'disabled', false ) );
 	} );
@@ -820,7 +868,7 @@ jQuery( function ( $ ) {
 				// Ažuriraj ime u select listi (ako je igrač tamo)
 				$( '#squad-player-select option[value="' + player_id + '"]' ).text( res.data.name );
 			} else {
-				alert( res.data || 'Greška.' );
+				if ( ! ( res.data && res.data.code === 'season_locked' ) ) alert( res.data || 'Greška.' );
 				$btn.prop( 'disabled', false );
 			}
 		} );
@@ -886,7 +934,6 @@ jQuery( function ( $ ) {
 
 	function updateSquadCount() {
 		const n = $( '#kurs-squad-list tr' ).length;
-		$( '#squad-count-label' ).text( n + ' ' + ( n === 1 ? 'igrač' : 'igrača' ) );
 		if ( n === 0 ) {
 			$( '#kurs-roster-table' ).hide();
 			$( '#squad-empty-msg' ).show();

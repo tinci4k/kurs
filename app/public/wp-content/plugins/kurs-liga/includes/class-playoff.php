@@ -207,11 +207,34 @@ class Kurs_Playoff {
 		) );
 	}
 
-	public static function finish_match( int $id, int $home_score, int $away_score ): void {
+	/** Strana pobjednika završenog meča: 'home' | 'away' | null (nije završen ili neriješeno bez penala). */
+	public static function winner_side( object $m ): ?string {
+		if ( ( $m->status ?? '' ) !== 'finished' ) return null;
+		[ $h, $a ] = [ (int) $m->home_score, (int) $m->away_score ];
+		if ( $h === $a && isset( $m->home_pen, $m->away_pen ) ) [ $h, $a ] = [ (int) $m->home_pen, (int) $m->away_pen ];
+		return $h === $a ? null : ( $h > $a ? 'home' : 'away' );
+	}
+
+	/** Penali uz rezultat za prikaz („pen. 5:4"), ili ''. */
+	public static function pen_label( object $m ): string {
+		return isset( $m->home_pen, $m->away_pen ) ? sprintf( 'pen. %d:%d', $m->home_pen, $m->away_pen ) : '';
+	}
+
+	/**
+	 * Zaključi playoff meč. Playoff mora imati pobjednika: kod neriješenog rezultata
+	 * obavezni su penali (različiti), inače se vraća greška i ništa se ne sprema.
+	 */
+	public static function finish_match( int $id, int $home_score, int $away_score, ?int $home_pen = null, ?int $away_pen = null ): bool|\WP_Error {
 		global $wpdb;
+		$draw = $home_score === $away_score;
+		if ( $draw && ( $home_pen === null || $away_pen === null || $home_pen === $away_pen ) ) {
+			return new \WP_Error( 'playoff_draw', 'Neriješeno — u playoffu upiši i rezultat penala.' );
+		}
 		$wpdb->update( self::t('playoff_matches'), [
 			'home_score' => $home_score,
 			'away_score' => $away_score,
+			'home_pen'   => $draw ? $home_pen : null,
+			'away_pen'   => $draw ? $away_pen : null,
 			'status'     => 'finished',
 		], [ 'id' => $id ] );
 		// Sinkroniziraj s wp_kurs_matches zapisnikom ako postoji
@@ -221,6 +244,7 @@ class Kurs_Playoff {
 		}
 		self::advance_winner( $id );
 		do_action( 'kurs_data_changed' );
+		return true;
 	}
 
 	public static function reopen_match( int $id ): void {
@@ -230,6 +254,8 @@ class Kurs_Playoff {
 		$wpdb->update( self::t('playoff_matches'), [
 			'home_score' => null,
 			'away_score' => null,
+			'home_pen'   => null,
+			'away_pen'   => null,
 			'status'     => 'scheduled',
 		], [ 'id' => $id ] );
 		// Sinkroniziraj s wp_kurs_matches zapisnikom ako postoji
@@ -238,14 +264,55 @@ class Kurs_Playoff {
 		do_action( 'kurs_data_changed' );
 	}
 
-	public static function update_teams( int $id, ?int $home_id, ?int $away_id, ?string $home_label, ?string $away_label ): void {
+	/**
+	 * Ručna promjena ekipa u slotu. Ako zapisnik meča već ima događaje (golovi/kartoni za stare
+	 * ekipe), ekipe se ne mijenjaju — vraća WP_Error.
+	 */
+	public static function update_teams( int $id, ?int $home_id, ?int $away_id, ?string $home_label, ?string $away_label ): bool|\WP_Error {
 		global $wpdb;
+		$pm      = self::get_match( $id );
+		$changed = $pm && ( (int) $pm->home_team_id !== (int) $home_id || (int) $pm->away_team_id !== (int) $away_id );
+		if ( $changed && $pm->match_id && self::record_has_events( (int) $pm->match_id ) ) {
+			return new \WP_Error( 'playoff_teams', 'Zapisnik ove utakmice već ima događaje — ekipe se ne mogu mijenjati.' );
+		}
 		$wpdb->update( self::t('playoff_matches'), [
 			'home_team_id' => $home_id ?: null,
 			'away_team_id' => $away_id ?: null,
 			'home_label'   => sanitize_text_field( $home_label ?? '' ) ?: null,
 			'away_label'   => sanitize_text_field( $away_label ?? '' ) ?: null,
 		], [ 'id' => $id ] );
+		self::sync_record( $id );
+		return true;
+	}
+
+	private static function record_has_events( int $match_id ): bool {
+		global $wpdb;
+		return (bool) $wpdb->get_var( $wpdb->prepare(
+			'SELECT COUNT(*) FROM ' . $wpdb->prefix . KURS_PREFIX . 'match_events WHERE match_id = %d', $match_id
+		) );
+	}
+
+	/**
+	 * Uskladi zapisnik (matches, group_id=0) s bracketom: termin uvijek, ekipe dok zapisnik nema
+	 * događaja. Slot bez obje ekipe (npr. nakon otključavanja prethodne runde) → prazan zapisnik se briše.
+	 */
+	private static function sync_record( int $id ): void {
+		global $wpdb;
+		$pm  = self::get_match( $id );
+		$mid = $pm ? (int) $pm->match_id : 0;
+		if ( ! $mid ) return;
+		$matches    = $wpdb->prefix . KURS_PREFIX . 'matches';
+		$has_events = self::record_has_events( $mid );
+		if ( ! $pm->home_team_id || ! $pm->away_team_id ) {
+			if ( ! $has_events ) {
+				$wpdb->delete( $matches, [ 'id' => $mid, 'group_id' => 0 ] );
+				$wpdb->update( self::t('playoff_matches'), [ 'match_id' => null ], [ 'id' => $id ] );
+			}
+			return;
+		}
+		$data = [ 'match_date' => $pm->match_date ];
+		if ( ! $has_events ) $data += [ 'home_team_id' => (int) $pm->home_team_id, 'away_team_id' => (int) $pm->away_team_id ];
+		$wpdb->update( $matches, $data, [ 'id' => $mid ] );
 	}
 
 	/**
@@ -298,6 +365,7 @@ class Kurs_Playoff {
 	public static function update_date( int $id, ?string $date ): void {
 		global $wpdb;
 		$wpdb->update( self::t('playoff_matches'), [ 'match_date' => $date ], [ 'id' => $id ] );
+		self::sync_record( $id );
 	}
 
 	// ── Auto-advance ─────────────────────────────────────────────────────────
@@ -311,10 +379,10 @@ class Kurs_Playoff {
 		$m = self::get_match( $match_id );
 		if ( ! $m || $m->status !== 'finished' ) return;
 
-		$winner_id   = (int) $m->home_score > (int) $m->away_score ? $m->home_team_id : $m->away_team_id;
-		$winner_name = (int) $m->home_score > (int) $m->away_score ? $m->home_name    : $m->away_name;
-
-		if ( ! $winner_id ) return; // Neriješeno — ne advance automatski (potrebno produžetke/penale)
+		$side = self::winner_side( $m );
+		if ( ! $side ) return; // neriješeno bez penala — nema prolaza (finish_match to ionako ne dopušta)
+		$winner_id = $side === 'home' ? $m->home_team_id : $m->away_team_id;
+		if ( ! $winner_id ) return;
 
 		// Odredi sljedeću rundu i slot
 		[ $next_round, $next_pos ] = self::next_slot( $m->round, (int) $m->slot );
@@ -336,6 +404,7 @@ class Kurs_Playoff {
 			$col       => $winner_id,
 			$label_col => $label,
 		], [ 'id' => $next->id ] );
+		self::sync_record( (int) $next->id );
 	}
 
 	private static function retract_winner( object $m ): void {
@@ -358,6 +427,7 @@ class Kurs_Playoff {
 			$col       => null,
 			$label_col => $label,
 		], [ 'id' => $next->id ] );
+		self::sync_record( (int) $next->id );
 	}
 
 	/**
@@ -391,8 +461,23 @@ class Kurs_Playoff {
 		) );
 	}
 
+	/**
+	 * Briše bracket ZAJEDNO s povezanim zapisnicima (wp_kurs_matches, group_id=0)
+	 * i njihovim eventima. Prije su ti zapisnici ostajali kao siročad, a ponovno
+	 * generiranje stvaralo je nove — duple utakmice.
+	 */
 	public static function reset( int $division_id ): void {
 		global $wpdb;
+		$mids = array_values( array_filter( array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
+			'SELECT match_id FROM ' . self::t('playoff_matches') . ' WHERE division_id = %d AND match_id IS NOT NULL',
+			$division_id
+		) ) ) ) );
+		if ( $mids ) {
+			$in = implode( ',', $mids ); // samo intovi
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . KURS_PREFIX . "match_events WHERE match_id IN ($in)" );
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . KURS_PREFIX . "matches WHERE group_id = 0 AND id IN ($in)" );
+		}
 		$wpdb->delete( self::t('playoff_matches'), [ 'division_id' => $division_id ] );
+		do_action( 'kurs_data_changed' );
 	}
 }

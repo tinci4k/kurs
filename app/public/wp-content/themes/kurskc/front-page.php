@@ -35,6 +35,47 @@ if ( $featured ) {
 	$grid_posts = array_slice( $news_raw, 1 );
 }
 $grid_posts = array_slice( $grid_posts, 0, 3 );
+
+/* ── Iz lige: zadnje odigrano kolo svake lige aktualnog natjecanja ─── */
+$home_rounds = [];
+$al          = function_exists( 'kurskc_active_league' ) ? kurskc_active_league() : null;
+if ( $al && class_exists( 'Kurs_Rounds' ) ) {
+	$hr_pan = Kurs_Season::is_pan_league( (string) $al['league'] );
+	foreach ( Kurs_Season::get_divisions( (int) $al['season_id'] ) as $d ) {
+		$did    = (int) $d->id;
+		$status = Kurs_Rounds::round_status( $did );
+		$r      = Kurs_Rounds::default_round( $did );
+		if ( ! $r ) continue;
+		$ms     = Kurs_Rounds::matches( $did, $r );
+		$played = ( $status[ $r ]['finished'] ?? 0 ) > 0;
+
+		// Vodeći (samo liga s jednom skupinom — Pan ima više skupina)
+		$leader = null;
+		$ph     = Kurs_Season::group_phase( $did );
+		$grps   = $ph ? Kurs_Season::get_groups( (int) $ph->id ) : [];
+		if ( $played && count( $grps ) === 1 ) {
+			$st     = Kurs_Match::get_standings( (int) $grps[0]->id );
+			$leader = $st[0] ?? null;
+		}
+		// Sljedeće kolo s neodigranim utakmicama
+		$next = null;
+		foreach ( $status as $nr => $nst ) {
+			if ( $nr > $r && $nst['finished'] < $nst['total'] ) { $next = $nr; break; }
+		}
+		$home_rounds[] = [
+			'name'    => $d->name,
+			'tone'    => $hr_pan ? 'pan' : ( stripos( $d->name, 'briga' ) !== false ? 'lbb' : 'kc' ),
+			'icon'    => $hr_pan ? 'Pan Ljetna' : $d->name,
+			'round'   => $r,
+			'played'  => $played,
+			'date'    => Kurs_Rounds::date_label( $ms ),
+			'matches' => $ms,
+			'leader'  => $leader,
+			'next'    => $next ? [ 'round' => $next, 'date' => Kurs_Rounds::date_label( Kurs_Rounds::matches( $did, $next ) ) ] : null,
+			'url'     => kurs_league_url( $did, [ 'tab' => 'kola', 'kolo' => $r ] ) . '#kola',
+		];
+	}
+}
 ?>
 
 <div class="container kurs-home">
@@ -77,7 +118,7 @@ $grid_posts = array_slice( $grid_posts, 0, 3 );
 				</div>
 				<div>
 					<div class="league-card__name">KC Liga</div>
-					<div class="league-card__cta">Tablica &middot; Raspored &rarr;</div>
+					<div class="league-card__cta">Rezultati &middot; Tablica &rarr;</div>
 				</div>
 			</a>
 			<a href="<?php echo esc_url( home_url( '/pan-ljetna/' ) ); ?>" class="league-card league-card--pan">
@@ -89,11 +130,63 @@ $grid_posts = array_slice( $grid_posts, 0, 3 );
 				</div>
 				<div>
 					<div class="league-card__name">Pan Ljetna</div>
-					<div class="league-card__cta">Tablica &middot; Raspored &rarr;</div>
+					<div class="league-card__cta">Rezultati &middot; Tablica &rarr;</div>
 				</div>
 			</a>
 		</div>
 	</div>
+
+	<?php if ( $home_rounds ) : ?>
+	<!-- ── IZ LIGE: zadnje kolo ───────────────────────────────────── -->
+	<div class="sec-head">
+		<h2 class="sec-head__title">Iz lige</h2>
+		<a href="<?php echo esc_url( home_url( '/za-medije/' ) ); ?>" class="sec-head__link">Za medije &rarr;</a>
+	</div>
+	<div class="home-rounds<?php echo count( $home_rounds ) === 1 ? ' home-rounds--single' : ''; ?>">
+		<?php foreach ( $home_rounds as $hb ) : ?>
+		<section class="home-round home-round--<?php echo esc_attr( $hb['tone'] ); ?>">
+			<a class="home-round__head" href="<?php echo esc_url( $hb['url'] ); ?>">
+				<span class="home-round__icon"><?php echo kurs_league_icon( $hb['icon'], 34 ); ?></span>
+				<span class="home-round__title">
+					<span class="home-round__league"><?php echo esc_html( $hb['name'] ); ?></span>
+					<span class="home-round__meta"><?php echo esc_html( $hb['round'] . '. kolo' . ( $hb['date'] ? ' · ' . $hb['date'] : '' ) ); ?></span>
+				</span>
+				<span class="home-round__badge"><?php echo $hb['played'] ? 'Rezultati' : 'Najava'; ?></span>
+			</a>
+			<div class="home-round__list">
+				<?php foreach ( $hb['matches'] as $m ) :
+					$done = $m->status === 'finished';
+					$hw   = $done && (int) $m->home_score > (int) $m->away_score;
+					$aw   = $done && (int) $m->away_score > (int) $m->home_score;
+				?>
+				<a class="hr-match" href="<?php echo esc_url( add_query_arg( 'match_id', (int) $m->id, home_url( '/utakmica/' ) ) ); ?>">
+					<span class="hr-match__team<?php echo $hw ? ' is-win' : ''; ?>"><?php echo esc_html( $m->home_name ); ?></span>
+					<?php if ( $done ) : ?>
+					<span class="hr-match__score"><?php echo (int) $m->home_score; ?>:<?php echo (int) $m->away_score; ?></span>
+					<?php else : ?>
+					<span class="hr-match__score hr-match__score--tbd"><?php echo $m->match_date ? esc_html( date( 'H:i', strtotime( $m->match_date ) ) ) : '–'; ?></span>
+					<?php endif; ?>
+					<span class="hr-match__team hr-match__team--away<?php echo $aw ? ' is-win' : ''; ?>"><?php echo esc_html( $m->away_name ); ?></span>
+				</a>
+				<?php endforeach; ?>
+			</div>
+			<div class="home-round__foot">
+				<?php if ( $hb['leader'] ) : ?>
+				<span>Vodi: <b><?php echo esc_html( $hb['leader']['team_name'] ); ?></b> · <?php echo (int) $hb['leader']['Pts']; ?> bod.</span>
+				<?php elseif ( $hb['next'] ) : ?>
+				<span>Sljedeće: <b><?php echo (int) $hb['next']['round']; ?>. kolo</b><?php echo $hb['next']['date'] ? ' · ' . esc_html( $hb['next']['date'] ) : ''; ?></span>
+				<?php else : ?>
+				<span></span>
+				<?php endif; ?>
+				<a href="<?php echo esc_url( $hb['url'] ); ?>">Ljestvica i strijelci &rarr;</a>
+			</div>
+			<?php if ( $hb['leader'] && $hb['next'] ) : ?>
+			<div class="home-round__next">Sljedeće: <b><?php echo (int) $hb['next']['round']; ?>. kolo</b><?php echo $hb['next']['date'] ? ' · ' . esc_html( $hb['next']['date'] ) : ''; ?></div>
+			<?php endif; ?>
+		</section>
+		<?php endforeach; ?>
+	</div>
+	<?php endif; ?>
 
 	<!-- ── NAJNOVIJE VIJESTI ──────────────────────────────────────── -->
 	<div class="sec-head">

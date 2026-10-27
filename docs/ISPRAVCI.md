@@ -21,11 +21,76 @@ Sve dolje navedeno potvrđeno je u kodu **i** u `wp-content/debug.log` prije isp
 
 Svi izmijenjeni PHP fajlovi prošli su `php -l` (PHP 8.2) bez grešaka.
 
+## 2026-10-16 — ispravci uz „Po kolima", „Za medije" i fiksnu strukturu natjecanja
+
+Pronađeno tijekom izrade pregleda po kolima (`Kurs_Rounds`) i stranice „Za medije".
+Nove značajke i pojednostavljenje backenda opisani su u `PLUGIN-KURS-LIGA.md` i `TEMA-KURSKC.md`;
+ovdje su samo **greške** koje su usput ispravljene.
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 9 | `themes/kurskc/page-utakmica.php` | Breadcrumb lige hardkodiran na `/kc-liga/?division_id=…` → za Pan ljetne utakmice vodio na KC hub. Playoff utakmice (`group_id=0`) nisu imale kontekst (JOIN po grupi vraća prazno) → breadcrumb bez lige i **prazne postave** (squad se dohvaća po `division_id`, a on je bio 0). | Breadcrumb preko `kurs_league_url( $division_id, … )` (slug `kc-liga`/`pan-ljetna` iz `seasons.league`); „N. kolo" je link na `?tab=kola&kolo=N#kola`. Za playoff meč `division_id` dolazi iz `Kurs_Playoff::find_by_match_id()` → rade postave, breadcrumb „Liga / Četvrtfinale \| Polufinale \| Finale" (→ `kolo=playoff`). |
+| 10 | `plugins/kurs-liga/includes/class-ticker.php` (`compute_podium`) | Podij prvaka (off-season status `champions`) uvijek je linkao na `/kc-liga/` — krivo kad je zadnja liga Pan ljetna. | URL preko `kurs_league_url( $division_id )` (fallback `/kc-liga/` ako helper nije učitan). |
+| 11 | `plugins/kurs-liga/includes/class-ticker.php` (`item_upcoming`) | Najava utakmica koristila `date_i18n( 'D j.n. H:i' )` → engleske kratice dana („Sat 17.10.") kad jezik WP-a nije hrvatski. | Vlastiti niz kratica `ned/pon/uto/sri/čet/pet/sub` + `date()` — neovisno o lokalizaciji WP-a. |
+| 12 | `themes/kurskc/inc/news.php` (`kurskc_active_league()`) | Oznaka aktivne lige (widget „Iz lige · uživo") ispisivala je sirovi slug natjecanja (`kc_liga · 5. kolo`). | Upit dohvaća i `d.name`; label = naziv lige/divizije („KC Liga · 5. kolo"). URL vodi na pregled tog kola (`?tab=kola&kolo=N#kola`; bez kola → `tab=tablica`), CTA widgeta „Rezultati kola · tablica →". |
+| 13 | `themes/kurskc/page-liga.php` (tab Tablica) | Tab je slijepo čitao `groups.playoff_spots` (fallback **2**) i za KC lige koje se igraju **bez playoffa** — postojeće KC skupine u bazi mogu imati 2 (DB default / divizija s defaultnim `has_playoff=1`) → prve dvije ekipe obojane kao „prolaz" + legenda „Playoff (1–2)". | Tab sada koristi `kurs_render_standings()` s `playoff_spots => 0` kad divizija nema `has_playoff` (odluka po diviziji, ne po skupini); ispod ljestvice se prikazuje bracket ako je generiran. Isto pravilo koriste „Po kolima" i „Za medije". (Nove skupine ionako nasljeđuju broj prolaznika iz divizije — `Kurs_Season::create_group()`, 0 bez playoffa.) |
+| 14 | `themes/kurskc/page-liga.php` | `?division_id=` nije validiran — divizija druge sezone/natjecanja (npr. Pan divizija na `/kc-liga/`) prikazivala se pod krivim bannerom i izbornikom sezone. | `division_id` mora pripadati odabranoj sezoni, inače se uzima prva divizija sezone. |
+| 15 | `themes/kurskc/assets/css/main.css` (Liga hub) | Na mobitelu je sadržaj huba bio širi od ekrana (horizontalni scroll) — i na postojećem tabu Tablica: `.hub-body` s `align-items:flex-start` nije rastezao glavni stupac, a stupci ljestvice nisu se mogli suziti. | `@media (max-width:900px) { .hub-body { align-items: stretch } }`; ≤600px grid ljestvice `26px minmax(0,1fr) 24px…` (ime kluba se skraćuje umjesto da gura širinu). |
+| 16 | `themes/kurskc/assets/css/main.css` (header) | Na širinama ~600–960 px izbornik (~560 px) + tražilica (230 px) nisu stali u red → header se prelijevao horizontalno. | ≤1080px tražilica postaje ikona (`.header-search-toggle` → `.site-header.search-open`); ≤880px izbornik ide u hamburger (`.site-nav.is-open`, dropdowni liga postaju statični podpopisi). |
+| 17 | `plugins/kurs-liga/includes/class-playoff.php` (`reset`) + `includes/class-season.php` (`delete_division`) | `reset()` je brisao samo `playoff_matches`; povezani zapisnici (`matches` s `group_id=0`) i njihovi eventi ostajali su kao **siročad**, a ponovno generiranje stvaralo je nove → duplicirane utakmice/golovi (npr. u statistici igrača). Brisanje divizije nije diralo playoff uopće. | `reset()` briše i povezane `matches` (`group_id=0`) + njihove `match_events` te okida `kurs_data_changed`; `delete_division()` najprije zove `Kurs_Playoff::reset()`. Confirm u `matches.php` upozorava da se brišu i zapisnici. |
+| 18 | `plugins/kurs-liga/includes/class-match.php` (`get_top_scorers`) | Upit nije vraćao `team_id` → widget „Zlatna kopačka" (`page-liga.php`) crtao je badge za ekipu `0` (generički krug umjesto grba ekipe). | Dodano `MAX(e.team_id) AS team_id` (igrač koji je u diviziji igrao za više ekipa → jedna). |
+| 19 | `plugins/kurs-liga/admin/class-admin.php` (`ajax_update_match`) | Promjena datuma/kola utakmice (inline ✎ u adminu) nije rušila cache → ticker (`Kurs_Ticker`) i „aktivna liga" (`kurskc_active_league`, transient 30 min) prikazivali su stari raspored. | Nakon `UPDATE` okida se `do_action('kurs_data_changed')`. |
+
+## 2026-10-16 — restrukturiranje admina (`KURS_VERSION` 1.16.0)
+
+Admin je preslagan po natjecanjima (stranice `kurs-kc` / `kurs-pan` s karticama, „Ekipe i igrači"
+kao registar, „Sve sezone", „Postavke"; stari slugovi samo preusmjeravaju — vidi `PLUGIN-KURS-LIGA.md` §5).
+Uz to su zatvorene rupe u integritetu ekipa — baza nema FK, pa su guardovi u admin handlerima:
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 20 | `plugins/kurs-liga/admin/class-admin.php` (`ajax_assign_team`) + `includes/class-season.php` | Ista ekipa se mogla uvrstiti u **dvije skupine iste lige** (UNIQUE je samo `group_id + team_id`) → dvaput u Pan skupinama, dupli redovi u ljestvicama, kriv playoff. Handler nije provjeravao ni zaključanu sezonu ni postoji li ekipa (`team_id` bilo koji post). | Nova `Kurs_Season::team_group_in_division($division_id, $team_id)`; handler odbija (`wp_send_json_error(['message'])`, JS `alert`): nepoznatu ekipu („Nepoznata ekipa."), zaključanu sezonu („Sezona je zaključana."), ekipu koja je već u ligi („Ekipa je već u ovoj ligi." / „…već u skupini „X" — ekipa igra samo u jednoj skupini."). Uspješan odgovor vraća i `badge` HTML + `roster` URL. |
+| 21 | `plugins/kurs-liga/admin/class-admin.php` (`ajax_remove_team`) | Ekipa s već odigranim/zakazanim utakmicama mogla se maknuti iz skupine → utakmice ostaju u rasporedu i „Po kolima", ali `get_standings()` broji samo utakmice u kojima su **obje** ekipe u `group_teams` — ekipa nestaje iz ljestvice, a protivnicima se tiho oduzmu bodovi i golovi iz utakmica s njom. Ni zaključana sezona nije bila blokirana. | Nova `Kurs_Season::team_match_count($group_id, $team_id)`; dok je > 0 handler odbija („Ekipa već ima N utakmica u ovoj ligi. Najprije ih obriši u kartici Utakmice…"). Zaključana sezona → greška. |
+| 22 | `plugins/kurs-liga/admin/class-admin.php` (`do_delete_team`) | Brisanje ekipe radilo je samo `wp_delete_post()` → **siročad**: utakmice s nepostojećim `home/away_team_id` (`Kurs_Match::get_by_group()` i admin/front popisi rade inner JOIN na `wp_posts` pa ih tiho ispuštaju; `get_standings()` ekipu više ne vidi pa preskače i sve njene utakmice — protivnicima nestanu bodovi), te zaostali redovi u `group_teams` i `squads`. | Ekipa s ijednom utakmicom u `matches` se **ne briše** (redirect `kurs-teams&in_use=N`, poruka da joj se može promijeniti naziv). Bez utakmica briše i svoje `group_teams` i `squads` retke pa tek onda post. |
+
+Usput uklonjeno (nije greška, nego mrtav kod): `admin/views/playoff.php` + `Kurs_Admin::pg_playoff()`
+(napuštena, nikad registrirana stranica `kurs-playoff`), kao i `season-setup.php`, `roster.php` i
+`pg_setup/pg_matches/pg_roster`; `matches.php` je postao `hub-matches.php`. `do_delete_match` sada
+dodatno okida `kurs_data_changed` (redundantno — `Kurs_Match::delete()` ga već okida).
+
 ## 2026-10-27 — 404 na profilima ekipa
 
 | # | Datoteka | Greška | Ispravak |
 |---|----------|--------|----------|
 | 23 | `plugins/kurs-liga/kurs-liga.php` | Klik na ekipu u ljestvici → **404**; isto `/igraci/…` i `/vijesti/`. Spremljena opcija `rewrite_rules` (94 pravila) nije imala **nijedno** CPT pravilo — generirana je u trenutku kad CPT-ovi nisu bili registrirani (vjerojatno migracija baze ili ažuriranje WP-a). Jednokratni flush (`kurs_cpt_flushed_v2`) se više nije okidao jer je opcija već bila postavljena. | Jednokratni flush zamijenjen **samoizlječenjem** na `init` 100: ako u `rewrite_rules` nema ključa `ekipe/…` (a permalinkovi nisu „plain"), `flush_rewrite_rules( false )`. Pravila su se regenerirala sama (156 pravila). |
+
+## 2026-10-27 — paket bugova i zaštita (`KURS_VERSION` 1.17.1, DB 1.11)
+
+Pronađeno pregledom organizacije admina; sve potvrđeno u kodu i testirano kroz prave handlere.
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 24 | `plugins/kurs-liga/includes/class-playoff.php` (`advance_winner`) | Neriješen playoff meč: pobjednik se računao kao `home > away ? home : away`, pa je kod remija **dalje tiho išao gost** (provjera „neriješeno" ispod nikad nije okinula). Isto pravilo u prvaku tickera, Pregledu i „Za medije". Nije bilo načina upisati penale. | Novi stupci `playoff_matches.home_pen/away_pen` (DB 1.11). `finish_match()` kod neriješenog traži različite penale, inače `WP_Error` i ništa se ne sprema (admin: `pm_error=draw` poruka). Pobjednika određuje samo `Kurs_Playoff::winner_side()`; „pen. 5:4" se prikazuje u bracketu (admin + web), zapisniku, na stranici utakmice i u „Za medije". Polja „Penali" u brzom unosu bracketa i u zapisniku playoff meča. |
+| 25 | `plugins/kurs-liga/admin/class-admin.php` (`ajax_add_squad`) | Isti igrač mogao se dodati u rostere **dvije ekipe iste lige** (UNIQUE je `player+team+division`). | Guard: igrač koji je u toj ligi već u drugoj ekipi → greška s imenom ekipe. Druga liga iste sezone i dalje dopuštena. |
+| 26 | `plugins/kurs-liga/admin/class-admin.php` + `hub-matches.php`, `match-record.php` | Zaključavanje sezone štitilo je samo dodjelu ekipa i generiranje rasporeda — utakmice, zapisnici (golovi, kartoni, suci, kapetan, odsutni, zaključi/otključaj), playoff, rosteri i brisanje sezone i dalje su se mogli mijenjati. | `guard_unlocked()` u svim tim handlerima (forma → povratak bez izmjene, AJAX → `season_locked` poruka). U zaključanoj sezoni kartica Utakmice, playoff i zapisnik skrivaju gumbe za izmjene; zapisnik ima banner. |
+| 27 | `plugins/kurs-liga/admin/views/teams.php` | Spremanje osnovnih podataka, loga, banera ili slike ekipe vraćalo je bez `division_id` → gubio se odabrani roster i „← Natrag na ligu". | `redirect_to` zadržava `division_id` kad je stranica otvorena iz lige. |
+| 28 | `plugins/kurs-liga/admin/class-admin.php` (`do_create_season`) | Nova sezona ostavljala je staru sezonu istog natjecanja „Aktivnom" → i dalje je punila „Čeka rezultat" / „Ovaj tjedan". | Starije aktivne sezone istog natjecanja (manja godina) prebacuju se u arhivu; obavijest u kartici Ekipe nove sezone (vraća se u Postavkama). Drugo natjecanje se ne dira. |
+
+## 2026-10-27 — prijenos sezone, vijesti i ostali ispravci (`KURS_VERSION` 1.18.1, tema 1.0.38)
+
+Nova značajka „Preuzmi ekipe iz sezone X” (prijenos ekipa i rostera s brojevima dresova) opisana je u `PLUGIN-KURS-LIGA.md`; ugradnja kola/ljestvice u vijesti u `TEMA-KURSKC.md` §4. Ovdje su greške:
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 29 | `themes/kurskc/single-kurs_igrac.php` | **Karijera igrača brojala je utakmice i golove ekipe iz drugih sezona/liga**: spoj na utakmice (`matches.group_id = g.id`) nije bio ograničen na ligu retka. Npr. Martin Kolarić (Klikaj.hr u KC i Pan) — za KC 2026/2027 prikazano 4 gola / 6 utakmica umjesto 3 / 5. „Utak.” je brojao i utakmice na kojima je igrač bio odsutan; playoff se nije brojao. | Redovi iz `squads` (samo lige u kojima je ekipa uvrštena), brojke po retku preko `Kurs_Match::team_match_ids()` (skupine + playoff) minus `absent`. |
+| 30 | `themes/kurskc/single-kurs_ekipa.php` | Profil ekipe (forma, sljedeća utakmica, strijelci, sve utakmice, statistika) išao je samo preko skupina — **playoff utakmice ekipe nisu se vidjele**; oznaka uvijek „N. kolo”. | `Kurs_Match::division_match_ids_sql()` u svim upitima; `kurs_round_label()` („Četvrtfinale”…). |
+| 31 | `plugins/kurs-liga/includes/class-playoff.php`, `admin/class-admin.php` | Bracket i zapisnik playoff meča vodili su ekipe i termin odvojeno: promjena termina/ekipa u bracketu ili prolaz pobjednika nije mijenjao zapisnik (i obrnuto); otvaranje ranije runde ostavljalo je zapisnik sa starom ekipom. Zapisnik je playoff meču upisivao „kolo”. | `sync_record()` u oba smjera; prazan zapisnik se briše kad slot ostane bez ekipe; promjena ekipa odbijena ako zapisnik ima događaje; zapisnik playoffa prikazuje rundu umjesto „Kolo 0” i nema polje kola. |
+| 32 | `includes/helpers.php` (`kurs_render_standings`), `page-utakmica.php`, `single-kurs_igrac.php`, `inc/news.php` | Linkovi na ekipu bez lige → s ljestvice stare sezone otvarao se profil u najnovijoj sezoni. Breadcrumb profila igrača i guardovi vodili su na nepostojeće `/igraci/` i `/ekipe/` (404). | Novi helper `kurs_team_url($team_id, $division_id)`; breadcrumb na trenutnu ekipu; guardovi na naslovnicu. |
+| 33 | `themes/kurskc/inc/news.php` | „Ugradi tablicu / ljestvicu” u vijestima ugrađivala je samo **aktualnu** ljestvicu (vijest o 5. kolu kasnije je pokazivala drugu tablicu), nije se moglo ugraditi kolo (rezultati, ljestvica nakon kola, strijelci) kao u „Za medije”, a bracket se nudio i ligama bez playoffa. | Novi izbornik liga → prikaz (vidi `TEMA-KURSKC.md` §4), zamrznuto na kolo; shortcode `[kurs_kolo]`; stari zapis i dalje radi. |
+| 34 | `plugins/kurs-liga/admin/class-admin.php` (`do_add_team`, `do_edit_season`, `ajax_set_logo/photo`) | Forma „Nova ekipa” u „Ekipe i igrači” nije provjeravala postoji li ekipa istog imena (brzo dodavanje na stranici natjecanja jest). Promjena godine sezone mogla je napraviti dvije sezone istog natjecanja iste godine. Logo/slika mogli su se postaviti na bilo koji post (npr. igrača). | Duplikat → `exists=ID` obavijest s linkom; `year_taken` obavijest; provjera `kurs_ekipa` + `wp_attachment_is_image`. |
+| 35 | `admin/views/hub-matches.php`, `match-record.php`, `admin.js`, `teams.php` | Generiranje playoffa bez upozorenja dok skupine nisu odigrane; potvrda „Otključaj za ispravke” tvrdila je da rezultat ostaje u tablici (ne ostaje — računa se samo završena); brojač „Bez lige u ovoj sezoni” nije rastao za novu ekipu (JS na nepostojeći `#pool-count`); „N igrača” u popisu ekipa zbrajalo je sve sezone. | Upozorenje s brojem neodigranih; ispravna poruka; brojač `#kurs-pool-free-count`; broj igrača u aktivnim sezonama. |
+
+Usklađeni nazivi: akcije nad utakmicom su **Završi utakmicu** / **Otvori za ispravak** (prije „Zaključi” / „Otključaj”, lako zamjenjivo sa „Zaključaj sezonu”); suci u zapisniku „Promijeni”; „Uvrsti ekipe u skupinu”. Uklonjen mrtav kod: `ajax_set_banner` (+ `wp_ajax_kurs_set_banner`), `do_remove_team_banner` (+ akcija `remove_team_banner`), skriveni stari obrazac „Dodaj gol / event” u zapisniku (+ CSS `.kurs-add-event*`), JS `#squad-count-label`.
 
 ## Još uvijek otvoreno (svjesno NIJE dirano)
 
@@ -35,9 +100,6 @@ Ovo su rizičnije izmjene ili dizajnerske odluke, ostavljene namjerno:
   zahtijeva migraciju; bezopasno je pa ostaje.
 - **Playoff runda `3rd`** (utakmica za 3. mjesto) — postoji u shemi i `ORDER BY`, ali se
   nikad ne generira. Nedovršena značajka, ne greška.
-- **`admin/views/playoff.php` + `Kurs_Admin::pg_playoff()`** — napušten kod koji duplicira
-  playoff prikaz iz `matches.php`. Sada je nedostupan (link #6 repointan), ali metoda i
-  view i dalje postoje. Kandidat za uklanjanje u zasebnom čišćenju.
 - **`playoff_matches.match_id BIGINT` vs `matches.id INT`** — neusklađenost tipova FK;
   kozmetički, ALTER na postojećim podacima je rizičan.
 - **`Kurs_Match::reopen()` ne briše rezultat** (za razliku od `Kurs_Playoff::reopen_match()`)
@@ -45,3 +107,6 @@ Ovo su rizičnije izmjene ili dizajnerske odluke, ostavljene namjerno:
   uneseni rezultat pri otključavanju za ispravak.
 - **`strip_tags(): Passing null`** deprecation iz `wp-admin/admin-header.php` — dolazi iz
   WP jezgre (skrivene podstranice s `parent=null`), nije čisto rješivo iz plugina.
+- **`Kurs_Season::update()`** i dalje prihvaća `league`; samo admin forma (`do_edit_season`) ga
+  više ne šalje. Natjecanje sezone se mijenja jedino izravno u bazi — i tada `scaffold()` ne
+  prepravlja postojeće lige/skupine.

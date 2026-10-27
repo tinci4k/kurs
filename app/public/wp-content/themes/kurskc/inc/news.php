@@ -116,7 +116,7 @@ function kurskc_active_league(): ?array {
 	$p   = $wpdb->prefix . 'kurs_';
 	$now = current_time( 'mysql' );
 	$row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT m.round, s.name AS season_name, s.league AS league, s.id AS season_id, d.id AS division_id,
+		"SELECT m.round, s.name AS season_name, s.league AS league, s.id AS season_id, d.id AS division_id, d.name AS division_name,
 		        ABS( TIMESTAMPDIFF( MINUTE, m.match_date, %s ) ) AS dist
 		 FROM   {$p}matches m
 		 JOIN   {$p}groups  g  ON g.id  = m.group_id
@@ -137,11 +137,15 @@ function kurskc_active_league(): ?array {
 		'season_id'   => (int) $row->season_id,
 		'division_id' => (int) $row->division_id,
 		'short'       => $is_pan ? 'LJ' : 'KC',
-		'label'       => $row->league . ( $row->round ? ' · ' . (int) $row->round . '. kolo' : '' ),
+		'label'       => $row->division_name . ( $row->round ? ' · ' . (int) $row->round . '. kolo' : '' ),
+		// vodi na pregled tog kola (rezultati + ljestvica nakon kola); bez kola → tablica
 		'url'         => add_query_arg(
-			[ 'season_id' => (int) $row->season_id, 'division_id' => (int) $row->division_id, 'tab' => 'tablica' ],
+			array_merge(
+				[ 'season_id' => (int) $row->season_id, 'division_id' => (int) $row->division_id ],
+				$row->round ? [ 'tab' => 'kola', 'kolo' => (int) $row->round ] : [ 'tab' => 'tablica' ]
+			),
 			home_url( '/' . $slug . '/' )
-		),
+		) . ( $row->round ? '#kola' : '' ),
 	];
 	set_transient( 'kurskc_active_league', $data, 30 * MINUTE_IN_SECONDS );
 	return $data;
@@ -158,54 +162,88 @@ add_action( 'add_meta_boxes', function () {
 function kurskc_news_opts_box( $post ): void {
 	wp_nonce_field( 'kurskc_news_meta', 'kurskc_news_nonce' );
 	$featured = (int) get_post_meta( $post->ID, '_kurs_featured', true );
-	$embed    = (string) get_post_meta( $post->ID, '_kurs_embed', true ); // "", "standings:ID", "bracket:ID"
+	$embed    = kurskc_embed_parse( (string) get_post_meta( $post->ID, '_kurs_embed', true ) );
 
 	echo '<p><label><input type="checkbox" name="kurs_featured" value="1" ' . checked( $featured, 1, false ) . '> ';
 	echo '<strong>Izdvoji na naslovnici</strong> (hero)</label></p>';
 	echo '<p style="color:#666;font-size:12px;margin:0 0 12px;">Ako je više objava izdvojeno, prikazuje se najnovija.</p>';
 
-	echo '<p><label for="kurs_embed"><strong>Ugradi tablicu / ljestvicu:</strong></label><br>';
-	echo '<select name="kurs_embed" id="kurs_embed" style="width:100%;max-width:100%;">';
+	echo '<p style="margin:0 0 6px;"><strong>Ugradi iz lige</strong> <span style="color:#666;">(ispod teksta objave)</span></p>';
+	if ( ! class_exists( 'Kurs_Season' ) || ! class_exists( 'Kurs_Rounds' ) ) {
+		echo '<p style="color:#666;font-size:12px;">Plugin KURS Liga nije aktivan.</p>';
+		return;
+	}
+	/* Liga → prikaz (kolo, ljestvica nakon kola…); JS puni drugi izbornik i skriveno polje kurs_embed */
+	$opts    = kurskc_embed_options();
+	$cur_div = (int) ( $embed['division_id'] ?? 0 );
+	if ( ( $embed['type'] ?? '' ) === 'standings' && isset( $opts[ $cur_div ] ) ) { // stari zapis ostaje odabran
+		array_unshift( $opts[ $cur_div ]['items'], [ $embed['value'], 'Ljestvica skupine (uvijek aktualna)' ] );
+	}
+	echo '<input type="hidden" name="kurs_embed" id="kurs_embed" value="' . esc_attr( $embed['value'] ?? '' ) . '">';
+	echo '<select id="kurs_embed_div" style="width:100%;max-width:100%;margin-bottom:6px;" aria-label="Liga">';
 	echo '<option value="">— ništa —</option>';
+	$season = null;
+	foreach ( $opts as $did => $o ) {
+		if ( $o['season'] !== $season ) {
+			if ( $season !== null ) echo '</optgroup>';
+			$season = $o['season'];
+			echo '<optgroup label="' . esc_attr( $season ) . '">';
+		}
+		printf( '<option value="%d" %s>%s</option>', (int) $did, selected( $cur_div, (int) $did, false ), esc_html( $o['division'] ) );
+	}
+	if ( $season !== null ) echo '</optgroup>';
+	echo '</select>';
+	echo '<select id="kurs_embed_what" style="width:100%;max-width:100%;" aria-label="Što ugraditi" hidden></select>';
+	echo '<script type="application/json" id="kurs_embed_opts">' . wp_json_encode( $opts, JSON_HEX_TAG | JSON_HEX_AMP ) . '</script>';
+	echo '<p style="color:#666;font-size:12px;margin:8px 0 0;">Kolo i „ljestvica nakon kola" ostaju na stanju tog kola — vijest i kasnije prikazuje tadašnju tablicu. '
+		. 'Ručno u tekst: <code>[kurs_kolo division_id="X" kolo="N"]</code> (<code>prikaz="tablica"</code> ili <code>"rezultati"</code>).</p>';
+}
 
-	if ( class_exists( 'Kurs_Season' ) ) {
-		// Grupe (ljestvice)
-		echo '<optgroup label="Ljestvica grupe">';
-		foreach ( Kurs_Season::all() as $s ) {
-			foreach ( Kurs_Season::get_divisions( (int) $s->id ) as $d ) {
-				foreach ( Kurs_Season::get_phases( (int) $d->id ) as $ph ) {
-					foreach ( Kurs_Season::get_groups( (int) $ph->id ) as $g ) {
-						$val = 'standings:' . (int) $g->id;
-						printf( '<option value="%s" %s>%s</option>', esc_attr( $val ), selected( $embed, $val, false ),
-							esc_html( "{$s->name} · {$d->name} · {$g->name}" ) );
-					}
+/**
+ * Mogućnosti ugradnje po ligi, najnovije sezone prve:
+ * [ division_id => [ 'season' => naziv, 'division' => naziv, 'items' => [ [ vrijednost, oznaka ], … ] ] ].
+ * Vrijednosti: round|table|results:DIV:KOLO, live|schedule|bracket:DIV.
+ */
+function kurskc_embed_options(): array {
+	$out = [];
+	foreach ( Kurs_Season::all() as $s ) {
+		foreach ( Kurs_Season::get_divisions( (int) $s->id ) as $d ) {
+			$did   = (int) $d->id;
+			$items = $upcoming = [];
+			foreach ( array_reverse( Kurs_Rounds::round_status( $did ), true ) as $r => $st ) {
+				if ( $st['finished'] ) { // odigrana kola: zadnje prvo (zadani odabir)
+					$items[] = [ "round:$did:$r",   "$r. kolo — rezultati, ljestvica i strijelci" ];
+					$items[] = [ "table:$did:$r",   "Ljestvica nakon $r. kola" ];
+					$items[] = [ "results:$did:$r", "$r. kolo — samo rezultati" ];
+				} else {                 // nadolazeća: od sljedećeg kola nadalje
+					array_unshift( $upcoming, [ "results:$did:$r", "$r. kolo — najava utakmica" ] );
 				}
 			}
+			$items = array_merge( $items, $upcoming );
+			$items[] = [ "live:$did", 'Ljestvica — uvijek aktualna' ];
+			$items[] = [ "schedule:$did", 'Cijeli raspored' ];
+			if ( ! empty( $d->has_playoff ) ) $items[] = [ "bracket:$did", 'Playoff (bracket)' ];
+			$out[ $did ] = [ 'season' => $s->name, 'division' => $d->name, 'items' => $items ];
 		}
-		echo '</optgroup>';
-		// Divizije (playoff bracket)
-		echo '<optgroup label="Playoff ljestvica (bracket)">';
-		foreach ( Kurs_Season::all() as $s ) {
-			foreach ( Kurs_Season::get_divisions( (int) $s->id ) as $d ) {
-				$val = 'bracket:' . (int) $d->id;
-				printf( '<option value="%s" %s>%s</option>', esc_attr( $val ), selected( $embed, $val, false ),
-					esc_html( "{$s->name} · {$d->name}" ) );
-			}
-		}
-		echo '</optgroup>';
-		// Divizije (raspored)
-		echo '<optgroup label="Raspored divizije">';
-		foreach ( Kurs_Season::all() as $s ) {
-			foreach ( Kurs_Season::get_divisions( (int) $s->id ) as $d ) {
-				$val = 'schedule:' . (int) $d->id;
-				printf( '<option value="%s" %s>%s</option>', esc_attr( $val ), selected( $embed, $val, false ),
-					esc_html( "{$s->name} · {$d->name}" ) );
-			}
-		}
-		echo '</optgroup>';
 	}
-	echo '</select></p>';
-	echo '<p style="color:#666;font-size:12px;margin:6px 0 0;">Prikazuje se ispod teksta objave. Možeš i ručno ubaciti <code>[kurs_standings group_id="X"]</code> ili <code>[kurs_bracket division_id="Y"]</code>.</p>';
+	return $out;
+}
+
+/** _kurs_embed → [ type, division_id, round, value(, group_id) ] ili []. Stari zapis „standings:SKUPINA" i dalje vrijedi. */
+function kurskc_embed_parse( string $v ): array {
+	if ( preg_match( '/^(round|table|results):(\d+):(\d+)$/', $v, $m ) ) {
+		return [ 'type' => $m[1], 'division_id' => (int) $m[2], 'round' => (int) $m[3], 'value' => $v ];
+	}
+	if ( preg_match( '/^(live|schedule|bracket):(\d+)$/', $v, $m ) ) {
+		return [ 'type' => $m[1], 'division_id' => (int) $m[2], 'round' => 0, 'value' => $v ];
+	}
+	if ( preg_match( '/^standings:(\d+)$/', $v, $m ) ) {
+		global $wpdb;
+		$p   = $wpdb->prefix . 'kurs_';
+		$div = (int) $wpdb->get_var( $wpdb->prepare( "SELECT ph.division_id FROM {$p}groups g JOIN {$p}phases ph ON ph.id = g.phase_id WHERE g.id = %d", (int) $m[1] ) );
+		return [ 'type' => 'standings', 'group_id' => (int) $m[1], 'division_id' => $div, 'round' => 0, 'value' => $v ];
+	}
+	return [];
 }
 
 function kurskc_gallery_box( $post ): void {
@@ -234,8 +272,7 @@ add_action( 'save_post_vijest', function ( $post_id ) {
 	update_post_meta( $post_id, '_kurs_featured', empty( $_POST['kurs_featured'] ) ? 0 : 1 );
 
 	$embed = isset( $_POST['kurs_embed'] ) ? sanitize_text_field( wp_unslash( $_POST['kurs_embed'] ) ) : '';
-	if ( $embed && ! preg_match( '/^(standings|bracket|schedule):\d+$/', $embed ) ) $embed = '';
-	update_post_meta( $post_id, '_kurs_embed', $embed );
+	update_post_meta( $post_id, '_kurs_embed', kurskc_embed_parse( $embed ) ? $embed : '' );
 
 	$gallery = isset( $_POST['kurs_gallery'] ) ? (string) wp_unslash( $_POST['kurs_gallery'] ) : '';
 	$gallery = implode( ',', array_filter( array_map( 'intval', explode( ',', $gallery ) ) ) );
@@ -279,24 +316,103 @@ jQuery(function($){
     $('#'+$wrap.data('target')).val('');
     $wrap.find('.kurs-gal-preview').empty();
   });
+  // Ugradnja iz lige: liga → prikaz (kolo, ljestvica nakon kola…) → skriveno polje kurs_embed
+  var $div=$('#kurs_embed_div'), $what=$('#kurs_embed_what'), $val=$('#kurs_embed');
+  if($div.length){
+    var opts=JSON.parse($('#kurs_embed_opts').text()||'{}');
+    var fill=function(keep){
+      var d=$div.val(); $what.empty();
+      if(!d||!opts[d]){ $what.prop('hidden',true); $val.val(''); return; }
+      opts[d].items.forEach(function(it){ $('<option>').val(it[0]).text(it[1]).appendTo($what); });
+      if(keep&&$what.find('option').filter(function(){return this.value===keep;}).length) $what.val(keep);
+      $what.prop('hidden',false); $val.val($what.val());
+    };
+    $div.on('change',function(){ fill(null); });
+    $what.on('change',function(){ $val.val($what.val()); });
+    fill($val.val());
+  }
 });
 JS;
 }
 
-/* ── Ispis ugrađene tablice/bracketa (ispod teksta objave) ────────────────── */
+/* ── Ispis ugrađenog sadržaja lige (ispod teksta objave) ──────────────────── */
 function kurskc_post_embed_html( int $post_id ): string {
-	$embed = (string) get_post_meta( $post_id, '_kurs_embed', true );
-	if ( ! $embed || ! preg_match( '/^(standings|bracket|schedule):(\d+)$/', $embed, $m ) ) return '';
-	if ( $m[1] === 'standings' && function_exists( 'kurs_render_standings' ) ) {
-		return '<div class="post-embed">' . kurs_render_standings( (int) $m[2], [ 'show_title' => true ] ) . '</div>';
+	$html = kurskc_embed_render( kurskc_embed_parse( (string) get_post_meta( $post_id, '_kurs_embed', true ) ) );
+	return $html ? '<div class="post-embed">' . $html . '</div>' : '';
+}
+
+/**
+ * HTML ugradnje (meta okvir vijesti i [kurs_kolo]). Kolo / ljestvica nakon kola računaju se do tog
+ * kola (Kurs_Rounds), kao na tabu „Po kolima" i u „Za medije" — ne mijenjaju se s kasnijim kolima.
+ */
+function kurskc_embed_render( array $e ): string {
+	if ( ! $e || ! class_exists( 'Kurs_Rounds' ) || ! function_exists( 'kurs_render_standings' ) ) return '';
+	$did = (int) $e['division_id'];
+	switch ( $e['type'] ) {
+		case 'standings': return kurs_render_standings( (int) $e['group_id'], [ 'show_title' => true ] );
+		case 'bracket':   return kurs_render_playoff_bracket( $did );
+		case 'schedule':  return kurs_render_schedule( $did );
 	}
-	if ( $m[1] === 'bracket' && function_exists( 'kurs_render_playoff_bracket' ) ) {
-		return '<div class="post-embed">' . kurs_render_playoff_bracket( (int) $m[2] ) . '</div>';
-	}
-	if ( $m[1] === 'schedule' && function_exists( 'kurs_render_schedule' ) ) {
-		return '<div class="post-embed">' . kurs_render_schedule( (int) $m[2] ) . '</div>';
-	}
-	return '';
+	$div    = $did ? Kurs_Season::get_division( $did ) : null;
+	$season = $div ? Kurs_Season::get( (int) $div->season_id ) : null;
+	if ( ! $div || ! $season ) return '';
+	$spots  = empty( $div->has_playoff ) ? 0 : null; // lige bez playoffa — bez oznake prolaza
+	$kicker = stripos( $season->name, $div->name ) !== false ? $season->name : $season->name . ' · ' . $div->name;
+	$r      = (int) $e['round'];
+	$type   = $e['type'];
+	$st     = Kurs_Rounds::round_status( $did )[ $r ] ?? [ 'total' => 0, 'finished' => 0 ];
+	$title  = $type === 'live' ? 'Ljestvica' : ( $type === 'table' ? "Ljestvica nakon $r. kola" : "$r. kolo" );
+	$date   = $type === 'live' ? '' : Kurs_Rounds::date_label( Kurs_Rounds::matches( $did, $r ) );
+	$more   = $type === 'live'
+		? kurs_league_url( $did, [ 'tab' => 'tablica' ] )
+		: kurs_league_url( $did, [ 'tab' => 'kola', 'kolo' => $r ] ) . '#kola';
+	if ( $type !== 'live' && ! $st['total'] ) return '';
+	ob_start(); ?>
+	<div class="round-head">
+		<div>
+			<div class="round-head__kicker"><?php echo esc_html( $kicker ); ?></div>
+			<h2 class="round-head__title"><?php echo esc_html( $title ); ?></h2>
+			<?php if ( $date ) : ?><div class="round-head__date"><?php echo esc_html( $date ); ?></div><?php endif; ?>
+		</div>
+	</div>
+	<?php if ( $type === 'live' ) :
+		foreach ( Kurs_Season::get_phases( $did ) as $ph ) {
+			$groups = Kurs_Season::get_groups( (int) $ph->id );
+			foreach ( $groups as $g ) {
+				echo kurs_render_standings( (int) $g->id, [ 'title' => count( $groups ) > 1 ? $g->name : '', 'playoff_spots' => $spots ] );
+			}
+		}
+	else :
+		if ( $type !== 'table' ) : ?>
+	<section class="round-sec">
+		<h3 class="round-sec__title"><?php echo $st['finished'] ? 'Rezultati' : 'Utakmice'; ?></h3>
+		<?php echo kurs_render_round_results( $did, $r ); ?>
+	</section>
+		<?php endif;
+		if ( $type !== 'results' && $st['finished'] ) :
+			$tables = Kurs_Rounds::standings( $did, $r ); ?>
+	<section class="round-sec">
+		<?php if ( $type === 'round' ) : ?><h3 class="round-sec__title">Ljestvica nakon <?php echo $r; ?>. kola</h3><?php endif; ?>
+		<?php foreach ( $tables as $t ) :
+			echo kurs_render_standings( (int) $t['group']->id, [
+				'rows' => $t['rows'], 'show_move' => true, 'playoff_spots' => $spots,
+				'title' => count( $tables ) > 1 ? $t['group']->name : '',
+			] );
+			if ( $t['unplayed'] ) : ?>
+		<p class="round-note">Neodigranih utakmica zaključno s ovim kolom: <strong><?php echo (int) $t['unplayed']; ?></strong> — nisu uračunate u ljestvicu.</p>
+			<?php endif;
+		endforeach; ?>
+	</section>
+		<?php endif;
+		if ( $type === 'round' && $st['finished'] ) : ?>
+	<section class="round-sec">
+		<h3 class="round-sec__title">Strijelci nakon <?php echo $r; ?>. kola</h3>
+		<?php echo kurs_render_round_scorers( $did, $r ) ?: '<p class="kurs-empty">Nema evidentiranih golova.</p>'; ?>
+	</section>
+		<?php endif;
+	endif; ?>
+	<p class="post-embed__more"><a href="<?php echo esc_url( $more ); ?>">Sve na stranici lige &rarr;</a></p>
+	<?php return ob_get_clean();
 }
 
 /* ── Galerija (2 stupca + lightbox) ──────────────────────────────────────── */
@@ -350,7 +466,7 @@ function kurskc_widget_league_live(): string {
 	<a class="news-widget news-widget--card news-widget--league" href="<?php echo esc_url( $al['url'] ); ?>">
 		<span class="nw-league__kicker">Iz lige · uživo</span>
 		<span class="nw-league__title"><?php echo esc_html( $al['label'] ); ?></span>
-		<span class="nw-league__cta">Tablica · raspored →</span>
+		<span class="nw-league__cta"><?php echo $al['round'] ? 'Rezultati kola · tablica →' : 'Tablica · raspored →'; ?></span>
 	</a>
 	<?php return ob_get_clean();
 }
@@ -372,7 +488,7 @@ function kurskc_widget_standings(): string {
 		<div class="news-widget__hd news-widget__hd--bar"><span class="tick tick--red"></span>Vrh tablice · <?php echo esc_html( $al['short'] ); ?></div>
 		<div class="news-widget__rows">
 			<?php foreach ( $rows as $i => $r ) : ?>
-			<a class="nw-st" href="<?php echo esc_url( get_post_permalink( $r['team_id'] ) ); ?>">
+			<a class="nw-st" href="<?php echo esc_url( kurs_team_url( (int) $r['team_id'], (int) $al['division_id'] ) ); ?>">
 				<span class="nw-st__rank"><?php echo $i + 1; ?></span>
 				<span class="nw-st__crest"><?php echo kurs_team_badge_html( (int) $r['team_id'], 20 ); ?></span>
 				<span class="nw-st__name"><?php echo esc_html( $r['team_name'] ); ?></span>
@@ -385,6 +501,13 @@ function kurskc_widget_standings(): string {
 }
 
 /* ── Shortcodes za ručnu ugradnju ─────────────────────────────────────────── */
+/* [kurs_kolo division_id="X" kolo="N" prikaz="kolo|tablica|rezultati"] — isto što i „Ugradi iz lige" */
+add_shortcode( 'kurs_kolo', function ( $atts ) {
+	$a    = shortcode_atts( [ 'division_id' => 0, 'kolo' => 0, 'prikaz' => 'kolo' ], $atts );
+	$type = [ 'kolo' => 'round', 'tablica' => 'table', 'rezultati' => 'results' ][ $a['prikaz'] ] ?? 'round';
+	if ( ! (int) $a['division_id'] || ! (int) $a['kolo'] ) return '';
+	return kurskc_embed_render( [ 'type' => $type, 'division_id' => (int) $a['division_id'], 'round' => (int) $a['kolo'], 'value' => '' ] );
+} );
 add_shortcode( 'kurs_standings', function ( $atts ) {
 	$a = shortcode_atts( [ 'group_id' => 0, 'limit' => 0, 'title' => '1' ], $atts );
 	if ( ! $a['group_id'] || ! function_exists( 'kurs_render_standings' ) ) return '';

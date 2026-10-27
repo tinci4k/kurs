@@ -3,7 +3,7 @@
  * Profil ekipe (E) — single-kurs_ekipa.php
  */
 if ( ! class_exists( 'Kurs_Season' ) || ! class_exists( 'Kurs_Match' ) ) {
-	wp_redirect( home_url( '/ekipe/' ) );
+	wp_redirect( home_url( '/' ) ); // nema arhive /ekipe/
 	exit;
 }
 
@@ -52,18 +52,19 @@ if ( $division_id ) {
 	}
 }
 
+/* Utakmice lige: skupine + playoff (zapisnici s group_id=0) — podupit za „m.id IN ( … )" */
+$in_div = $division_id ? Kurs_Match::division_match_ids_sql( $division_id ) : '';
+
 /* ── Forma: zadnjih 5 utakmica ──────────────────────────── */
 $form = [];
 if ( $division_id ) {
 	$form = $wpdb->get_results( $wpdb->prepare(
 		"SELECT m.id, m.home_team_id, m.away_team_id, m.home_score, m.away_score
 		 FROM   {$p}matches m
-		 JOIN   {$p}groups  g  ON g.id  = m.group_id
-		 JOIN   {$p}phases  ph ON ph.id = g.phase_id
-		 WHERE  ph.division_id = %d AND m.status = 'finished'
+		 WHERE  m.id IN ( {$in_div} ) AND m.status = 'finished'
 		   AND  (m.home_team_id = %d OR m.away_team_id = %d)
 		 ORDER  BY m.match_date DESC, m.id DESC LIMIT 5",
-		$division_id, $team_id, $team_id
+		$team_id, $team_id
 	) );
 }
 
@@ -71,18 +72,17 @@ if ( $division_id ) {
 $next = null;
 if ( $division_id ) {
 	$next = $wpdb->get_row( $wpdb->prepare(
-		"SELECT m.id, m.match_date, m.round,
+		"SELECT m.id, m.match_date, m.round, pm.round AS po_round,
 		        h.post_title AS home_name, a.post_title AS away_name,
 		        m.home_team_id, m.away_team_id
 		 FROM   {$p}matches m
-		 JOIN   {$p}groups  g  ON g.id  = m.group_id
-		 JOIN   {$p}phases  ph ON ph.id = g.phase_id
+		 LEFT JOIN {$p}playoff_matches pm ON pm.match_id = m.id
 		 JOIN   {$wpdb->posts} h ON h.ID = m.home_team_id
 		 JOIN   {$wpdb->posts} a ON a.ID = m.away_team_id
-		 WHERE  ph.division_id = %d AND m.status = 'scheduled'
+		 WHERE  m.id IN ( {$in_div} ) AND m.status = 'scheduled'
 		   AND  (m.home_team_id = %d OR m.away_team_id = %d)
-		 ORDER  BY m.match_date ASC, m.id ASC LIMIT 1",
-		$division_id, $team_id, $team_id
+		 ORDER  BY m.match_date IS NULL, m.match_date ASC, m.id ASC LIMIT 1",
+		$team_id, $team_id
 	) );
 }
 
@@ -96,12 +96,10 @@ if ( $division_id ) {
 		"SELECT e.player_id, COUNT(*) AS goals
 		 FROM   {$p}match_events e
 		 JOIN   {$p}matches      m  ON m.id  = e.match_id
-		 JOIN   {$p}groups       g  ON g.id  = m.group_id
-		 JOIN   {$p}phases       ph ON ph.id = g.phase_id
-		 WHERE  ph.division_id = %d AND e.team_id = %d
+		 WHERE  m.id IN ( {$in_div} ) AND e.team_id = %d
 		   AND  e.event_type IN ('goal','penalty') AND m.status = 'finished'
 		 GROUP  BY e.player_id",
-		$division_id, $team_id
+		$team_id
 	) );
 	foreach ( $sc_rows as $s ) $scorer_map[ (int) $s->player_id ] = (int) $s->goals;
 }
@@ -110,18 +108,17 @@ if ( $division_id ) {
 $all_matches = [];
 if ( $division_id ) {
 	$all_matches = $wpdb->get_results( $wpdb->prepare(
-		"SELECT m.id, m.round, m.match_date, m.status, m.home_score, m.away_score,
+		"SELECT m.id, m.round, pm.round AS po_round, m.match_date, m.status, m.home_score, m.away_score,
 		        h.post_title AS home_name, a.post_title AS away_name,
 		        m.home_team_id, m.away_team_id
 		 FROM   {$p}matches m
-		 JOIN   {$p}groups  g  ON g.id  = m.group_id
-		 JOIN   {$p}phases  ph ON ph.id = g.phase_id
+		 LEFT JOIN {$p}playoff_matches pm ON pm.match_id = m.id
 		 JOIN   {$wpdb->posts} h ON h.ID = m.home_team_id
 		 JOIN   {$wpdb->posts} a ON a.ID = m.away_team_id
-		 WHERE  ph.division_id = %d
+		 WHERE  m.id IN ( {$in_div} )
 		   AND  (m.home_team_id = %d OR m.away_team_id = %d)
-		 ORDER  BY m.round ASC, m.match_date ASC",
-		$division_id, $team_id, $team_id
+		 ORDER  BY m.group_id = 0, m.round ASC, m.match_date ASC",
+		$team_id, $team_id
 	) );
 }
 
@@ -131,11 +128,9 @@ if ( $division_id ) {
 	$ms = $wpdb->get_results( $wpdb->prepare(
 		"SELECT m.home_team_id, m.home_score, m.away_score
 		 FROM   {$p}matches m
-		 JOIN   {$p}groups g  ON g.id  = m.group_id
-		 JOIN   {$p}phases ph ON ph.id = g.phase_id
-		 WHERE  ph.division_id = %d AND m.status = 'finished'
+		 WHERE  m.id IN ( {$in_div} ) AND m.status = 'finished'
 		   AND  (m.home_team_id = %d OR m.away_team_id = %d)",
-		$division_id, $team_id, $team_id
+		$team_id, $team_id
 	) );
 	$N = count( $ms );
 	if ( $N ) {
@@ -161,12 +156,10 @@ if ( $division_id ) {
 			   SUM(CASE WHEN e.team_id =  %d AND e.event_type = 'foul'                        THEN 1 ELSE 0 END) AS fouls
 			 FROM   {$p}match_events e
 			 JOIN   {$p}matches m  ON m.id  = e.match_id
-			 JOIN   {$p}groups  g  ON g.id  = m.group_id
-			 JOIN   {$p}phases  ph ON ph.id = g.phase_id
-			 WHERE  ph.division_id = %d AND m.status = 'finished'
+			 WHERE  m.id IN ( {$in_div} ) AND m.status = 'finished'
 			   AND  (m.home_team_id = %d OR m.away_team_id = %d)
 			 GROUP  BY h",
-			$team_id, $team_id, $team_id, $team_id, $team_id, $team_id, $team_id, $division_id, $team_id, $team_id
+			$team_id, $team_id, $team_id, $team_id, $team_id, $team_id, $team_id, $team_id, $team_id
 		) );
 		$half = [ 1 => [ 'gf' => 0, 'ga' => 0, 'fouls' => 0 ], 2 => [ 'gf' => 0, 'ga' => 0, 'fouls' => 0 ] ];
 		$yellow = $red = 0;
@@ -365,7 +358,7 @@ function ekipa_league_color( string $league ): string {
 				<!-- Sljedeća utakmica -->
 				<?php if ( $next ) : ?>
 				<div class="next-match-card">
-					<div class="next-match-card__label">Sljedeća &middot; <?php echo (int) $next->round; ?>. kolo</div>
+					<div class="next-match-card__label">Sljedeća &middot; <?php echo esc_html( kurs_round_label( $next->round, $next->po_round ) ); ?></div>
 					<div class="next-match-card__teams">
 						<span><?php echo esc_html( $next->home_name ); ?></span>
 						<span class="next-match-card__vs">vs</span>
@@ -399,7 +392,7 @@ function ekipa_league_color( string $league ): string {
 					?>
 					<a href="<?php echo esc_url( add_query_arg( 'match_id', $m->id, home_url( '/utakmica/' ) ) ); ?>"
 					   class="sched-match">
-						<div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);min-width:42px;"><?php echo (int) $m->round; ?>. kolo</div>
+						<div style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);min-width:42px;"><?php echo esc_html( kurs_round_label( $m->round, $m->po_round ) ); ?></div>
 						<div class="sched-match__home"><?php echo $home ? '<strong>' . esc_html( get_the_title( $team_id ) ) . '</strong>' : $opp; ?></div>
 						<div class="sched-match__score"><?php echo $sc; ?></div>
 						<div class="sched-match__away"><?php echo $home ? $opp : '<strong>' . esc_html( get_the_title( $team_id ) ) . '</strong>'; ?></div>

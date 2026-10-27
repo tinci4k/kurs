@@ -1,205 +1,141 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-$action    = sanitize_key( $_GET['action'] ?? '' );
-$edit_id   = absint( $_GET['id'] ?? 0 );
-$edit_item = ( $action === 'edit' && $edit_id ) ? Kurs_Season::get( $edit_id ) : null;
+/*
+ * KURS Liga → Sve sezone: arhiva svih sezona po natjecanju + kreiranje nove sezone.
+ * Sve ostalo (ekipe, utakmice, postavke, zaključavanje) je na stranici natjecanja.
+ */
+$pre_league = sanitize_key( $_GET['league'] ?? '' );
+if ( ! Kurs_Season::competition( $pre_league ) ) $pre_league = 'kc_liga';
 ?>
 <div class="wrap kurs-wrap">
 
 	<div class="kurs-breadcrumb">
-		<a href="<?php echo admin_url( 'admin.php?page=kurs-dashboard' ); ?>">KURS Liga</a>
-		<span class="kurs-breadcrumb__sep">/</span>
-		Sezone
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-dashboard' ) ); ?>">KURS Liga</a>
+		<span class="kurs-breadcrumb__sep">/</span> Sve sezone
 	</div>
-	<div class="kurs-page-hd">
-		<h1><?php echo $edit_item ? 'Uredi sezonu' : 'Sezone natjecanja'; ?></h1>
-	</div>
+	<div class="kurs-page-hd"><h1>Sve sezone</h1></div>
 
-	<?php if ( ! empty( $_GET['updated'] ) ) : ?>
-	<div class="notice notice-success is-dismissible"><p>Sezona je ažurirana.</p></div>
-	<?php elseif ( ! empty( $_GET['deleted'] ) ) : ?>
+	<?php if ( ! empty( $_GET['deleted'] ) ) : ?>
 	<div class="notice notice-success is-dismissible"><p>Sezona je obrisana.</p></div>
-	<?php elseif ( ! empty( $_GET['added'] ) ) : ?>
-	<div class="notice notice-success is-dismissible"><p>Sezona je kreirana.</p></div>
 	<?php elseif ( ! empty( $_GET['locked'] ) ) : ?>
 	<div class="notice notice-success is-dismissible"><p>Sezona je zaključana — podaci su sada konačni.</p></div>
 	<?php elseif ( ! empty( $_GET['unlocked'] ) ) : ?>
-	<div class="notice notice-success is-dismissible"><p>Sezona je otključana — uređivanje je ponovno moguće.</p></div>
+	<div class="notice notice-success is-dismissible"><p>Sezona je otključana.</p></div>
+	<?php elseif ( ! empty( $_GET['invalid'] ) ) : ?>
+	<div class="notice notice-error is-dismissible"><p>Odaberi natjecanje i ispravnu godinu.</p></div>
+	<?php elseif ( ! empty( $_GET['exists'] ) && ( $dup = Kurs_Season::get( absint( $_GET['exists'] ) ) ) ) : ?>
+	<div class="notice notice-warning is-dismissible"><p>
+		Sezona <strong><?php echo esc_html( $dup->name ); ?></strong> već postoji.
+		<a href="<?php echo esc_url( Kurs_Admin::hub_url( (int) $dup->id ) ); ?>">Otvori je &rarr;</a>
+	</p></div>
 	<?php endif; ?>
 
 	<div class="kurs-two-col">
 
-		<!-- ── Lista sezona ──────────────────────────────────────────────── -->
-		<div>
-			<?php $seasons = Kurs_Season::all(); ?>
-
-			<?php if ( empty( $seasons ) ) : ?>
-			<div class="kurs-empty-state">
-				<p>Nema sezona. Kreiraj prvu sezonu &rarr;</p>
-			</div>
-			<?php else : ?>
-
+		<!-- ── Sezone po natjecanju ──────────────────────────────────────── -->
+		<div class="kurs-form-col" style="gap:16px;">
+			<?php foreach ( Kurs_Admin::HUBS as $slug => $league ) :
+				$is_pan  = Kurs_Season::is_pan_league( $league );
+				$comp    = Kurs_Season::competition( $league );
+				$list    = Kurs_Season::for_league( $is_pan );
+				$current = Kurs_Season::current_for_league( $is_pan );
+			?>
 			<div class="kurs-panel">
 				<div class="kurs-panel__head">
-					<h3 class="kurs-panel__title">Sve sezone</h3>
-					<span style="font-family:var(--font-mono);font-size:9px;color:var(--ka-muted);text-transform:uppercase;">
-						<?php echo count( $seasons ); ?> ukupno
-					</span>
+					<h3 class="kurs-panel__title" style="display:flex;align-items:center;gap:8px;"><?php echo kurs_league_icon( $is_pan ? 'Pan Ljetna' : 'KC Liga', 22 ); ?> <?php echo esc_html( $comp['label'] ?? '' ); ?></h3>
+					<a class="kurs-btn kurs-btn--ghost kurs-btn--sm" href="<?php echo esc_url( admin_url( 'admin.php?page=' . $slug ) ); ?>">Stranica natjecanja &rarr;</a>
 				</div>
 				<div class="kurs-panel__body" style="padding:0;">
-				<?php foreach ( $seasons as $s ) :
-					$bar_color = Kurs_Season::is_pan_league( $s->league ) ? '#F47B16' : '#DA0F1E';
-				?>
-				<div style="display:grid;grid-template-columns:4px 1fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f5f5ef;gap:14px;">
-					<div style="width:4px;height:36px;border-radius:2px;background:<?php echo $bar_color; ?>;flex-shrink:0;"></div>
-					<div>
-						<div style="font-family:var(--font-cond);font-weight:800;font-size:15px;"><?php echo esc_html( $s->name ); ?></div>
-						<div style="display:flex;align-items:center;gap:8px;margin-top:3px;">
-							<?php echo kurs_league_icon( $s->league, 20 ); ?>
-							<span class="kurs-tag kurs-tag--<?php echo esc_attr( $s->league ); ?>">
-								<?php echo Kurs_Season::is_pan_league( $s->league ) ? 'Pan Ljetna' : 'KC Liga'; ?>
-							</span>
-							<span class="kurs-badge kurs-badge--<?php echo esc_attr( $s->status ); ?>">
-								<?php echo $s->status === 'active' ? 'Aktivna' : 'Arhiva'; ?>
-							</span>
-							<span style="font-family:var(--font-mono);font-size:9px;color:var(--ka-muted);"><?php echo esc_html( $s->year ); ?></span>
+					<?php if ( ! $list ) : ?>
+					<div class="kurs-panel__empty">Nema sezona.</div>
+					<?php endif; ?>
+					<?php foreach ( $list as $s ) :
+						$is_cur = $current && (int) $current->id === (int) $s->id;
+					?>
+					<a class="kurs-season-row" href="<?php echo esc_url( Kurs_Admin::hub_url( (int) $s->id ) ); ?>">
+						<span class="kurs-season-row__name"><?php echo esc_html( $s->name ); ?></span>
+						<span class="kurs-season-row__tags">
+							<?php if ( $is_cur ) : ?><span class="kurs-badge kurs-badge--active">Aktualna na webu</span><?php endif; ?>
 							<?php if ( ! empty( $s->locked ) ) : ?>
-							<span class="kurs-badge" style="background:#111317;color:#FDE206;">&#128274; Zaključano</span>
+							<span class="kurs-badge" style="background:#111317;color:#FDE206;">&#128274; Zaključana</span>
+							<?php elseif ( $s->status !== 'active' ) : ?>
+							<span class="kurs-badge kurs-badge--archived">Arhiva</span>
+							<?php elseif ( ! $is_cur ) : ?>
+							<span class="kurs-badge kurs-badge--active">Aktivna</span>
 							<?php endif; ?>
-						</div>
-					</div>
-					<div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;">
-						<?php if ( empty( $s->locked ) ) : ?>
-						<a href="<?php echo admin_url( 'admin.php?page=kurs-season-setup&season_id=' . $s->id . '&step=2' ); ?>"
-						   class="kurs-btn kurs-btn--red kurs-btn--sm">Postavi</a>
-						<?php endif; ?>
-						<a href="<?php echo admin_url( 'admin.php?page=kurs-matches&season_id=' . $s->id ); ?>"
-						   class="kurs-btn kurs-btn--outline kurs-btn--sm">Utakmice</a>
-						<a href="<?php echo admin_url( 'admin.php?page=kurs-seasons&action=edit&id=' . $s->id ); ?>"
-						   class="kurs-btn kurs-btn--ghost kurs-btn--sm">&#9998;</a>
-						<form method="post" style="display:inline;"<?php echo empty( $s->locked ) ? ' onsubmit="return confirm(\'Zaključati sezonu &quot;' . esc_js( $s->name ) . '&quot;? Podaci postaju konačni i skriva se postavljanje lige. Možeš ju kasnije otključati.\')"' : ''; ?>>
-							<?php wp_nonce_field( 'kurs_toggle_lock' ); ?>
-							<input type="hidden" name="kurs_action" value="toggle_season_lock">
-							<input type="hidden" name="season_id"   value="<?php echo (int) $s->id; ?>">
-							<input type="hidden" name="lock"        value="<?php echo empty( $s->locked ) ? '1' : ''; ?>">
-							<button type="submit" class="kurs-btn kurs-btn--sm <?php echo empty( $s->locked ) ? 'kurs-btn--dark' : 'kurs-btn--outline'; ?>" title="<?php echo empty( $s->locked ) ? 'Zaključaj sezonu (konačni podaci)' : 'Otključaj sezonu'; ?>">
-								<?php echo empty( $s->locked ) ? '&#128274; Zaključaj' : '&#128275; Otključaj'; ?>
-							</button>
-						</form>
-						<?php if ( empty( $s->locked ) ) : ?>
-						<form method="post" style="display:inline;"
-						      onsubmit="return confirm('Sigurno želiš obrisati sezonu &quot;<?php echo esc_js( $s->name ); ?>&quot;?\n\nOvo će obrisati sve podatke ove sezone. Radnja se ne može poništiti!');">
-							<?php wp_nonce_field( 'kurs_delete_season' ); ?>
-							<input type="hidden" name="kurs_action" value="delete_season">
-							<input type="hidden" name="season_id"   value="<?php echo (int) $s->id; ?>">
-							<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm" style="color:#c00 !important;border-color:#c00 !important;" title="Obriši sezonu">&times;</button>
-						</form>
-						<?php endif; ?>
-					</div>
-				</div>
-				<?php endforeach; ?>
+						</span>
+						<span class="kurs-season-row__go">Otvori &rarr;</span>
+					</a>
+					<?php endforeach; ?>
 				</div>
 			</div>
-			<?php endif; ?>
+			<?php endforeach; ?>
 		</div>
 
-		<!-- ── Forma ─────────────────────────────────────────────────────── -->
+		<!-- ── Nova sezona ───────────────────────────────────────────────── -->
 		<div>
-			<div class="kurs-panel">
-				<div class="kurs-panel__head">
-					<h3 class="kurs-panel__title">
-						<?php echo $edit_item ? 'Uredi sezonu' : 'Nova sezona'; ?>
-					</h3>
-					<?php if ( $edit_item ) : ?>
-					<a href="<?php echo admin_url( 'admin.php?page=kurs-seasons' ); ?>"
-					   class="kurs-btn kurs-btn--ghost kurs-btn--sm">Odustani</a>
-					<?php endif; ?>
-				</div>
+			<div class="kurs-panel" id="nova-sezona">
+				<div class="kurs-panel__head"><h3 class="kurs-panel__title">Nova sezona</h3></div>
 				<div class="kurs-panel__body" style="padding:18px;">
-
-				<?php if ( $edit_item ) : ?>
-				<form method="post">
-					<?php wp_nonce_field( 'kurs_edit_season' ); ?>
-					<input type="hidden" name="kurs_action" value="edit_season">
-					<input type="hidden" name="season_id"   value="<?php echo (int) $edit_item->id; ?>">
-
-					<div class="kurs-form-col" style="gap:12px;">
-						<div>
-							<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Liga / natjecanje</label>
-							<select name="league" style="width:100%;">
-								<option value="kc_liga"    <?php selected( $edit_item->league, 'kc_liga' ); ?>>KC Liga</option>
-								<option value="pan_ljetna" <?php selected( $edit_item->league, 'pan_ljetna' ); ?>>Pan Ljetna Liga</option>
-							</select>
-						</div>
-						<div>
-							<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Puni naziv sezone</label>
-							<input type="text" name="name" class="regular-text" style="width:100%;"
-							       value="<?php echo esc_attr( $edit_item->name ); ?>" required>
-						</div>
-						<div class="kurs-stack-mobile" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-							<div>
-								<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Godina</label>
-								<input type="number" name="year" class="small-text" style="width:100%;"
-								       value="<?php echo (int) $edit_item->year; ?>" min="2000" max="2100" required>
-							</div>
-							<div>
-								<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Status</label>
-								<select name="status" style="width:100%;">
-									<option value="active"   <?php selected( $edit_item->status, 'active' ); ?>>Aktivna</option>
-									<option value="archived" <?php selected( $edit_item->status, 'archived' ); ?>>Arhiva</option>
+					<form method="post" id="kurs-new-season">
+						<?php wp_nonce_field( 'kurs_create_season' ); ?>
+						<input type="hidden" name="kurs_action" value="create_season">
+						<div class="kurs-form-col" style="gap:12px;">
+							<label class="kurs-field-wrap">
+								<span class="kurs-field-label">Natjecanje</span>
+								<select name="league" id="ns-league" style="width:100%;">
+									<?php foreach ( Kurs_Season::COMPETITIONS as $slug => $c ) : ?>
+									<option value="<?php echo esc_attr( $slug ); ?>" <?php selected( $slug, $pre_league ); ?>><?php echo esc_html( $c['label'] ); ?></option>
+									<?php endforeach; ?>
 								</select>
-							</div>
+							</label>
+							<label class="kurs-field-wrap">
+								<span class="kurs-field-label" id="ns-year-lbl">Godina početka sezone</span>
+								<input type="number" name="year" id="ns-year" style="width:100%;" value="<?php echo (int) date( 'Y' ); ?>" min="2000" max="2100" required>
+							</label>
+							<label class="kurs-field-wrap" id="ns-groups-row" style="display:none;">
+								<span class="kurs-field-label">Broj skupina</span>
+								<select name="pan_groups" id="ns-groups" style="width:100%;">
+									<option value="4">4 skupine — po 2 prolaze u četvrtfinale</option>
+									<option value="2">2 skupine — po 2 prolaze u polufinale</option>
+								</select>
+								<span class="kurs-muted" style="font-size:11px;">Može se promijeniti i kasnije, dok skupine nemaju ekipa.</span>
+							</label>
+							<label class="kurs-field-wrap">
+								<span class="kurs-field-label">Max faulova po poluvremenu (akumulirani)</span>
+								<input type="number" name="max_fouls_per_half" style="width:120px;" value="5" min="1" max="20" required>
+							</label>
+							<div class="kurs-notice" id="ns-preview" style="margin:0;"></div>
+							<button type="submit" class="kurs-btn kurs-btn--red">+ Kreiraj sezonu &rarr;</button>
 						</div>
-						<div>
-								<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Max faulova po poluvremenu (akumulirani)</label>
-								<input type="number" name="max_fouls_per_half" class="small-text" style="width:100%;"
-								       value="<?php echo (int) ( $edit_item->max_fouls_per_half ?? 5 ); ?>" min="1" max="20" required>
-								<p style="margin:4px 0 0;font-size:11px;color:var(--ka-muted);">Nakon ovog broja prekršaja po poluvremenu svaki je sljedeći akumulirani penal (zadano 5).</p>
-							</div>
-							<button type="submit" class="kurs-btn kurs-btn--red" style="margin-top:4px;">Spremi promjene</button>
-					</div>
-				</form>
-
-				<?php else : ?>
-				<form method="post">
-					<?php wp_nonce_field( 'kurs_create_season' ); ?>
-					<input type="hidden" name="kurs_action" value="create_season">
-
-					<div class="kurs-form-col" style="gap:12px;">
-						<div>
-							<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Liga / natjecanje</label>
-							<select name="league" style="width:100%;">
-								<option value="kc_liga">KC Liga</option>
-								<option value="pan_ljetna">Pan Ljetna Liga</option>
-							</select>
-						</div>
-						<div>
-							<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Puni naziv sezone</label>
-							<input type="text" name="name" class="regular-text" style="width:100%;"
-							       placeholder="Npr. KC Liga 2026/27" required>
-						</div>
-						<div>
-							<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Godina</label>
-							<input type="number" name="year" class="small-text" style="width:100%;"
-							       value="<?php echo (int) date( 'Y' ); ?>" min="2000" max="2100" required>
-						</div>
-						<div>
-							<label style="font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ka-muted);display:block;margin-bottom:4px;">Max faulova po poluvremenu (akumulirani)</label>
-							<input type="number" name="max_fouls_per_half" class="small-text" style="width:100%;"
-							       value="5" min="1" max="20" required>
-							<p style="margin:4px 0 0;font-size:11px;color:var(--ka-muted);">Nakon ovog broja prekršaja po poluvremenu svaki je sljedeći akumulirani penal (zadano 5).</p>
-						</div>
-						<button type="submit" class="kurs-btn kurs-btn--red" style="margin-top:4px;">
-							+ Kreiraj sezonu &rarr;
-						</button>
-					</div>
-				</form>
-				<div class="kurs-notice" style="margin-top:14px;">
-					<strong>Sljedeći korak:</strong> Nakon kreiranja sezone, postavi grupe, dodaj ekipe i generiraj raspored utakmica.
-				</div>
-				<?php endif; ?>
-
+					</form>
+					<p class="kurs-muted" style="margin-top:12px;font-size:12px;">
+						Lige i skupine nastaju automatski. Nakon kreiranja otvara se stranica natjecanja,
+						gdje uvrstiš ekipe i jednim klikom generiraš raspored.
+					</p>
+					<script>
+					( function () {
+						var C = <?php echo wp_json_encode( Kurs_Season::COMPETITIONS ); ?>;
+						var lg = document.getElementById( 'ns-league' ), yr = document.getElementById( 'ns-year' ),
+						    gr = document.getElementById( 'ns-groups' ), grRow = document.getElementById( 'ns-groups-row' ),
+						    lbl = document.getElementById( 'ns-year-lbl' ), out = document.getElementById( 'ns-preview' );
+						function esc( s ) { return String( s ).replace( /[&<>"]/g, function ( c ) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ c ]; } ); }
+						function render() {
+							var c = C[ lg.value ], y = parseInt( yr.value, 10 ) || 0;
+							if ( ! c ) return;
+							var name = c.label + ' ' + ( c.span_year ? y + '/' + ( y + 1 ) : y );
+							grRow.style.display = c.groups ? '' : 'none';
+							lbl.textContent = c.span_year ? 'Godina početka sezone' : 'Godina';
+							var what = c.groups
+								? gr.value + ' skupine, po 2 najbolje u ' + ( gr.value === '4' ? 'četvrtfinale' : 'polufinale' )
+								: 'lige ' + c.divisions.map( esc ).join( ' i ' ) + ' — svatko sa svakim jednom, bez playoffa';
+							out.innerHTML = 'Kreirat će se <strong>' + esc( name ) + '</strong>: ' + what + '.';
+						}
+						[ lg, yr, gr ].forEach( function ( el ) { el.addEventListener( 'input', render ); el.addEventListener( 'change', render ); } );
+						render();
+					} )();
+					</script>
 				</div>
 			</div>
 		</div>

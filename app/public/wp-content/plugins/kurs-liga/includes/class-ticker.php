@@ -212,9 +212,9 @@ class Kurs_Ticker {
 	private static function item_upcoming( object $m, bool $today ): array {
 		$time = '';
 		if ( $m->match_date ) {
-			$time = $today
-				? date_i18n( 'H:i', strtotime( $m->match_date ) )
-				: date_i18n( 'D j.n. H:i', strtotime( $m->match_date ) );
+			$ts   = strtotime( $m->match_date );
+			$days = [ 'ned', 'pon', 'uto', 'sri', 'čet', 'pet', 'sub' ]; // neovisno o jeziku WP-a
+			$time = $today ? date( 'H:i', $ts ) : $days[ (int) date( 'w', $ts ) ] . ' ' . date( 'j.n. H:i', $ts );
 		}
 		return [
 			'kind' => 'upcoming', 'league' => self::league_short( $m->league ),
@@ -247,8 +247,9 @@ class Kurs_Ticker {
 		if ( class_exists( 'Kurs_Playoff' ) ) {
 			$bracket = Kurs_Playoff::get_bracket( $division_id );
 			$final   = $bracket['final'][1] ?? null;
-			if ( $final && $final->status === 'finished' && $final->home_name && $final->away_name ) {
-				$home_wins = (int) $final->home_score > (int) $final->away_score;
+			$side    = $final ? Kurs_Playoff::winner_side( $final ) : null;
+			if ( $side && $final->home_name && $final->away_name ) {
+				$home_wins = $side === 'home';
 				$champion  = $home_wins ? $final->home_name : $final->away_name;
 				$second    = $home_wins ? $final->away_name : $final->home_name;
 			}
@@ -272,7 +273,7 @@ class Kurs_Ticker {
 			'second'   => $second,
 			'third'    => $third,
 			'label'    => $row->season_name,
-			'url'      => home_url( '/kc-liga/' ),
+			'url'      => function_exists( 'kurs_league_url' ) ? kurs_league_url( $division_id ) : home_url( '/kc-liga/' ),
 		];
 	}
 

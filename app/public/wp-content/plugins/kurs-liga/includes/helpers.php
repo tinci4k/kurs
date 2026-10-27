@@ -125,31 +125,6 @@ function kurs_team_banner( int $team_id, string $size = 'large' ): ?array {
 	return $all[0] ?? null;
 }
 
-/* ── Baza sudaca (za autocomplete u zapisniku) ───────────────────────────── */
-
-/** Spremljeni suci — sortirani niz imena (option `kurs_referees`). */
-function kurs_get_referees(): array {
-	$list = get_option( 'kurs_referees', [] );
-	if ( ! is_array( $list ) ) $list = [];
-	$list = array_values( array_unique( array_filter( array_map( 'trim', $list ) ) ) );
-	natcasesort( $list );
-	return array_values( $list );
-}
-
-/** Dodaj imena u listu sudaca (bez duplikata). */
-function kurs_add_referees( array $names ): void {
-	$list = get_option( 'kurs_referees', [] );
-	if ( ! is_array( $list ) ) $list = [];
-	$changed = false;
-	foreach ( $names as $n ) {
-		$n = trim( (string) $n );
-		if ( $n === '' || in_array( $n, $list, true ) ) continue;
-		$list[]  = $n;
-		$changed = true;
-	}
-	if ( $changed ) update_option( 'kurs_referees', array_values( $list ) );
-}
-
 /**
  * Grb/ikona lige (inline SVG, dizajn „KURS Ikone"). Tip se odredi iz teksta
  * (liga + divizija): „bez briga" → Liga bez briga, „pan/ljet" → Pan Ljetna,
@@ -200,27 +175,46 @@ function kurs_team_photo( int $team_id, string $size = 'large' ): ?string {
 	return $url ?: null;
 }
 
+/**
+ * URL Liga Huba za ligu (diviziju): /kc-liga/ ili /pan-ljetna/ prema natjecanju
+ * sezone, sa season_id + division_id + dodatnim parametrima (npr. tab, kolo).
+ */
+function kurs_league_url( int $division_id, array $args = [] ): string {
+	global $wpdb;
+	$p   = $wpdb->prefix . KURS_PREFIX;
+	$row = $division_id ? $wpdb->get_row( $wpdb->prepare(
+		"SELECT s.id AS season_id, s.league FROM {$p}divisions d JOIN {$p}seasons s ON s.id = d.season_id WHERE d.id = %d",
+		$division_id
+	) ) : null;
+	if ( ! $row ) return home_url( '/kc-liga/' );
+	$slug = class_exists( 'Kurs_Season' ) && Kurs_Season::is_pan_league( (string) $row->league ) ? 'pan-ljetna' : 'kc-liga';
+	return add_query_arg( array_merge( [ 'season_id' => (int) $row->season_id, 'division_id' => $division_id ], $args ), home_url( '/' . $slug . '/' ) );
+}
+
 /* ── Dijeljeni frontend renderi (liga hub, ugradnja u objave, sidebar widgeti) ── */
 
 /**
  * Ljestvica jedne grupe. Markup/klase identični page-liga.php (tema ima CSS).
  *
- * @param array $args [ playoff_spots, show_title, title, limit, link_teams, show_legend ]
+ * @param array $args [ playoff_spots, show_title, title, limit, link_teams, show_legend,
+ *                      max_round (ljestvica nakon N. kola), rows (gotovi redovi, npr. iz
+ *                      Kurs_Rounds::standings), show_move (strelica pomaka iz $row['move']) ]
  */
 function kurs_render_standings( int $group_id, array $args = [] ): string {
 	if ( ! class_exists( 'Kurs_Match' ) ) return '';
 	$a = array_merge( [
 		'playoff_spots' => null, 'show_title' => false, 'title' => '',
 		'limit' => null, 'link_teams' => true, 'show_legend' => true,
+		'max_round' => null, 'rows' => null, 'show_move' => false,
 	], $args );
 
-	$standings = Kurs_Match::get_standings( $group_id );
+	$standings = $a['rows'] ?? Kurs_Match::get_standings( $group_id, $a['max_round'] ? (int) $a['max_round'] : null );
 	if ( ! $standings ) return '';
 
 	global $wpdb;
 	$p     = $wpdb->prefix . KURS_PREFIX;
 	$ginfo = $wpdb->get_row( $wpdb->prepare(
-		"SELECT g.name AS gname, g.playoff_spots AS spots, ph.name AS phname
+		"SELECT g.name AS gname, g.playoff_spots AS spots, ph.name AS phname, ph.division_id
 		 FROM {$p}groups g JOIN {$p}phases ph ON ph.id = g.phase_id WHERE g.id = %d", $group_id ) );
 
 	$spots = $a['playoff_spots'] !== null ? (int) $a['playoff_spots'] : ( $ginfo ? (int) $ginfo->spots : 2 );
@@ -239,10 +233,17 @@ function kurs_render_standings( int $group_id, array $args = [] ): string {
 		<?php foreach ( $rows as $i => $row ) :
 			$pos = $i + 1; $playoff = $i < $spots; $is_cutoff = $i === $spots - 1;
 			$tag  = $a['link_teams'] ? 'a' : 'div';
-			$href = $a['link_teams'] ? ' href="' . esc_url( get_post_permalink( $row['team_id'] ) ) . '"' : '';
+			$href = $a['link_teams'] ? ' href="' . esc_url( kurs_team_url( (int) $row['team_id'], (int) ( $ginfo->division_id ?? 0 ) ) ) . '"' : '';
 		?>
 		<<?php echo $tag . $href; ?> class="standings__row <?php echo $playoff ? 'playoff' : ''; ?><?php echo $is_cutoff ? ' standings__row--cutoff' : ''; ?>" style="text-decoration:none;color:inherit;">
-			<div class="st-pos <?php echo $playoff ? 'is-playoff' : ''; ?>"><?php echo $pos; ?></div>
+			<div class="st-pos <?php echo $playoff ? 'is-playoff' : ''; ?>"><?php echo $pos; ?><?php
+				if ( $a['show_move'] && isset( $row['move'] ) && $row['move'] !== null ) {
+					$mv = (int) $row['move'];
+					echo $mv > 0 ? '<span class="st-move st-move--up" title="Skok za ' . $mv . ' mj.">&#9650;' . $mv . '</span>'
+						: ( $mv < 0 ? '<span class="st-move st-move--down" title="Pad za ' . abs( $mv ) . ' mj.">&#9660;' . abs( $mv ) . '</span>'
+						: '<span class="st-move st-move--same" title="Bez promjene">&ndash;</span>' );
+				}
+			?></div>
 			<div class="st-club">
 				<div class="team-badge"><?php echo kurs_team_badge_html( (int) $row['team_id'], 32 ); ?></div>
 				<span style="font-weight:600;"><?php echo esc_html( $row['team_name'] ); ?></span>
@@ -261,6 +262,33 @@ function kurs_render_standings( int $group_id, array $args = [] ): string {
 	</div>
 	<?php
 	return ob_get_clean();
+}
+
+/**
+ * Čitljiv naziv još nepoznatog playoff sudionika: „QF1-W" → „Pobjednik ČF 1",
+ * „SF2-W" → „Pobjednik PF 2", „A1" → „1. skupine A". Ostalo vraća kako jest.
+ */
+/** Link na profil ekipe u kontekstu lige (bez lige profil otvara najnoviju ligu ekipe). */
+function kurs_team_url( int $team_id, int $division_id = 0 ): string {
+	$url = (string) get_post_permalink( $team_id );
+	return $division_id ? add_query_arg( 'division_id', $division_id, $url ) : $url;
+}
+
+/** Oznaka runde utakmice: „3. kolo" ili naziv playoff runde ($po_round iz playoff_matches.round). */
+function kurs_round_label( $round, ?string $po_round = null ): string {
+	$po = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale', '3rd' => 'Ut. za 3. mjesto' ];
+	return $po_round ? ( $po[ $po_round ] ?? 'Playoff' ) : (int) $round . '. kolo';
+}
+
+function kurs_playoff_label( ?string $label ): string {
+	$label = trim( (string) $label );
+	if ( preg_match( '/^(QF|SF)(\d)-W$/i', $label, $m ) ) {
+		return 'Pobjednik ' . ( strtoupper( $m[1] ) === 'QF' ? 'ČF' : 'PF' ) . ' ' . $m[2];
+	}
+	if ( preg_match( '/^([A-H])(\d)$/i', $label, $m ) ) {
+		return $m[2] . '. skupine ' . strtoupper( $m[1] );
+	}
+	return $label !== '' ? $label : '?';
 }
 
 /**
@@ -286,10 +314,12 @@ function kurs_render_playoff_bracket( int $division_id, array $args = [] ): stri
 			<div class="kurs-bracket__matches">
 				<?php foreach ( $matches as $slot => $m ) :
 					$finished  = $m->status === 'finished';
-					$home_name = $m->home_name ?: $m->home_label ?: '?';
-					$away_name = $m->away_name ?: $m->away_label ?: '?';
-					$home_wins = $finished && (int) $m->home_score > (int) $m->away_score;
-					$away_wins = $finished && (int) $m->away_score > (int) $m->home_score;
+					$home_name = $m->home_name ?: kurs_playoff_label( $m->home_label );
+					$away_name = $m->away_name ?: kurs_playoff_label( $m->away_label );
+					$side      = Kurs_Playoff::winner_side( $m );
+					$home_wins = $side === 'home';
+					$away_wins = $side === 'away';
+					$pen       = Kurs_Playoff::pen_label( $m );
 					$mid  = (int) ( $m->match_id ?? 0 );
 					$url  = $mid ? add_query_arg( 'match_id', $mid, home_url( '/utakmica/' ) ) : '';
 					$tag  = $url ? 'a' : 'div';
@@ -307,7 +337,8 @@ function kurs_render_playoff_bracket( int $division_id, array $args = [] ): stri
 						<?php if ( $finished ) : ?><span class="kurs-bracket__score <?php echo $away_wins ? 'is-winner' : ''; ?>"><?php echo (int) $m->away_score; ?></span><?php endif; ?>
 					</div>
 					<div class="kurs-bracket__meta">
-						<?php if ( $m->match_date ) : ?><span><?php echo esc_html( date_i18n( 'j.n. H:i', strtotime( $m->match_date ) ) ); ?></span><?php else : ?><span class="kurs-muted">Datum TBD</span><?php endif; ?>
+						<?php if ( $m->match_date ) : ?><span><?php echo esc_html( date_i18n( 'j.n. H:i', strtotime( $m->match_date ) ) ); ?></span><?php else : ?><span class="kurs-muted">Termin naknadno</span><?php endif; ?>
+						<?php if ( $pen ) : ?><span class="kurs-bracket__pen"><?php echo esc_html( $pen ); ?></span><?php endif; ?>
 						<span class="kurs-bracket__meta-label"><?php echo esc_html( $labels[ $round ] ?? '' ); ?> #<?php echo (int) $slot; ?></span>
 					</div>
 				</<?php echo $tag; ?>>
@@ -315,6 +346,89 @@ function kurs_render_playoff_bracket( int $division_id, array $args = [] ): stri
 			</div>
 		</div>
 		<?php endforeach; ?>
+	</div>
+	<?php
+	return ob_get_clean();
+}
+
+/**
+ * Rezultati jednog kola sa strijelcima ispod svake utakmice (pregled po kolima).
+ * Za ligu s više skupina utakmice su grupirane po skupini. Tema ima CSS (.rr-*).
+ */
+function kurs_render_round_results( int $division_id, int $round ): string {
+	if ( ! class_exists( 'Kurs_Rounds' ) ) return '';
+	$matches = Kurs_Rounds::matches( $division_id, $round );
+	if ( ! $matches ) return '';
+	$goals   = Kurs_Rounds::goals_by_match( $division_id, $matches );
+	$byes    = Kurs_Rounds::byes( $matches );
+
+	$by_group = [];
+	foreach ( $matches as $m ) $by_group[ $m->group_name ][] = $m;
+	$multi = count( $by_group ) > 1;
+
+	ob_start(); ?>
+	<div class="round-results">
+		<?php foreach ( $by_group as $gname => $list ) : ?>
+		<?php if ( $multi ) : $gdate = Kurs_Rounds::date_label( $list ); ?>
+		<div class="round-results__group"><span><?php echo esc_html( $gname ); ?></span><?php if ( $gdate ) : ?><em><?php echo esc_html( $gdate ); ?></em><?php endif; ?></div>
+		<?php endif; ?>
+		<?php foreach ( $list as $m ) :
+			$done = $m->status === 'finished';
+			$gl   = $done ? ( $goals[ (int) $m->id ] ?? [] ) : [];
+			$hs   = Kurs_Rounds::scorers_text( $gl['home'] ?? [] );
+			$as   = Kurs_Rounds::scorers_text( $gl['away'] ?? [] );
+			$ts   = $m->match_date ? strtotime( $m->match_date ) : 0;
+			$note = ! $ts ? 'Termin nije određen'
+				: ( $ts < current_time( 'timestamp' ) ? 'Nije odigrano (' . kurs_schedule_date_label( $m->match_date ) . ')' : kurs_schedule_date_label( $m->match_date ) );
+		?>
+		<a class="rr-match<?php echo $done ? ' is-finished' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'match_id', (int) $m->id, home_url( '/utakmica/' ) ) ); ?>">
+			<div class="rr-match__team rr-match__team--home"><span class="rr-match__name"><?php echo esc_html( $m->home_name ); ?></span><?php echo kurs_team_badge_html( (int) $m->home_team_id, 26 ); ?></div>
+			<?php if ( $done ) : ?>
+			<div class="rr-match__score"><?php echo (int) $m->home_score; ?><i>:</i><?php echo (int) $m->away_score; ?></div>
+			<?php else : ?>
+			<div class="rr-match__score rr-match__score--tbd"><?php echo $ts ? esc_html( date( 'H:i', $ts ) ) : 'vs'; ?></div>
+			<?php endif; ?>
+			<div class="rr-match__team rr-match__team--away"><?php echo kurs_team_badge_html( (int) $m->away_team_id, 26 ); ?><span class="rr-match__name"><?php echo esc_html( $m->away_name ); ?></span></div>
+			<?php if ( $hs || $as ) : ?>
+			<div class="rr-match__scorers"><div class="rr-match__sc rr-match__sc--home"><?php echo esc_html( $hs ); ?></div><div class="rr-match__sc rr-match__sc--away"><?php echo esc_html( $as ); ?></div></div>
+			<?php elseif ( ! $done ) : ?>
+			<div class="rr-match__note"><?php echo esc_html( $note ); ?></div>
+			<?php endif; ?>
+		</a>
+		<?php endforeach; ?>
+		<?php if ( isset( $byes[ (int) $list[0]->group_id ] ) ) : ?>
+		<div class="rr-bye">Slobodna u ovom kolu: <strong><?php echo esc_html( $byes[ (int) $list[0]->group_id ] ); ?></strong></div>
+		<?php endif; ?>
+		<?php endforeach; ?>
+	</div>
+	<?php
+	return ob_get_clean();
+}
+
+/** Strijelci lige nakon N. kola, grupirani po broju golova (kao u medijima) + autogolovi. */
+function kurs_render_round_scorers( int $division_id, ?int $round = null ): string {
+	if ( ! class_exists( 'Kurs_Rounds' ) ) return '';
+	$sc = Kurs_Rounds::scorers( $division_id, $round );
+	if ( ! $sc['groups'] && ! $sc['own'] ) return '';
+
+	ob_start(); ?>
+	<div class="round-scorers">
+		<?php foreach ( $sc['groups'] as $goals => $list ) : ?>
+		<div class="rs-row">
+			<div class="rs-goals"><?php echo (int) $goals; ?></div>
+			<div class="rs-names">
+				<?php foreach ( $list as $i => $s ) : ?><span class="rs-name"><?php echo esc_html( $s['name'] ); ?> <em><?php echo esc_html( $s['team'] ); ?></em></span><?php endforeach; ?>
+			</div>
+		</div>
+		<?php endforeach; ?>
+		<?php if ( $sc['own'] ) : ?>
+		<div class="rs-row rs-row--own">
+			<div class="rs-goals" title="Autogol">AG</div>
+			<div class="rs-names">
+				<?php foreach ( $sc['own'] as $s ) : ?><span class="rs-name"><?php echo esc_html( $s['name'] . ( $s['goals'] > 1 ? ' ' . $s['goals'] : '' ) ); ?> <em><?php echo esc_html( $s['team'] ); ?></em></span><?php endforeach; ?>
+			</div>
+		</div>
+		<?php endif; ?>
 	</div>
 	<?php
 	return ob_get_clean();

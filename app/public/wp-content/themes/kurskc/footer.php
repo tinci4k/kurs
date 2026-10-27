@@ -44,9 +44,10 @@
 			<h4 class="site-footer__nav-title">Portal</h4>
 			<ul>
 				<li><a href="<?php echo esc_url( home_url( '/vijesti/' ) ); ?>">Vijesti</a></li>
-				<li><a href="<?php echo esc_url( home_url( '/kc-liga/?tab=tablica' ) ); ?>">Tablice</a></li>
-				<li><a href="<?php echo esc_url( home_url( '/kc-liga/?tab=raspored' ) ); ?>">Raspored kola</a></li>
-				<li><a href="<?php echo esc_url( home_url( '/kc-liga/?tab=raspored' ) ); ?>">Rezultati</a></li>
+				<li><a href="<?php echo esc_url( home_url( '/kc-liga/?tab=tablica#liga' ) ); ?>">Tablice</a></li>
+				<li><a href="<?php echo esc_url( home_url( '/kc-liga/?tab=kola#kola' ) ); ?>">Rezultati po kolima</a></li>
+				<li><a href="<?php echo esc_url( home_url( '/kc-liga/?tab=raspored#liga' ) ); ?>">Raspored</a></li>
+				<li><a href="<?php echo esc_url( home_url( '/za-medije/' ) ); ?>">Za medije</a></li>
 			</ul>
 		</nav>
 

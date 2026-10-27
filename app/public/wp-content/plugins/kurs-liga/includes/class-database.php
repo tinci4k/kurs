@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.9';
+	const DB_VERSION = '1.11';
 
 	public static function install(): void {
 		global $wpdb;
@@ -22,7 +22,8 @@ class Kurs_Database {
 			status             VARCHAR(20)       NOT NULL DEFAULT 'active',
 			locked             TINYINT UNSIGNED  NOT NULL DEFAULT 0 COMMENT 'zaključana sezona = konačni podaci',
 			max_fouls_per_half TINYINT UNSIGNED  NOT NULL DEFAULT 5 COMMENT 'akumulirani prekršaji prije penala',
-			created_at         DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			referees           TEXT              DEFAULT NULL COMMENT 'baza sudaca sezone, JSON [{ime, prezime}]',
+			created_at        DATETIME          NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id),
 			KEY idx_status (status)
 		) $c;" );
@@ -124,6 +125,8 @@ class Kurs_Database {
 			away_team_id BIGINT UNSIGNED DEFAULT NULL,
 			home_score   TINYINT UNSIGNED DEFAULT NULL,
 			away_score   TINYINT UNSIGNED DEFAULT NULL,
+			home_pen     TINYINT UNSIGNED DEFAULT NULL COMMENT 'penali — samo kod neriješenog',
+			away_pen     TINYINT UNSIGNED DEFAULT NULL,
 			status       VARCHAR(20)     NOT NULL DEFAULT 'scheduled',
 			match_date   DATETIME        DEFAULT NULL,
 			home_label   VARCHAR(20)     DEFAULT NULL COMMENT 'npr. A1, QF1-W',
@@ -153,6 +156,17 @@ class Kurs_Database {
 			// v1.1 — promjena tipa postojećeg stupca (valjan MySQL; dbDelta ne mijenja
 			// uvijek pouzdano duljinu VARCHAR-a).
 			$wpdb->query( "ALTER TABLE {$p}seasons MODIFY COLUMN league VARCHAR(100) NOT NULL" );
+		}
+
+		// v1.10 — baza sudaca se vodi po sezoni (seasons.referees): dotadašnju zajedničku listu
+		// (opcija kurs_referees) dobivaju sve postojeće sezone, a opcija se briše. Uvjet je stara
+		// opcija, ne verzija baze — prekinuta migracija (npr. usred deploya) ponovi se sama.
+		$old = get_option( 'kurs_referees' );
+		if ( $old !== false && method_exists( 'Kurs_Season', 'set_referees' ) ) {
+			foreach ( is_array( $old ) && $old ? Kurs_Season::all() : [] as $s ) {
+				if ( ! Kurs_Season::get_referees( (int) $s->id ) ) Kurs_Season::set_referees( (int) $s->id, $old );
+			}
+			delete_option( 'kurs_referees' );
 		}
 	}
 }

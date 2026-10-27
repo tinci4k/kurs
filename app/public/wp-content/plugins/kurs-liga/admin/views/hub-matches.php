@@ -1,137 +1,65 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-$season_id      = absint( $_GET['season_id']   ?? 0 );
-$group_id       = absint( $_GET['group_id']     ?? 0 );
-$playoff_div_id = absint( $_GET['playoff_div']  ?? 0 );
+/*
+ * Stranica natjecanja → kartica „Utakmice": odabir lige / skupine / playoffa,
+ * raspored po kolima (zapisnik, datum i kolo, brisanje) + ljestvica; playoff bracket.
+ * Varijable iz season-hub.php: $season, $season_id, $divisions, $accent, $is_locked, $hub_url.
+ */
 
-$seasons = Kurs_Season::all();
-if ( ! $season_id && ! empty( $seasons ) ) $season_id = (int) $seasons[0]->id;
+$group_id       = absint( $_GET['group_id']    ?? 0 );
+$playoff_div_id = absint( $_GET['playoff_div'] ?? 0 );
 
-$season    = $season_id ? Kurs_Season::get( $season_id ) : null;
-$divisions = $season_id ? Kurs_Season::get_divisions( $season_id ) : [];
-
-/* Flatten svih grupa i napravi listu playoff divizija */
-$all_groups      = [];
-$playoff_divs    = [];   // divizije koje imaju grupnu fazu (potencijalni playoff)
-
+/* Skupine sezone (po ligama) + lige koje imaju playoff */
+$all_groups   = [];
+$playoff_divs = [];
 foreach ( $divisions as $div ) {
-	$has_group_phase = false;
-	foreach ( Kurs_Season::get_phases( (int) $div->id ) as $ph ) {
-		if ( $ph->type === 'group' ) {
-			$has_group_phase = true;
-			foreach ( Kurs_Season::get_groups( (int) $ph->id ) as $g ) {
-				$g->div_name   = $div->name;
-				$g->phase_name = $ph->name;
-				$g->phase_type = $ph->type;
-				$g->div_id     = (int) $div->id;
-				$all_groups[]  = $g;
-			}
-		}
+	$ph     = Kurs_Season::group_phase( (int) $div->id );
+	$groups = $ph ? Kurs_Season::get_groups( (int) $ph->id ) : [];
+	foreach ( $groups as $g ) {
+		$g->div_name = $div->name;
+		$g->div_id   = (int) $div->id;
+		$g->label    = count( $groups ) === 1 ? $div->name : $g->name; // KC: skupina = liga
+		$all_groups[] = $g;
 	}
-	// Playoff nudimo samo divizijama koje su tako postavljene (has_playoff)
-	if ( $has_group_phase && ! empty( $div->has_playoff ) ) {
-		$playoff_divs[] = $div;
-	}
+	if ( $groups && ! empty( $div->has_playoff ) ) $playoff_divs[] = $div;
 }
 
-/* Defaulti */
-if ( ! $group_id && ! $playoff_div_id && ! empty( $all_groups ) ) {
-	$group_id = (int) $all_groups[0]->id;
-}
+/* Odabir mora pripadati ovoj sezoni; zadano prva liga/skupina */
+if ( $group_id && ! in_array( $group_id, array_map( fn( $g ) => (int) $g->id, $all_groups ), true ) ) $group_id = 0;
+if ( $playoff_div_id && ! in_array( $playoff_div_id, array_map( fn( $d ) => (int) $d->id, $playoff_divs ), true ) ) $playoff_div_id = 0;
+if ( ! $group_id && ! $playoff_div_id && $all_groups ) $group_id = (int) $all_groups[0]->id;
 
 $current_group = null;
 foreach ( $all_groups as $g ) {
 	if ( (int) $g->id === $group_id ) { $current_group = $g; break; }
 }
-
-$view = $playoff_div_id ? 'playoff' : 'group';
-
-$bar_color = ( $season && Kurs_Season::is_pan_league( $season->league ) ) ? '#F47B16' : '#DA0F1E';
-
-/* Generiraj href-ove za selektor */
-function kurs_matches_group_url( int $sid, int $gid ): string {
-	return admin_url( "admin.php?page=kurs-matches&season_id={$sid}&group_id={$gid}" );
-}
-function kurs_matches_playoff_url( int $sid, int $did ): string {
-	return admin_url( "admin.php?page=kurs-matches&season_id={$sid}&playoff_div={$did}" );
-}
+$view      = $playoff_div_id ? 'playoff' : 'group';
+$bar_color = $accent;
 ?>
-<div class="wrap kurs-wrap">
 
-	<!-- ── Breadcrumb + naslov ───────────────────────────────────────────── -->
-	<div class="kurs-breadcrumb">
-		<a href="<?php echo admin_url( 'admin.php?page=kurs-dashboard' ); ?>">KURS Liga</a>
-		<span class="kurs-breadcrumb__sep">/</span>
-		Utakmice &amp; tablice
-	</div>
-	<div class="kurs-page-hd">
-		<h1>
-			Utakmice &amp; tablice
-			<?php if ( $season ) : ?>
-			<span style="display:inline-block;vertical-align:middle;margin-left:10px;"><?php echo kurs_league_icon( $season->league, 26 ); ?></span>
-			<span class="kurs-tag kurs-tag--<?php echo esc_attr( $season->league ); ?>" style="font-size:.5em;vertical-align:middle;margin-left:6px;">
-				<?php echo esc_html( $season->name ); ?>
-			</span>
-			<?php if ( ! empty( $season->locked ) ) : ?>
-			<span class="kurs-badge" style="background:#111317;color:#FDE206;font-size:.42em;vertical-align:middle;margin-left:6px;">&#128274; Zaključano</span>
-			<?php endif; ?>
-			<?php endif; ?>
-		</h1>
-		<?php if ( $season_id ) : ?>
-		<a href="<?php echo admin_url( 'admin.php?page=kurs-season-setup&season_id=' . $season_id . '&step=2' ); ?>"
-		   class="kurs-btn kurs-btn--outline kurs-btn--sm">&#9881; Postavi ligu</a>
-		<?php endif; ?>
-	</div>
+<?php if ( isset( $_GET['generated_season'] ) ) :
+	$gen = absint( $_GET['generated_season'] ); ?>
+<div class="notice notice-success is-dismissible"><p>
+	<?php echo $gen
+		? sprintf( 'Raspored je generiran — %d novih utakmica. Datume upiši preko ✎ uz svaku utakmicu.', $gen )
+		: 'Sve utakmice već postoje — ništa novo nije dodano.'; ?>
+</p></div>
+<?php endif; ?>
 
-	<!-- ── Selektor sezone i pogleda ─────────────────────────────────────── -->
-	<div class="kurs-selector-bar">
-		<span class="kurs-selector-bar__label">Sezona</span>
-		<select onchange="window.location.href=this.value;">
-			<?php foreach ( $seasons as $s ) :
-				$first_group = null;
-				foreach ( $all_groups as $g ) { $first_group = $g; break; }
-				$href = $first_group
-					? kurs_matches_group_url( (int)$s->id, 0 )
-					: admin_url( 'admin.php?page=kurs-matches&season_id=' . $s->id );
-			?>
-			<option value="<?php echo esc_url( admin_url( 'admin.php?page=kurs-matches&season_id=' . $s->id ) ); ?>"
-			        <?php selected( $s->id, $season_id ); ?>>
-				<?php echo esc_html( $s->name ); ?>
-			</option>
-			<?php endforeach; ?>
-		</select>
-
-		<?php if ( ! empty( $all_groups ) || ! empty( $playoff_divs ) ) : ?>
-		<span class="kurs-selector-bar__label">Prikaz</span>
-		<select onchange="window.location.href=this.value;" class="kurs-view-sel">
-			<?php foreach ( $divisions as $div ) :
-				$div_groups = array_filter( $all_groups, fn($g) => $g->div_id === (int)$div->id );
-				if ( empty( $div_groups ) ) continue;
-			?>
-			<optgroup label="<?php echo esc_attr( $div->name ); ?>">
-				<?php foreach ( $div_groups as $g ) : ?>
-				<option value="<?php echo esc_url( kurs_matches_group_url( $season_id, (int)$g->id ) ); ?>"
-				        <?php selected( $view === 'group' && $group_id === (int)$g->id, true ); ?>>
-					<?php echo esc_html( $g->name ); ?>
-				</option>
-				<?php endforeach; ?>
-			</optgroup>
-			<?php endforeach; ?>
-
-			<?php if ( ! empty( $playoff_divs ) ) : ?>
-			<optgroup label="— Playoff —">
-				<?php foreach ( $playoff_divs as $div ) : ?>
-				<option value="<?php echo esc_url( kurs_matches_playoff_url( $season_id, (int)$div->id ) ); ?>"
-				        <?php selected( $view === 'playoff' && $playoff_div_id === (int)$div->id, true ); ?>>
-					<?php echo esc_html( $div->name ); ?> — Playoff bracket
-				</option>
-				<?php endforeach; ?>
-			</optgroup>
-			<?php endif; ?>
-		</select>
-		<?php endif; ?>
-	</div>
+<?php if ( count( $all_groups ) + count( $playoff_divs ) > 1 ) : ?>
+<!-- ── Liga / skupina / playoff ──────────────────────────────────────────── -->
+<nav class="kurs-hub-sub" aria-label="Liga">
+	<?php foreach ( $all_groups as $g ) : ?>
+	<a href="<?php echo esc_url( $hub_url( 'utakmice', [ 'group_id' => (int) $g->id ] ) ); ?>"
+	   class="<?php echo $view === 'group' && $group_id === (int) $g->id ? 'is-active' : ''; ?>"><?php echo esc_html( $g->label ); ?></a>
+	<?php endforeach; ?>
+	<?php foreach ( $playoff_divs as $div ) : ?>
+	<a href="<?php echo esc_url( $hub_url( 'utakmice', [ 'playoff_div' => (int) $div->id ] ) ); ?>"
+	   class="kurs-hub-sub__po<?php echo $view === 'playoff' && $playoff_div_id === (int) $div->id ? ' is-active' : ''; ?>">&#127942; Playoff<?php echo count( $playoff_divs ) > 1 ? ' · ' . esc_html( $div->name ) : ''; ?></a>
+	<?php endforeach; ?>
+</nav>
+<?php endif; ?>
 
 <?php if ( $view === 'playoff' ) :
 	/* ════════════════════════════════════════════════════════════════════
@@ -149,13 +77,22 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 	];
 	$round_order = [ 'qf', 'sf', 'final', '3rd' ];
 
-	$self_playoff_url = admin_url( "admin.php?page=kurs-matches&season_id={$season_id}&playoff_div={$playoff_div_id}" );
 ?>
 
 	<!-- Playoff akcije -->
+	<?php if ( ! $is_locked ) : ?>
 	<div style="display:flex;gap:10px;align-items:center;margin:14px 0 10px;flex-wrap:wrap;">
-		<?php if ( ! $has_bracket ) : ?>
-		<form method="post" onsubmit="return confirm('Generirati playoff bracket iz grupnih ljestvica?');">
+		<?php if ( ! $has_bracket ) :
+			global $wpdb;
+			$open_group = (int) $wpdb->get_var( $wpdb->prepare( // neodigrane utakmice skupina → ljestvice još nisu konačne
+				"SELECT COUNT(*) FROM {$wpdb->prefix}kurs_matches m JOIN {$wpdb->prefix}kurs_groups g ON g.id = m.group_id
+				 JOIN {$wpdb->prefix}kurs_phases ph ON ph.id = g.phase_id WHERE ph.division_id = %d AND m.status <> 'finished'", $playoff_div_id ) );
+			$gen_msg = $open_group
+				? sprintf( 'U skupinama još ima %d neodigranih utakmica — ljestvice nisu konačne pa ni parovi playoffa. Svejedno generirati bracket?', $open_group )
+				: 'Generirati playoff bracket iz grupnih ljestvica?';
+		?>
+		<?php if ( $open_group ) : ?><span class="kurs-muted" style="font-size:12px;">&#9888; Neodigrano u skupinama: <?php echo $open_group; ?></span><?php endif; ?>
+		<form method="post" onsubmit="return confirm(<?php echo esc_attr( wp_json_encode( $gen_msg ) ); ?>);">
 			<?php wp_nonce_field('kurs_generate_playoff'); ?>
 			<input type="hidden" name="kurs_action"  value="generate_playoff">
 			<input type="hidden" name="division_id"  value="<?php echo $playoff_div_id; ?>">
@@ -163,7 +100,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 			<button type="submit" class="kurs-btn kurs-btn--red">&#9654; Generiraj bracket</button>
 		</form>
 		<?php else : ?>
-		<form method="post" onsubmit="return confirm('Obrisati cijeli bracket? Svi rezultati će biti izgubljeni!');">
+		<form method="post" onsubmit="return confirm('Obrisati cijeli bracket?\n\nBrišu se i svi playoff rezultati i zapisnici (strijelci, kartoni). Radnja se ne može poništiti!');">
 			<?php wp_nonce_field('kurs_reset_playoff'); ?>
 			<input type="hidden" name="kurs_action"  value="reset_playoff">
 			<input type="hidden" name="division_id"  value="<?php echo $playoff_div_id; ?>">
@@ -172,11 +109,16 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 		</form>
 		<?php endif; ?>
 	</div>
+	<?php endif; ?>
 
 	<?php if ( isset($_GET['generated']) ) : ?>
 	<div class="kurs-notice kurs-notice--ok">&#10003; Playoff bracket generiran iz grupnih ljestvica.</div>
 	<?php elseif ( isset($_GET['reset']) ) : ?>
 	<div class="kurs-notice">Bracket je resetiran.</div>
+	<?php elseif ( ( $_GET['pm_error'] ?? '' ) === 'draw' ) : ?>
+	<div class="kurs-notice kurs-notice--err">Utakmica nije zaključena: neriješeno je, a u playoffu mora biti pobjednik — upiši i rezultat penala.</div>
+	<?php elseif ( ( $_GET['pm_error'] ?? '' ) === 'teams' ) : ?>
+	<div class="kurs-notice kurs-notice--err">Ekipe nisu promijenjene: zapisnik te utakmice već ima golove ili kartone (termin se sprema normalno).</div>
 	<?php endif; ?>
 
 	<?php if ( ! $has_bracket ) : ?>
@@ -200,8 +142,10 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 					$finished  = $m->status === 'finished';
 					$home_name = $m->home_name ?: $m->home_label ?: '?';
 					$away_name = $m->away_name ?: $m->away_label ?: '?';
-					$home_wins = $finished && (int)$m->home_score > (int)$m->away_score;
-					$away_wins = $finished && (int)$m->away_score > (int)$m->home_score;
+					$side      = Kurs_Playoff::winner_side( $m );
+					$home_wins = $side === 'home';
+					$away_wins = $side === 'away';
+					$pen       = Kurs_Playoff::pen_label( $m );
 				?>
 				<div class="kurs-bracket__match <?php echo $finished ? 'is-finished' : ''; ?>" id="pm-<?php echo $m->id; ?>">
 
@@ -229,8 +173,9 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 						<?php if ( $m->match_date ) : ?>
 						<span><?php echo esc_html( date( 'j.n. H:i', strtotime( $m->match_date ) ) ); ?></span>
 						<?php else : ?>
-						<span class="kurs-muted">Datum TBD</span>
+						<span class="kurs-muted">Termin naknadno</span>
 						<?php endif; ?>
+						<?php if ( $pen ) : ?><span class="kurs-bracket__pen"><?php echo esc_html( $pen ); ?></span><?php endif; ?>
 						<span class="kurs-bracket__meta-label"><?php echo esc_html( $round_labels[$round] ?? '' ); ?> #<?php echo $slot; ?></span>
 					</div>
 
@@ -244,14 +189,15 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 							}
 						}
 						?>
-						<?php if ( $finished ) : ?>
+						<?php if ( $is_locked ) : ?>
+						<?php elseif ( $finished ) : ?>
 						<form method="post" style="display:inline;">
 							<?php wp_nonce_field('kurs_reopen_playoff_match'); ?>
 							<input type="hidden" name="kurs_action"       value="reopen_playoff_match">
 							<input type="hidden" name="playoff_match_id"  value="<?php echo $m->id; ?>">
 							<input type="hidden" name="division_id"       value="<?php echo $playoff_div_id; ?>">
 							<input type="hidden" name="season_id"         value="<?php echo $season_id; ?>">
-							<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--xs">&#128274; Otključaj</button>
+							<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--xs">&#9998; Otvori za ispravak</button>
 						</form>
 						<?php else : ?>
 						<button class="kurs-btn kurs-btn--outline kurs-btn--xs pm-edit-btn"
@@ -259,7 +205,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 						<?php endif; ?>
 					</div>
 
-					<?php if ( ! $finished ) : ?>
+					<?php if ( ! $finished && ! $is_locked ) : ?>
 					<div class="kurs-pm-edit-panel" id="pm-edit-<?php echo $m->id; ?>" style="display:none;">
 
 						<form method="post" class="kurs-pm-score-form">
@@ -275,7 +221,14 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 								<input type="number" name="away_score" class="kurs-si kurs-pm-si" min="0" max="99" required placeholder="0">
 								<label class="kurs-field-label" style="font-size:9px;"><?php echo esc_html( $away_name ); ?></label>
 							</div>
-							<button type="submit" class="kurs-btn kurs-btn--red kurs-btn--sm" style="width:100%;margin-top:6px;">&#10003; Zaključi</button>
+							<div class="kurs-pm-score-row kurs-pm-pen-row" title="Upiši samo ako je utakmica završila neriješeno">
+								<span class="kurs-field-label" style="font-size:9px;">Penali</span>
+								<input type="number" name="home_pen" class="kurs-si kurs-pm-si" min="0" max="99" placeholder="–">
+								<span class="kurs-finish-score__sep">:</span>
+								<input type="number" name="away_pen" class="kurs-si kurs-pm-si" min="0" max="99" placeholder="–">
+								<span class="kurs-field-label" style="font-size:9px;">samo kod neriješenog</span>
+							</div>
+							<button type="submit" class="kurs-btn kurs-btn--red kurs-btn--sm" style="width:100%;margin-top:6px;">&#10003; Završi utakmicu</button>
 						</form>
 
 						<hr style="border:none;border-top:1px solid var(--ka-border);margin:10px 0;">
@@ -337,8 +290,8 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 	<div class="kurs-empty-state">
 		<p>Nema postavljenih grupa u ovoj sezoni.</p>
 		<?php if ( $season_id ) : ?>
-		<a href="<?php echo admin_url( 'admin.php?page=kurs-season-setup&season_id=' . $season_id . '&step=2' ); ?>"
-		   class="kurs-btn kurs-btn--red" style="margin-top:14px;">Postavi ligu &rarr;</a>
+		<a href="<?php echo esc_url( $hub_url( 'ekipe' ) ); ?>"
+		   class="kurs-btn kurs-btn--red" style="margin-top:14px;">Uvrsti ekipe u lige &rarr;</a>
 		<?php endif; ?>
 	</div>
 
@@ -365,7 +318,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 					Ljestvica
 					<?php if ( $current_group ) : ?>
 					<span style="font-weight:400;font-style:normal;font-size:.75em;color:var(--ka-muted);margin-left:8px;">
-						<?php echo esc_html( $current_group->div_name . ' / ' . $current_group->name ); ?>
+						<?php echo esc_html( $current_group->label === $current_group->div_name ? $current_group->div_name : $current_group->div_name . ' / ' . $current_group->name ); ?>
 					</span>
 					<?php endif; ?>
 				</h3>
@@ -381,8 +334,8 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 				<p class="kurs-muted" style="padding:20px 0;">
 					Nema završenih utakmica.
 					<?php if ( empty( $group_teams ) ) : ?>
-					<a href="<?php echo admin_url( 'admin.php?page=kurs-season-setup&season_id=' . $season_id . '&step=3' ); ?>">
-						Dodaj ekipe u grupu &rarr;
+					<a href="<?php echo esc_url( $hub_url( 'ekipe' ) ); ?>">
+						Uvrsti ekipe u skupinu &rarr;
 					</a>
 					<?php endif; ?>
 				</p>
@@ -426,7 +379,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 									<span style="font-family:var(--font-mono);font-size:9px;color:#fff;font-weight:700;"><?php echo esc_html( $abbr ); ?></span>
 									<?php endif; ?>
 								</div>
-								<a href="<?php echo admin_url( 'admin.php?page=kurs-roster&team_id=' . (int) $r['team_id'] . '&division_id=' . (int) $current_group->div_id ); ?>"
+								<a href="<?php echo esc_url( add_query_arg( [ 'page' => 'kurs-teams', 'action' => 'edit', 'id' => (int) $r['team_id'], 'division_id' => (int) $current_group->div_id ], admin_url( 'admin.php' ) ) ); ?>"
 								   style="font-family:var(--font-cond);font-weight:700;font-size:14px;text-decoration:none;color:var(--ka-dark);">
 									<?php echo esc_html( $r['team_name'] ); ?>
 								</a>
@@ -463,7 +416,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 
 			<div class="kurs-panel__head kurs-sched-head">
 				<h3 class="kurs-panel__title">Raspored</h3>
-				<?php if ( count( $group_teams ) >= 2 ) : ?>
+				<?php if ( count( $group_teams ) >= 2 && ! $is_locked ) : ?>
 				<div class="kurs-sched-head__actions">
 					<label class="kurs-btn kurs-btn--outline kurs-btn--sm" for="kurs-add-manual-chk" style="cursor:pointer;">
 						+ Dodaj ručno
@@ -476,7 +429,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 				<?php endif; ?>
 			</div>
 
-			<?php if ( count( $group_teams ) >= 2 ) : ?>
+			<?php if ( count( $group_teams ) >= 2 && ! $is_locked ) : ?>
 			<input type="checkbox" id="kurs-add-manual-chk" class="kurs-add-manual-chk" style="display:none;">
 			<div class="kurs-add-match-drop">
 				<form method="post">
@@ -521,8 +474,8 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 
 			<?php if ( empty( $group_teams ) ) : ?>
 			<div class="kurs-panel__empty">
-				<a href="<?php echo admin_url( 'admin.php?page=kurs-season-setup&season_id=' . $season_id . '&step=3' ); ?>">
-					Dodaj ekipe u grupu &rarr;
+				<a href="<?php echo esc_url( $hub_url( 'ekipe' ) ); ?>">
+					Uvrsti ekipe u skupinu &rarr;
 				</a>
 			</div>
 			<?php endif; ?>
@@ -531,6 +484,16 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 			<?php if ( ! empty( $group_teams ) && empty( $matches ) ) : ?>
 			<p class="kurs-muted" style="padding:20px 18px;">Nema utakmica. Klikni "Generiraj sve" ili dodaj ručno.</p>
 			<?php elseif ( ! empty( $matches ) ) :
+				/* Ekipe koje igraju više puta u istom kolu (krivo upisano kolo) — kvari pregled po kolima */
+				$round_dupes = [];
+				$seen        = [];
+				foreach ( $matches as $m ) {
+					foreach ( [ $m->home_team_id => $m->home_name, $m->away_team_id => $m->away_name ] as $tid => $tname ) {
+						$key = (int) $m->round . '_' . (int) $tid;
+						if ( isset( $seen[ $key ] ) ) $round_dupes[ (int) $m->round ][ (int) $tid ] = $tname;
+						$seen[ $key ] = true;
+					}
+				}
 				$cur_round = null;
 				foreach ( $matches as $m ) :
 					$is_new_round = ( (int) $m->round !== $cur_round );
@@ -538,7 +501,12 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 						if ( $cur_round !== null ) echo '</div>';
 						$cur_round = (int) $m->round;
 						echo '<div class="kurs-round-block">';
-						echo '<div class="kurs-round-hd"><span class="kurs-round-hd__label">Kolo ' . $cur_round . '</span></div>';
+						echo '<div class="kurs-round-hd"><span class="kurs-round-hd__label">Kolo ' . $cur_round . '</span>';
+						if ( ! empty( $round_dupes[ $cur_round ] ) ) {
+							echo '<span class="kurs-round-warn" title="Provjeri kolo uz te utakmice (✎)">&#9888; Više puta u ovom kolu: '
+								. esc_html( implode( ', ', $round_dupes[ $cur_round ] ) ) . '</span>';
+						}
+						echo '</div>';
 					}
 			?>
 				<div class="kurs-match kurs-match--<?php echo esc_attr( $m->status ); ?>" id="match-<?php echo (int) $m->id; ?>">
@@ -572,6 +540,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 							   class="kurs-btn kurs-btn--outline kurs-btn--sm" title="Zapisnik">
 								Zapisnik
 							</a>
+							<?php if ( ! $is_locked ) : ?>
 							<button class="kurs-btn kurs-btn--ghost kurs-btn--sm kurs-btn-edit-match"
 							        data-match-id="<?php echo (int) $m->id; ?>"
 							        data-date="<?php echo esc_attr( $m->match_date ?? '' ); ?>"
@@ -587,6 +556,7 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 								<input type="hidden" name="season_id"   value="<?php echo $season_id; ?>">
 								<button type="submit" class="kurs-del-btn" title="Obriši">&times;</button>
 							</form>
+							<?php endif; ?>
 						</div>
 					</div>
 
@@ -619,8 +589,6 @@ function kurs_matches_playoff_url( int $sid, int $did ): string {
 	</div><!-- /.kurs-matches-layout -->
 	<?php endif; // group_id
 endif; // view ?>
-
-</div>
 
 <?php if ( $view === 'playoff' ) : ?>
 <script>

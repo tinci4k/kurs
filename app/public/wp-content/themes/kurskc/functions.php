@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURSKC_VERSION', '1.0.33' );
+define( 'KURSKC_VERSION', '1.0.38' );
 define( 'KURSKC_DIR', get_template_directory() );
 define( 'KURSKC_URI', get_template_directory_uri() );
 
@@ -10,6 +10,7 @@ require_once KURSKC_DIR . '/inc/enqueue.php';
 require_once KURSKC_DIR . '/inc/nav-menus.php';
 require_once KURSKC_DIR . '/inc/news.php';
 require_once KURSKC_DIR . '/inc/sponsors.php';
+require_once KURSKC_DIR . '/inc/media-kit.php';
 
 /* Helpers iz plugina — badge, boja ekipe itd. */
 if ( ! function_exists( 'kurs_team_badge_html' ) ) {
@@ -48,6 +49,11 @@ function kurskc_create_pages(): void {
 			'slug'     => 'utakmica',
 			'template' => 'page-utakmica.php',
 		],
+		[
+			'title'    => 'Za medije',
+			'slug'     => 'za-medije',
+			'template' => 'page-za-medije.php',
+		],
 	];
 
 	foreach ( $pages as $page ) {
@@ -76,7 +82,7 @@ function kurskc_create_pages(): void {
 add_action( 'after_switch_theme', 'kurskc_create_pages' );
 // Pokretaj i pri svakom loadu ako stranica nedostaje (sigurnosna mreža)
 add_action( 'init', function () {
-	if ( ! get_page_by_path( 'kc-liga' ) || ! get_page_by_path( 'pan-ljetna' ) || ! get_page_by_path( 'utakmica' ) ) {
+	if ( ! get_page_by_path( 'kc-liga' ) || ! get_page_by_path( 'pan-ljetna' ) || ! get_page_by_path( 'utakmica' ) || ! get_page_by_path( 'za-medije' ) ) {
 		kurskc_create_pages();
 	}
 }, 20 );

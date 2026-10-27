@@ -37,6 +37,8 @@ if ( ! $season_id && $division_id ) {
 	) );
 }
 
+$season_locked = Kurs_Season::is_locked( $season_id ); // konačni podaci — server odbija izmjene, sučelje ih skriva
+
 $home_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->home_team_id, $division_id ) : [];
 $away_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->away_team_id, $division_id ) : [];
 $events      = Kurs_Match::get_events( $match_id );
@@ -63,9 +65,10 @@ if ( isset( $_GET['format'] ) && $_GET['format'] === 'pdf' ) {
 	exit;
 }
 
-$back_url = $is_playoff
-	? admin_url( "admin.php?page=kurs-matches&season_id={$season_id}&playoff_div={$division_id}" )
-	: admin_url( "admin.php?page=kurs-matches&season_id={$season_id}&group_id={$match->group_id}" );
+$back_url = Kurs_Admin::hub_url( $season_id, 'utakmice', $is_playoff
+	? [ 'playoff_div' => $division_id ]
+	: [ 'group_id' => (int) $match->group_id ] );
+$back_season = $season_id ? Kurs_Season::get( $season_id ) : null;
 $pdf_url  = admin_url( "admin.php?page=kurs-match-record&match_id={$match_id}&format=pdf" );
 $date_val = $match->match_date ? date( 'd.m.Y H:i', strtotime( $match->match_date ) ) : '';
 
@@ -98,7 +101,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 
 	<!-- Gornja traka -->
 	<div class="kurs-record-topbar no-print">
-		<a href="<?php echo esc_url( $back_url ); ?>" class="kurs-back">&larr; Utakmice</a>
+		<a href="<?php echo esc_url( $back_url ); ?>" class="kurs-back">&larr; <?php echo esc_html( $back_season ? $back_season->name . ' · Utakmice' : 'Utakmice' ); ?></a>
 		<div class="kurs-record-topbar__actions">
 			<button class="kurs-btn kurs-btn--outline kurs-btn--sm" onclick="window.print()">
 				&#128424; Ispiši
@@ -108,6 +111,13 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 			</a>
 		</div>
 	</div>
+
+	<?php if ( $season_locked ) : ?>
+	<div class="kurs-hub-locked no-print">&#128274; Sezona je <strong>zaključana</strong> — zapisnik je konačan i ne može se mijenjati. Otključati je možeš u <a href="<?php echo esc_url( Kurs_Admin::hub_url( $season_id, 'postavke' ) ); ?>">Postavkama natjecanja</a>.</div>
+	<?php endif; ?>
+	<?php if ( ( $_GET['pm_error'] ?? '' ) === 'draw' ) : ?>
+	<div class="kurs-notice kurs-notice--err no-print">Utakmica nije zaključena: neriješeno je, a u playoffu mora biti pobjednik — upiši i rezultat penala.</div>
+	<?php endif; ?>
 
 	<!-- ── DOKUMENT ZAPISNIKA ─────────────────────────────────────────────── -->
 	<div class="kurs-record-doc">
@@ -173,7 +183,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 						<span class="kurs-match__dt-none">Datum nije postavljen</span>
 						<?php endif; ?>
 						<span class="kurs-record-hero__meta-sep">·</span>
-						<span class="kurs-record-hero__kolo">Kolo <strong><?php echo (int) $match->round; ?></strong></span>
+						<span class="kurs-record-hero__kolo"><?php echo $is_playoff ? esc_html( kurs_round_label( null, $playoff_m->round ?? '' ) ) : 'Kolo <strong>' . (int) $match->round . '</strong>'; ?></span>
 					</div>
 				</div>
 
@@ -187,10 +197,11 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 		</div>
 
 		<!-- Uredi podatke utakmice -->
+		<?php if ( ! $season_locked ) : ?>
 		<details class="kurs-record-edit-details no-print">
-			<summary>&#9998; Uredi datum, sat i kolo</summary>
+			<summary>&#9998; Uredi datum, sat<?php echo $is_playoff ? '' : ' i kolo'; ?></summary>
 			<div class="kurs-record-edit-form">
-				<label class="kurs-field-wrap">
+				<label class="kurs-field-wrap"<?php echo $is_playoff ? ' style="display:none"' : ''; ?>><!-- playoff nema kola -->
 					<span class="kurs-field-label">Kolo</span>
 					<input type="number" id="rec-round" class="kurs-field-input kurs-field-input--xs"
 					       value="<?php echo (int) $match->round; ?>" min="1" max="99">
@@ -205,6 +216,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<span id="save-match-msg" class="kurs-muted" style="display:none;"></span>
 			</div>
 		</details>
+		<?php endif; ?>
 
 		<!-- ── Zapisničareve akcije: GOL / KARTON / PREKRŠAJ ─────────────────── -->
 		<div class="kurs-record-section kurs-record-actions">
@@ -298,34 +310,6 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<?php endforeach; ?>
 			</div>
 
-			<?php if ( $match->status !== 'finished' ) : ?>
-			<div class="kurs-add-event no-print" style="display:none;" aria-hidden="true">
-				<h4>Dodaj gol / event</h4>
-				<div class="kurs-add-event__row">
-					<select id="ev-team">
-						<option value="<?php echo (int) $match->home_team_id; ?>"><?php echo esc_html( $match->home_name ); ?></option>
-						<option value="<?php echo (int) $match->away_team_id; ?>"><?php echo esc_html( $match->away_name ); ?></option>
-					</select>
-					<select id="ev-player">
-						<option value="">— Igrač —</option>
-						<?php foreach ( $home_squad as $sq ) : ?>
-						<option value="<?php echo (int) $sq->player_id; ?>" data-team="<?php echo (int) $match->home_team_id; ?>">
-							<?php echo esc_html( ( $sq->jersey_no ? '#' . (int) $sq->jersey_no . ' ' : '' ) . $sq->player_name ); ?>
-						</option>
-						<?php endforeach; ?>
-					</select>
-					<select id="ev-type">
-						<option value="goal">&#9917; Gol</option>
-						<option value="own_goal">&#9917; Gol u vlastitu mrežu</option>
-						<option value="yellow_card">&#129000; Žuti karton</option>
-						<option value="red_card">&#128997; Crveni karton</option>
-					</select>
-					<input type="number" id="ev-minute" class="small-text" placeholder="Min." min="0" max="120">
-					<button class="button button-primary" id="btn-add-event">+ Dodaj</button>
-				</div>
-				<p id="add-event-msg" class="kurs-muted" style="display:none;margin-top:.3rem;"></p>
-			</div>
-			<?php endif; ?>
 		</div>
 
 		<!-- ── Postave ──────────────────────────────────────────────────────── -->
@@ -418,8 +402,8 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 
 		<!-- ── Suci ──────────────────────────────────────────────────────────── -->
 		<?php
-		$saved_referees = function_exists( 'kurs_get_referees' ) ? kurs_get_referees() : [];
-		$refs_locked    = ( ( $match->referee1 ?? '' ) !== '' ) || ( ( $match->referee2 ?? '' ) !== '' );
+		$saved_referees = Kurs_Season::referee_names( $season_id );
+		$refs_locked    = $season_locked || ( ( $match->referee1 ?? '' ) !== '' ) || ( ( $match->referee2 ?? '' ) !== '' );
 		?>
 		<div class="kurs-record-section kurs-record-refs">
 			<h3 class="kurs-record-section__title">Suci <span class="kurs-muted" style="font-weight:400;font-size:11px;text-transform:none;letter-spacing:0;">(2 po utakmici)</span></h3>
@@ -430,7 +414,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				</div>
 				<div class="kurs-refs-actions no-print">
 					<button type="button" class="kurs-btn kurs-btn--dark kurs-btn--sm" id="ref-save"<?php echo $refs_locked ? ' hidden' : ''; ?>>Spremi suce</button>
-					<button type="button" class="kurs-btn kurs-btn--outline kurs-btn--sm" id="ref-unlock"<?php echo $refs_locked ? '' : ' hidden'; ?>>&#128275; Otključaj</button>
+					<button type="button" class="kurs-btn kurs-btn--outline kurs-btn--sm" id="ref-unlock"<?php echo $refs_locked && ! $season_locked ? '' : ' hidden'; ?>>&#9998; Promijeni</button>
 					<span class="kurs-ref-msg" id="ref-msg" hidden>&#10003; Spremljeno</span>
 				</div>
 				<datalist id="kurs-ref-list">
@@ -441,11 +425,11 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 			</div>
 		</div>
 
-		<!-- ── Zaključi utakmicu ────────────────────────────────────────────── -->
+		<!-- ── Završi utakmicu ────────────────────────────────────────────── -->
 		<?php if ( ! $is_finished ) : ?>
 		<div class="kurs-record-section kurs-record-section--finish-wrap no-print">
 		<div class="kurs-record-section--finish">
-			<h3 class="kurs-record-section__title">Zaključi utakmicu</h3>
+			<h3 class="kurs-record-section__title">Završi utakmicu</h3>
 			<form method="post">
 				<?php wp_nonce_field( 'kurs_finish_match' ); ?>
 				<input type="hidden" name="kurs_action" value="finish_match">
@@ -461,6 +445,17 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					</div>
 					<span class="kurs-finish-row__away"><?php echo esc_html( $match->away_name ); ?></span>
 				</div>
+				<?php if ( $is_playoff ) : ?>
+				<div class="kurs-finish-row kurs-finish-row--pen" title="Playoff mora imati pobjednika — upiši samo ako je utakmica završila neriješeno">
+					<span class="kurs-finish-row__home kurs-muted">Penali</span>
+					<div class="kurs-finish-score">
+						<input type="number" name="home_pen" class="kurs-si" min="0" max="99" placeholder="–">
+						<span class="kurs-finish-score__sep">:</span>
+						<input type="number" name="away_pen" class="kurs-si" min="0" max="99" placeholder="–">
+					</div>
+					<span class="kurs-finish-row__away kurs-muted">samo kod neriješenog</span>
+				</div>
+				<?php endif; ?>
 				<div class="kurs-finish-meta">
 					<span class="kurs-finish-auto-label" id="finish-auto-label">
 						&#9679; Rezultat se automatski računa iz unesenih golova
@@ -470,8 +465,8 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					</button>
 				</div>
 				<div class="kurs-finish-submit">
-					<button type="submit" class="kurs-btn kurs-btn--red">&#10003; Zaključi i spremi rezultat</button>
-					<span class="kurs-muted" style="font-size:11px;">Zaključivanjem se rezultat bilježi u tablicu bodova.</span>
+					<button type="submit" class="kurs-btn kurs-btn--red">&#10003; Završi i spremi rezultat</button>
+					<span class="kurs-muted" style="font-size:11px;">Završavanjem se rezultat bilježi u tablicu bodova.</span>
 				</div>
 			</form>
 		</div>
@@ -481,22 +476,27 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 		<div class="kurs-record-section kurs-record-section--finish-wrap no-print">
 			<div class="kurs-record-section--finish kurs-record-section--finished">
 				<div class="kurs-finished-status">
-					<span class="kurs-finished-status__badge">&#10003; Zaključeno</span>
+					<span class="kurs-finished-status__badge">&#10003; Završeno</span>
 					<span class="kurs-finished-status__score">
 						<?php echo esc_html( $match->home_name ); ?>
 						<strong><?php echo (int) $match->home_score; ?> : <?php echo (int) $match->away_score; ?></strong>
 						<?php echo esc_html( $match->away_name ); ?>
+						<?php if ( $playoff_m && ( $pen = Kurs_Playoff::pen_label( $playoff_m ) ) ) : ?>
+						<span class="kurs-muted">(<?php echo esc_html( $pen ); ?>)</span>
+						<?php endif; ?>
 					</span>
 				</div>
+				<?php if ( ! $season_locked ) : ?>
 				<form method="post" class="kurs-reopen-form"
-				      onsubmit="return confirm('Otvoriti utakmicu za ispravke? Rezultat ostaje vidljiv u tablici sve dok utakmica nije ponovo zaključana.');">
+				      onsubmit="return confirm('Otvoriti utakmicu za ispravak? Dok je otvorena, ne računa se u ljestvicu — nakon ispravka je ponovno završi.');">
 					<?php wp_nonce_field( 'kurs_reopen_match' ); ?>
 					<input type="hidden" name="kurs_action" value="reopen_match">
 					<input type="hidden" name="match_id"    value="<?php echo $match_id; ?>">
 					<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm">
-						&#128274; Otključaj za ispravke
+						&#9998; Otvori za ispravak
 					</button>
 				</form>
+				<?php endif; ?>
 			</div>
 		</div>
 		<?php endif; ?>

@@ -40,6 +40,13 @@ $info = $wpdb->get_row( $wpdb->prepare(
 ) );
 
 $division_id = $info ? (int) $info->division_id : 0;
+
+/* Playoff utakmica (group_id = 0) — liga iz bracketa, da rade postave i breadcrumb */
+$po_match = ( ! $info && class_exists( 'Kurs_Playoff' ) ) ? Kurs_Playoff::find_by_match_id( $match_id ) : null;
+if ( $po_match ) {
+	$division_id = (int) $po_match->division_id;
+	$po_div      = Kurs_Season::get_division( $division_id );
+}
 $events      = Kurs_Match::get_events( $match_id );
 $home_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->home_team_id, $division_id ) : [];
 $away_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->away_team_id, $division_id ) : [];
@@ -58,17 +65,23 @@ if ( $match->status === 'finished' ) {
 	$status_class = 'semafor__status--sched';
 }
 
-$liga_url = $info ? home_url( '/kc-liga/?division_id=' . $division_id . '&tab=raspored' ) : home_url( '/kc-liga/' );
+$liga_url = kurs_league_url( $division_id, [ 'tab' => 'raspored' ] );
+$po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale', '3rd' => 'Utakmica za 3. mjesto' ];
 ?>
 
 <div class="match-wrap">
 
-	<!-- Breadcrumb -->
+	<!-- Breadcrumb: Naslovnica / Liga / N. kolo (→ pregled tog kola) -->
 	<div class="match-breadcrumb">
 		<a href="<?php echo esc_url( home_url( '/' ) ); ?>">Naslovnica</a> /
 		<?php if ( $info ) : ?>
 		<a href="<?php echo esc_url( $liga_url ); ?>"><?php echo esc_html( $info->div_name ); ?></a> /
-		<?php echo esc_html( (int) $match->round . '. kolo' ); ?>
+		<?php if ( $match->round ) : ?>
+		<a href="<?php echo esc_url( kurs_league_url( $division_id, [ 'tab' => 'kola', 'kolo' => (int) $match->round ] ) . '#kola' ); ?>"><?php echo esc_html( (int) $match->round . '. kolo' ); ?></a>
+		<?php endif; ?>
+		<?php elseif ( $po_match ) : ?>
+		<a href="<?php echo esc_url( $liga_url ); ?>"><?php echo esc_html( $po_div->name ?? 'Liga' ); ?></a> /
+		<a href="<?php echo esc_url( kurs_league_url( $division_id, [ 'tab' => 'kola', 'kolo' => 'playoff' ] ) . '#kola' ); ?>"><?php echo esc_html( $po_names[ $po_match->round ] ?? 'Playoff' ); ?></a>
 		<?php endif; ?>
 	</div>
 
@@ -78,7 +91,7 @@ $liga_url = $info ? home_url( '/kc-liga/?division_id=' . $division_id . '&tab=ra
 		<div class="semafor__hatch"></div>
 		<div class="semafor__inner">
 			<div class="semafor__team">
-				<a href="<?php echo esc_url( get_permalink( (int) $match->home_team_id ) ); ?>"
+				<a href="<?php echo esc_url( kurs_team_url( (int) $match->home_team_id, (int) $division_id ) ); ?>"
 				   class="semafor__badge" style="text-decoration:none;">
 					<?php echo $home_badge; ?>
 				</a>
@@ -87,6 +100,9 @@ $liga_url = $info ? home_url( '/kc-liga/?division_id=' . $division_id . '&tab=ra
 
 			<div class="semafor__center">
 				<div class="semafor__score"><?php echo esc_html( $score ); ?></div>
+				<?php if ( $po_match && ( $pen = Kurs_Playoff::pen_label( $po_match ) ) ) : ?>
+				<div class="semafor__pen"><?php echo esc_html( $pen ); ?></div>
+				<?php endif; ?>
 				<div class="semafor__status <?php echo $status_class; ?>"><?php echo esc_html( $status_label ); ?></div>
 				<?php if ( $match->match_date && $match->status === 'finished' ) : ?>
 				<div class="semafor__date"><?php echo esc_html( date_i18n( 'j.n.Y.', strtotime( $match->match_date ) ) ); ?></div>
@@ -94,7 +110,7 @@ $liga_url = $info ? home_url( '/kc-liga/?division_id=' . $division_id . '&tab=ra
 			</div>
 
 			<div class="semafor__team">
-				<a href="<?php echo esc_url( get_permalink( (int) $match->away_team_id ) ); ?>"
+				<a href="<?php echo esc_url( kurs_team_url( (int) $match->away_team_id, (int) $division_id ) ); ?>"
 				   class="semafor__badge" style="text-decoration:none;">
 					<?php echo $away_badge; ?>
 				</a>
