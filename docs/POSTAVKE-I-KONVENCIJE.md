@@ -71,7 +71,7 @@ Projekt ima **dva** glavna dijela:
 | CPT-ovi | `kurs_ekipa` (Ekipe), `kurs_igrac` (Igrači) — registrira `Kurs_CPT` na `init` |
 | Funkcije / helperi | prefiks `kurs_` (npr. `kurs_team_color`, `kurs_team_badge_html`, `kurs_team_text_color` u `includes/helpers.php`) |
 | Post meta | prefiks `_kurs_` (npr. `_kurs_team_color`) |
-| Opcije | prefiks `kurs_` (`kurs_db_version`, `kurs_flush_needed`, `kurs_cpt_flushed_v2`) |
+| Opcije | prefiks `kurs_` (`kurs_db_version`, `kurs_flush_needed`) |
 
 ### 3.2 DB tablice (`includes/class-database.php`)
 
@@ -147,7 +147,7 @@ Učitavaju se s Google Fonts u `inc/enqueue.php`: **Barlow**, **Barlow Semi Cond
 
 - `Kurs_CPT` se instancira u `kurs-liga.php:27`, registrira `kurs_ekipa` / `kurs_igrac` na `init`.
 - `Kurs_Database::maybe_upgrade` na `plugins_loaded`; `Kurs_Database::install` na `register_activation_hook`.
-- Više `flush_rewrite_rules` mehanizama: opcije `kurs_flush_needed`, `kurs_cpt_flushed_v2` (priority 99/100 na `init`); u temi `kurskc_flush_needed`.
+- Više `flush_rewrite_rules` mehanizama: opcija `kurs_flush_needed` (`init` 99) i samoizlječenje kad u `rewrite_rules` nema `ekipe/…` (`init` 100) u pluginu; u temi `kurskc_flush_needed`.
 - **Tema automatski kreira stranice** (`kurskc_create_pages`, hook `after_switch_theme` + `init` priority 20) ako nedostaju: `kc-liga`, `pan-ljetna` (template `page-liga.php`), `utakmica` (`page-utakmica.php`), te `o-kurs-u` (`page-o-nama.php`, `init` priority 25 s tvrdo kodiranim Gutenberg sadržajem). **Sigurnosna mreža** — može iznenaditi pri ručnom brisanju stranica jer ih sustav ponovno stvori.
 - `admin_menu` hook skriva default WP "Objave" (`edit.php`) i "Komentari"; `load-edit.php` redirecta na `edit.php?post_type=vijest`.
 

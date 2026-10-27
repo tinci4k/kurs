@@ -34,7 +34,7 @@ Definirane konstante:
 - `add_action('plugins_loaded', ['Kurs_Database','maybe_upgrade'])` — provjera/migracija DB sheme pri svakom učitavanju.
 - `if (is_admin()) { require admin/class-admin.php; new Kurs_Admin(); }` — admin sloj se učitava **samo u wp-adminu**.
 - `register_activation_hook` × 2 — `Kurs_Database::install()` (kreira tablice) + registracija CPT-ova i `flush_rewrite_rules()`.
-- Dva `init` hooka (prioriteti 99 i 100) rade jednokratni `flush_rewrite_rules()` preko opcija `kurs_flush_needed` i `kurs_cpt_flushed_v2` (sami se brišu).
+- `init` 99 radi jednokratni `flush_rewrite_rules()` preko opcije `kurs_flush_needed` (sama se briše); `init` 100 je **samoizlječenje** — ako u spremljenim `rewrite_rules` nema pravila `ekipe/…` (npr. nakon migracije baze), pravila se regeneriraju (inače `/ekipe/…`, `/igraci/…` i `/vijesti/` vraćaju 404).
 
 ### 1.2 Slojevi
 

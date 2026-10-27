@@ -21,6 +21,12 @@ Sve dolje navedeno potvrđeno je u kodu **i** u `wp-content/debug.log` prije isp
 
 Svi izmijenjeni PHP fajlovi prošli su `php -l` (PHP 8.2) bez grešaka.
 
+## 2026-10-27 — 404 na profilima ekipa
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 23 | `plugins/kurs-liga/kurs-liga.php` | Klik na ekipu u ljestvici → **404**; isto `/igraci/…` i `/vijesti/`. Spremljena opcija `rewrite_rules` (94 pravila) nije imala **nijedno** CPT pravilo — generirana je u trenutku kad CPT-ovi nisu bili registrirani (vjerojatno migracija baze ili ažuriranje WP-a). Jednokratni flush (`kurs_cpt_flushed_v2`) se više nije okidao jer je opcija već bila postavljena. | Jednokratni flush zamijenjen **samoizlječenjem** na `init` 100: ako u `rewrite_rules` nema ključa `ekipe/…` (a permalinkovi nisu „plain"), `flush_rewrite_rules( false )`. Pravila su se regenerirala sama (156 pravila). |
+
 ## Još uvijek otvoreno (svjesno NIJE dirano)
 
 Ovo su rizičnije izmjene ili dizajnerske odluke, ostavljene namjerno:

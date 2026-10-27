@@ -75,7 +75,7 @@ graph TB
 Definira konstante: `KURS_VERSION='1.0.0'`, `KURS_DIR`, `KURS_URL`, `KURS_PREFIX='kurs_'`. Učitava (`require_once`) sve domenske klase i helpere, te u adminu `admin/class-admin.php`. Instancira `new Kurs_CPT()` (registrira CPT-ove na `init`). Veže:
 - `add_action('plugins_loaded', ['Kurs_Database','maybe_upgrade'])` — migracija sheme na svakom učitavanju.
 - `register_activation_hook` — `Kurs_Database::install()` (kreira tablice) + registracija CPT-ova + `flush_rewrite_rules()`.
-- Dva `init` hooka (prioritet 99/100) za jednokratni flush rewrite pravila (opcije `kurs_flush_needed`, `kurs_cpt_flushed_v2`).
+- `init` 99 — jednokratni flush rewrite pravila (opcija `kurs_flush_needed`); `init` 100 — samoizlječenje: regenerira pravila ako u `rewrite_rules` nema `ekipe/…`.
 - U adminu: `new Kurs_Admin()` (veže `admin_menu`, `admin_enqueue_scripts`, `admin_init`, `wp_ajax_*`).
 
 ### `functions.php` (bootstrap teme)

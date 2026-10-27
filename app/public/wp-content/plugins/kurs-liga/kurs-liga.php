@@ -53,10 +53,12 @@ add_action( 'init', function () {
 	}
 }, 99 );
 
-/* Jednokratni flush — briše se sam */
+/* Samoizlječenje rewrite pravila: ako u spremljenim pravilima nema /ekipe/ (npr. nakon
+ * migracije baze ili flusha prije registracije CPT-ova), profili ekipa/igrača i /vijesti/
+ * vraćaju 404 → regeneriraj ih. Na `init` 100 su CPT-ovi plugina i teme već registrirani. */
 add_action( 'init', function () {
-	if ( ! get_option( 'kurs_cpt_flushed_v2' ) ) {
-		flush_rewrite_rules();
-		update_option( 'kurs_cpt_flushed_v2', 1 );
+	$rules = get_option( 'rewrite_rules' );
+	if ( is_array( $rules ) && get_option( 'permalink_structure' ) && ! preg_grep( '#^ekipe/#', array_keys( $rules ) ) ) {
+		flush_rewrite_rules( false );
 	}
 }, 100 );

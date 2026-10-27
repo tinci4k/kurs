@@ -31,7 +31,7 @@ Bootstrap, konstante i hookovi nalaze se u glavnoj datoteci `kurs-liga.php`.
 - `add_action( 'plugins_loaded', [ 'Kurs_Database', 'maybe_upgrade' ] )` — provjera/migracija sheme pri svakom učitavanju.
 - `register_activation_hook( __FILE__, [ 'Kurs_Database', 'install' ] )` — kreiranje tablica pri aktivaciji.
 - Drugi `register_activation_hook` — poziva `(new Kurs_CPT())->register()` + `flush_rewrite_rules()`.
-- Dva `init` hooka (prioritet 99 i 100) za jednokratni `flush_rewrite_rules()` putem opcija `kurs_flush_needed` i `kurs_cpt_flushed_v2`.
+- `init` 99 — jednokratni `flush_rewrite_rules()` ako je postavljena opcija `kurs_flush_needed`; `init` 100 — samoizlječenje: ako u spremljenim `rewrite_rules` nema pravila `ekipe/…`, pravila se regeneriraju.
 
 ---
 
