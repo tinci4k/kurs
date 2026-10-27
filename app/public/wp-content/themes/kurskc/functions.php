@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURSKC_VERSION', '1.0.38' );
+define( 'KURSKC_VERSION', '1.0.39' );
 define( 'KURSKC_DIR', get_template_directory() );
 define( 'KURSKC_URI', get_template_directory_uri() );
 

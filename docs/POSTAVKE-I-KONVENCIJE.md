@@ -104,14 +104,14 @@ Projekt ima **dva** glavna dijela:
 
 | Element | Konvencija / vrijednost |
 |---|---|
-| Verzija | `KURS_VERSION = '1.18.1'` (header plugina `Version: 1.2.0` se ne podiže; podigni `KURS_VERSION` pri izmjeni `admin.css`/`admin.js` — cache-busting) |
+| Verzija | `KURS_VERSION = '1.19.0'` (header plugina `Version: 1.2.0` se ne podiže; podigni `KURS_VERSION` pri izmjeni `admin.css`/`admin.js` — cache-busting) |
 | Putanje | `KURS_DIR` = `plugin_dir_path(__FILE__)`, `KURS_URL` = `plugin_dir_url(__FILE__)` |
 | Prefiks | `KURS_PREFIX = 'kurs_'` |
 | Ovlast | `KURS_CAP = 'manage_kurs_liga'` (cijeli KURS admin; ranije `manage_options`) |
 | Klase | `Kurs_Database`, `Kurs_CPT`, `Kurs_Season`, `Kurs_Match`, `Kurs_Playoff`, `Kurs_Rounds` (2026-10-16), `Kurs_Ticker`, `Kurs_Roles`, `Kurs_Admin` |
 | Konstante domene | `Kurs_Season::COMPETITIONS` (ključevi `kc_liga` / `pan_ljetna` = vrijednosti `seasons.league`), `Kurs_Season::PAN_GROUP_OPTIONS = [2, 4]` |
 | Hookovi | `kurs_data_changed` — okidaj nakon svake promjene rezultata/rasporeda (ruši cache tickera i `kurskc_active_league`) |
-| Admin stranice (slugovi) | prefiks `kurs-` (asseti se učitavaju samo kad hook sadrži `kurs-`): `kurs-dashboard` (Pregled), **`kurs-kc` / `kurs-pan`** (stranica natjecanja; `Kurs_Admin::HUBS` → ključ `COMPETITIONS`; kartice `&tab=pregled\|ekipe\|utakmice\|postavke`), `kurs-teams` (Ekipe i igrači), `kurs-seasons` (Sve sezone), `kurs-settings` (Postavke), skriven `kurs-match-record`. Legacy (samo preusmjeravaju): `kurs-season-setup`, `kurs-matches`, `kurs-roster`. Linkove na stranicu natjecanja gradi `Kurs_Admin::hub_url($season_id, $tab, $args)`. |
+| Admin stranice (slugovi) | prefiks `kurs-` (asseti se učitavaju samo kad hook sadrži `kurs-`): `kurs-dashboard` (Pregled), **`kurs-kc` / `kurs-pan`** (stranica natjecanja; `Kurs_Admin::HUBS` → ključ `COMPETITIONS`; kartice `&tab=pregled\|ekipe\|utakmice\|postavke`), `kurs-teams` (Ekipe), `kurs-players` (Igrači, 1.19.0), `kurs-seasons` (Sve sezone), `kurs-settings` (Postavke), skriven `kurs-match-record`. Legacy (samo preusmjeravaju): `kurs-season-setup`, `kurs-matches`, `kurs-roster`. Linkove na stranicu natjecanja gradi `Kurs_Admin::hub_url($season_id, $tab, $args)`. |
 | CPT-ovi | `kurs_ekipa` (Ekipe), `kurs_igrac` (Igrači) — registrira `Kurs_CPT` na `init` |
 | Funkcije / helperi | prefiks `kurs_` (npr. `kurs_team_color`, `kurs_team_badge_html`, `kurs_team_text_color` u `includes/helpers.php`) |
 | Post meta | prefiks `_kurs_` (npr. `_kurs_team_color`) |
@@ -119,7 +119,7 @@ Projekt ima **dva** glavna dijela:
 
 ### 3.2 DB tablice (`includes/class-database.php`)
 
-Prefiks tablica: `$wpdb->prefix . KURS_PREFIX` = **`wp_kurs_`**. DB verzija: `Kurs_Database::DB_VERSION = '1.11'` (sprema se u opciju `kurs_db_version`). Donja tablica prikazuje glavne stupce; kasnije dodani (`seasons.locked/max_fouls_per_half`, `divisions.has_playoff/advance_per_group`, `matches.referee1/2`, `match_events.half`) opisani su u `PLUGIN-KURS-LIGA.md` §3.2.
+Prefiks tablica: `$wpdb->prefix . KURS_PREFIX` = **`wp_kurs_`**. DB verzija: `Kurs_Database::DB_VERSION = '1.12'` (sprema se u opciju `kurs_db_version`). Donja tablica prikazuje glavne stupce; kasnije dodani (`seasons.locked/max_fouls_per_half`, `divisions.has_playoff/advance_per_group`, `matches.referee1/2`, `match_events.half`) opisani su u `PLUGIN-KURS-LIGA.md` §3.2.
 
 | Tablica | Svrha | Ključni stupci |
 |---|---|---|
@@ -128,7 +128,8 @@ Prefiks tablica: `$wpdb->prefix . KURS_PREFIX` = **`wp_kurs_`**. DB verzija: `Ku
 | `wp_kurs_phases` | Faze (group/playoff) | id, division_id, name, type, sort_order |
 | `wp_kurs_groups` | Grupe (Grupa A, B…) | id, phase_id, name, playoff_spots |
 | `wp_kurs_group_teams` | Ekipe dodijeljene grupama | id, group_id, team_id (BIGINT → `wp_posts.ID`) |
-| `wp_kurs_squads` | Roster igrača po ekipi/diviziji | id, player_id, team_id, division_id, jersey_no |
+| `wp_kurs_squads` | Roster igrača po ekipi/diviziji (trenutni) | id, player_id, team_id, division_id, jersey_no |
+| `wp_kurs_match_players` | Postava utakmice (spremljena pri završetku, DB 1.12) | id, match_id, team_id, player_id, jersey_no |
 | `wp_kurs_matches` | Utakmice grupne faze | id, group_id, home/away_team_id, home/away_score, match_date, round, status |
 | `wp_kurs_match_events` | Golovi/kartoni/prekršaji | id, match_id, team_id, player_id, event_type (goal/penalty/own_goal/yellow_card/second_yellow/red_card/foul + inertni captain/absent), minute, half, scored_for |
 | `wp_kurs_playoff_matches` | Playoff bracket | id, division_id, round (qf/sf/final/3rd), slot, home/away_team_id, home/away_score, status, match_date, home/away_label, match_id |
@@ -139,7 +140,7 @@ Prefiks tablica: `$wpdb->prefix . KURS_PREFIX` = **`wp_kurs_`**. DB verzija: `Ku
 
 | Element | Konvencija / vrijednost |
 |---|---|
-| Verzija | `KURSKC_VERSION = '1.0.38'` (podigni pri izmjeni `main.css`/`main.js` — cache-busting) |
+| Verzija | `KURSKC_VERSION = '1.0.39'` (podigni pri izmjeni `main.css`/`main.js` — cache-busting) |
 | Putanje | `KURSKC_DIR` = `get_template_directory()`, `KURSKC_URI` = `get_template_directory_uri()` |
 | Funkcije | prefiks `kurskc_` (`kurskc_setup`, `kurskc_create_pages`, `kurskc_register_post_types`, `kurskc_enqueue_assets`, `kurskc_maybe_flush`, `kurskc_active_league`…); plus poneka `kurs_` (`kurs_time_ago`, `kurs_hub_url` u `page-liga.php`) |
 | Klase | `Kurskc_Media_Kit` (`inc/media-kit.php`, 2026-10-16) |
@@ -255,8 +256,8 @@ Sljedeće se ponavljalo u logu. Stavke 1–3 su **ISPRAVLJENE 2026-06-22** (vidi
 - DB: `DB_NAME=local`, `DB_USER=root`, `DB_PASSWORD=root`, `DB_HOST=localhost` (MySQL stvarno na `127.0.0.1:10011`), prefix `wp_`, charset `utf8`.
 - `WP_DEBUG=true`, `WP_DEBUG_LOG=true` (log u `app/public/wp-content/debug.log`), `WP_DEBUG_DISPLAY=false`, `WP_ENVIRONMENT_TYPE=local`.
 - Local: dva php-cgi workera (10008/10009, round-robin) — ako svaki drugi zahtjev visi, restartaj site.
-- Plugin `kurs-liga`: prefiks `kurs_`, klase `Kurs_*`, CPT `kurs_ekipa` + `kurs_igrac`, meta `_kurs_`, DB tablice `wp_kurs_*` (DB_VERSION 1.11), `KURS_VERSION 1.18.1`, ovlast `KURS_CAP`; struktura natjecanja u `Kurs_Season::COMPETITIONS`; admin po natjecanjima (`kurs-kc` / `kurs-pan`, linkovi preko `Kurs_Admin::hub_url()`).
-- Tema `kurskc`: `KURSKC_VERSION 1.0.38`, prefiks `kurskc_`; registrira `vijest` + `vijest_kategorija` (+ `sponzor`).
+- Plugin `kurs-liga`: prefiks `kurs_`, klase `Kurs_*`, CPT `kurs_ekipa` + `kurs_igrac`, meta `_kurs_`, DB tablice `wp_kurs_*` (DB_VERSION 1.12), `KURS_VERSION 1.19.0`, ovlast `KURS_CAP`; struktura natjecanja u `Kurs_Season::COMPETITIONS`; admin po natjecanjima (`kurs-kc` / `kurs-pan`, linkovi preko `Kurs_Admin::hub_url()`).
+- Tema `kurskc`: `KURSKC_VERSION 1.0.39`, prefiks `kurskc_`; registrira `vijest` + `vijest_kategorija` (+ `sponzor`).
 - Demo podaci lokalno: `tools/demo-podaci.php [obrisi]` (s `PHPRC`, §1.4).
 - CSS varijable su `--c-*` (NE `--color-*`); KC crvena `#DA0F1E`, Pan narančasta `#F47B16`, gold `#FDE206`.
 - **Prije rada: pročitaj §7 (neusklađenosti) — CLAUDE.md nije pouzdan za CPT/taksonomije/boje.**

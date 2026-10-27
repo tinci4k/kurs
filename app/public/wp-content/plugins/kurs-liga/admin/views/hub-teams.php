@@ -4,7 +4,8 @@ defined( 'ABSPATH' ) || exit;
 /*
  * Stranica natjecanja → kartica „Ekipe": koje ekipe igraju u kojoj ligi (skupini)
  * ove sezone + igrači svake ekipe za tu ligu + generiranje rasporeda.
- * Ekipe (klubovi) su zajednički registar u „Ekipe i igrači" — ovdje ih se samo uvrštava.
+ * Ekipe (klubovi) su zajednički registar u „Ekipe" — ovdje ih se samo uvrštava; „N igr." otvara
+ * roster ekipe u ligi (?roster=&division_id=, roster-panel.php).
  * Varijable iz season-hub.php: $season, $season_id, $divisions, $comp, $is_locked, $hub_url.
  */
 
@@ -35,7 +36,60 @@ if ( $divisions ) {
 		$squad_counts[ (int) $r->division_id ][ (int) $r->team_id ] = (int) $r->n;
 	}
 }
-$roster_url = fn( int $team_id, int $division_id ) => add_query_arg( [ 'page' => 'kurs-teams', 'action' => 'edit', 'id' => $team_id, 'division_id' => $division_id ], admin_url( 'admin.php' ) );
+$roster_url = Kurs_Admin::roster_url( ... );
+
+/* ── Roster jedne ekipe u ligi (?roster=EKIPA&division_id=LIGA) ─────────────────────────── */
+$roster_team_id     = absint( $_GET['roster'] ?? 0 );
+$roster_division_id = absint( $_GET['division_id'] ?? 0 );
+if ( $roster_team_id && isset( $div_groups[ $roster_division_id ] ) && Kurs_Season::team_group_in_division( $roster_division_id, $roster_team_id ) ) :
+	$roster_locked = $is_locked;
+	$roster_div    = Kurs_Season::get_division( $roster_division_id );
+	$captain       = (int) get_post_meta( $roster_team_id, '_kurs_team_captain', true );
+	$coach         = kurs_team_coach( $roster_team_id );
+	?>
+	<div class="kurs-roster-hd">
+		<a href="<?php echo esc_url( $hub_url( 'ekipe' ) ); ?>" class="kurs-back">&larr; Sve ekipe sezone</a>
+		<label class="kurs-roster-hd__switch">
+			<span class="kurs-muted">Ekipa:</span>
+			<select onchange="if(this.value)location.href=this.value" aria-label="Prijeđi na roster druge ekipe">
+				<?php foreach ( $divisions as $d ) : ?>
+				<optgroup label="<?php echo esc_attr( $d->name ); ?>">
+					<?php foreach ( $div_groups[ (int) $d->id ] as $g ) : foreach ( $g->teams as $gt ) : ?>
+					<option value="<?php echo esc_url( $roster_url( (int) $gt->team_id, (int) $d->id ) ); ?>" <?php selected( (int) $gt->team_id === $roster_team_id && (int) $d->id === $roster_division_id ); ?>>
+						<?php echo esc_html( $gt->team_name . ' (' . (int) ( $squad_counts[ (int) $d->id ][ (int) $gt->team_id ] ?? 0 ) . ')' ); ?>
+					</option>
+					<?php endforeach; endforeach; ?>
+				</optgroup>
+				<?php endforeach; ?>
+			</select>
+		</label>
+	</div>
+
+	<div class="kurs-roster-title">
+		<?php echo kurs_team_badge_html( $roster_team_id, 44 ); ?>
+		<div>
+			<h2><?php echo esc_html( get_the_title( $roster_team_id ) ); ?></h2>
+			<span class="kurs-muted"><?php echo esc_html( $season->name . ' · ' . ( $roster_div->name ?? '' ) ); ?></span>
+		</div>
+	</div>
+
+	<div class="kurs-roster-layout">
+		<div><?php require KURS_DIR . 'admin/views/roster-panel.php'; ?></div>
+		<aside class="kurs-panel">
+			<div class="kurs-panel__head"><h3 class="kurs-panel__title">Ekipa</h3></div>
+			<div class="kurs-panel__body kurs-roster-side">
+				<p><span class="kurs-muted">Kapetan:</span> <?php echo $captain ? esc_html( get_the_title( $captain ) ) : '<span class="kurs-muted">—</span>'; ?></p>
+				<p><span class="kurs-muted">Trener:</span> <?php echo $coach ? esc_html( $coach['name'] ) : '<span class="kurs-muted">—</span>'; ?></p>
+				<a class="kurs-btn kurs-btn--outline kurs-btn--sm" href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams&action=edit&id=' . $roster_team_id . '&division_id=' . $roster_division_id ) ); ?>">&#9998; Podaci ekipe</a>
+				<a class="kurs-btn kurs-btn--ghost kurs-btn--sm" href="<?php echo esc_url( kurs_team_url( $roster_team_id, $roster_division_id ) ); ?>" target="_blank" rel="noopener">Javni profil &#8599;</a>
+				<p class="kurs-muted" style="font-size:11px;margin:4px 0 0;">Logo, boja, trener, predstavnik, kapetan i sponzori su u podacima ekipe (vrijede za sve sezone).</p>
+			</div>
+		</aside>
+	</div>
+	<?php
+	return;
+endif;
+
 $has_teams   = $ready_groups > 0;
 $has_matches = $match_total > 0;
 $all_groups  = array_merge( ...array_values( $div_groups ?: [ [] ] ) );
@@ -139,8 +193,8 @@ if ( $carry_rows ) :
 
 <p class="kurs-hub-intro">
 	Ovdje biraš <strong>koje ekipe igraju u kojoj ligi</strong> ove sezone. Ekipa (klub) se u sustav upisuje jednom
-	— u <a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>">Ekipe i igrači</a> — i može igrati više sezona.
-	Igrače ekipe za ovu ligu uređuješ klikom na <em>„N igr."</em> uz ekipu.
+	— u <a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>">Ekipe</a> — i može igrati više sezona.
+	Igrače ekipe za ovu ligu (roster s brojevima dresova) uređuješ klikom na <em>„N igr."</em> uz ekipu.
 </p>
 
 <!-- ── Lige sezone (struktura je automatska) ───────────────────────────── -->

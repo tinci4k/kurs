@@ -15,6 +15,7 @@ class Kurs_Admin {
 		add_action( 'wp_ajax_kurs_remove_team',    [ $this, 'ajax_remove_team' ] );
 		add_action( 'wp_ajax_kurs_set_logo',            [ $this, 'ajax_set_logo' ] );
 		add_action( 'wp_ajax_kurs_set_photo',           [ $this, 'ajax_set_photo' ] );
+		add_action( 'wp_ajax_kurs_set_player_photo',    [ $this, 'ajax_set_player_photo' ] );
 		add_action( 'wp_ajax_kurs_add_squad',           [ $this, 'ajax_add_squad' ] );
 		add_action( 'wp_ajax_kurs_remove_squad',        [ $this, 'ajax_remove_squad' ] );
 		add_action( 'wp_ajax_kurs_quick_add_player',    [ $this, 'ajax_quick_add_player' ] );
@@ -28,6 +29,7 @@ class Kurs_Admin {
 		add_action( 'wp_ajax_kurs_record_update_event', [ $this, 'ajax_record_update_event' ] );
 		add_action( 'wp_ajax_kurs_record_set_captain',  [ $this, 'ajax_record_set_captain' ] );
 		add_action( 'wp_ajax_kurs_record_set_absent',   [ $this, 'ajax_record_set_absent' ] );
+		add_action( 'wp_ajax_kurs_record_add_lineup',   [ $this, 'ajax_record_add_lineup' ] );
 		add_action( 'wp_ajax_kurs_record_set_referees', [ $this, 'ajax_record_set_referees' ] );
 		add_action( 'wp_ajax_kurs_update_match',        [ $this, 'ajax_update_match' ] );
 	}
@@ -37,8 +39,8 @@ class Kurs_Admin {
 	/*
 	 * Izbornik: svako natjecanje ima SVOJU stranicu (aktualna sezona + odabir starijih)
 	 * s karticama Pregled · Ekipe · Utakmice · Postavke — sve o ligi na jednom mjestu.
-	 * Ekipe i igrači su zajednički registar (klub igra više sezona/natjecanja); u ligu
-	 * se uvrštavaju na kartici „Ekipe" natjecanja.
+	 * Ekipe i Igrači su zajednički registri (klub i igrač igraju više sezona/natjecanja); ekipa se u
+	 * ligu uvrštava na kartici „Ekipe" natjecanja, a igrač u roster ekipe (ista kartica → „N igr.").
 	 */
 	public function menus(): void {
 		add_menu_page(
@@ -51,7 +53,8 @@ class Kurs_Admin {
 			$label = Kurs_Season::competition( $league )['label'] ?? $league;
 			add_submenu_page( 'kurs-dashboard', $label, $label, KURS_CAP, $slug, [ $this, 'pg_hub' ] );
 		}
-		add_submenu_page( 'kurs-dashboard', 'Ekipe i igrači',  'Ekipe i igrači',  KURS_CAP, 'kurs-teams',     [ $this, 'pg_teams' ] );
+		add_submenu_page( 'kurs-dashboard', 'Ekipe',           'Ekipe',           KURS_CAP, 'kurs-teams',     [ $this, 'pg_teams' ] );
+		add_submenu_page( 'kurs-dashboard', 'Igrači',          'Igrači',          KURS_CAP, 'kurs-players',   [ $this, 'pg_players' ] );
 		add_submenu_page( 'kurs-dashboard', 'Sve sezone',      'Sve sezone',      KURS_CAP, 'kurs-seasons',   [ $this, 'pg_seasons' ] );
 		add_submenu_page( 'kurs-dashboard', 'Postavke',        'Postavke',        KURS_CAP, 'kurs-settings',  [ $this, 'pg_settings' ] );
 		// Skrivene: zapisnik se otvara iz utakmice; stare adrese preusmjeravaju na stranicu natjecanja.
@@ -79,6 +82,14 @@ class Kurs_Admin {
 		if ( $season ) $query['season_id'] = (int) $season->id;
 		if ( $tab && $tab !== 'pregled' ) $query['tab'] = $tab;
 		return add_query_arg( array_merge( $query, $args ), admin_url( 'admin.php' ) );
+	}
+
+	/** Roster ekipe u ligi: stranica natjecanja → Ekipe → igrači ekipe (bez lige → popis ekipa). */
+	public static function roster_url( int $team_id, int $division_id ): string {
+		$sid = self::season_of_division( $division_id );
+		return $sid && $team_id
+			? self::hub_url( $sid, 'ekipe', [ 'roster' => $team_id, 'division_id' => $division_id ] )
+			: admin_url( 'admin.php?page=kurs-teams' . ( $team_id ? '&action=edit&id=' . $team_id : '' ) );
 	}
 
 	/** Sezona kojoj pripada skupina (0 ako ne postoji). */
@@ -123,10 +134,7 @@ class Kurs_Admin {
 			if ( ! $sid && ! empty( $_GET['group_id'] ) ) $sid = self::season_of_group( absint( $_GET['group_id'] ) );
 			$to = self::hub_url( $sid, 'utakmice', $keep( [ 'group_id', 'playoff_div', 'generated', 'reset', 'generated_season' ] ) );
 		} elseif ( $page === 'kurs-roster' ) {
-			$to = add_query_arg( array_filter( [
-				'page' => 'kurs-teams', 'action' => 'edit',
-				'id' => absint( $_GET['team_id'] ?? 0 ), 'division_id' => absint( $_GET['division_id'] ?? 0 ),
-			] ), admin_url( 'admin.php' ) );
+			$to = self::roster_url( absint( $_GET['team_id'] ?? 0 ), absint( $_GET['division_id'] ?? 0 ) );
 		} elseif ( $page === 'kurs-seasons' && ( $_GET['action'] ?? '' ) === 'edit' && ! empty( $_GET['id'] ) ) {
 			$to = self::hub_url( absint( $_GET['id'] ), 'postavke' );
 		}
@@ -221,6 +229,11 @@ class Kurs_Admin {
 			'remove_team_logo'   => $this->do_remove_team_logo(),
 			'remove_team_photo'  => $this->do_remove_team_photo(),
 			'save_team_banners'  => $this->do_save_team_banners(),
+			'add_player'         => $this->do_add_player(),
+			'edit_player'        => $this->do_edit_player(),
+			'remove_player_photo' => $this->do_remove_player_photo(),
+			'merge_players'      => $this->do_merge_players(),
+			'delete_player'      => $this->do_delete_player(),
 			'save_season_referees' => $this->do_save_season_referees(),
 			'save_ticker_settings' => $this->do_save_ticker_settings(),
 			default              => null,
@@ -509,6 +522,91 @@ class Kurs_Admin {
 		exit;
 	}
 
+	// ── Igrači (stranica „Igrači") ────────────────────────────────────────────
+
+	private static function player_url( int $id, array $args = [] ): string {
+		return add_query_arg( array_merge( [ 'page' => 'kurs-players', 'action' => 'edit', 'id' => $id ], $args ), admin_url( 'admin.php' ) );
+	}
+
+	/** Pozicija i godina rođenja iz forme (prazna/nevaljana godina → briše se). */
+	private static function save_player_meta( int $id ): void {
+		update_post_meta( $id, '_kurs_player_type', ( $_POST['player_type'] ?? '' ) === 'goalkeeper' ? 'goalkeeper' : 'player' );
+		$year = absint( $_POST['birthyear'] ?? 0 );
+		$year >= 1940 && $year <= (int) current_time( 'Y' ) - 5
+			? update_post_meta( $id, '_kurs_player_birthyear', $year )
+			: delete_post_meta( $id, '_kurs_player_birthyear' );
+	}
+
+	private function do_add_player(): void {
+		check_admin_referer( 'kurs_add_player' );
+		$name = sanitize_text_field( wp_unslash( $_POST['player_name'] ?? '' ) );
+		$list = admin_url( 'admin.php?page=kurs-players' );
+		if ( $name === '' ) { wp_safe_redirect( $list ); exit; }
+		global $wpdb;
+		$dup = (int) $wpdb->get_var( $wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type = 'kurs_igrac' AND post_status = 'publish' AND post_title = %s LIMIT 1", $name
+		) );
+		if ( $dup ) { wp_safe_redirect( add_query_arg( 'exists', $dup, $list ) ); exit; }
+		$id = wp_insert_post( [ 'post_title' => $name, 'post_type' => 'kurs_igrac', 'post_status' => 'publish' ] );
+		if ( ! $id || is_wp_error( $id ) ) { wp_safe_redirect( $list ); exit; }
+		self::save_player_meta( (int) $id );
+		wp_safe_redirect( self::player_url( (int) $id, [ 'created' => 1 ] ) );
+		exit;
+	}
+
+	private function do_edit_player(): void {
+		$id = absint( $_POST['player_id'] ?? 0 );
+		check_admin_referer( 'kurs_edit_player_' . $id );
+		$name = sanitize_text_field( wp_unslash( $_POST['player_name'] ?? '' ) );
+		if ( get_post_type( $id ) === 'kurs_igrac' ) {
+			if ( $name !== '' ) wp_update_post( [ 'ID' => $id, 'post_title' => $name ] );
+			self::save_player_meta( $id );
+			do_action( 'kurs_data_changed' );
+		}
+		wp_safe_redirect( self::player_url( $id, [ 'updated' => 1 ] ) );
+		exit;
+	}
+
+	private function do_remove_player_photo(): void {
+		$id = absint( $_POST['player_id'] ?? 0 );
+		check_admin_referer( 'kurs_remove_player_photo_' . $id );
+		if ( get_post_type( $id ) === 'kurs_igrac' ) delete_post_thumbnail( $id );
+		wp_safe_redirect( self::player_url( $id ) );
+		exit;
+	}
+
+	private function do_merge_players(): void {
+		$keep = absint( $_POST['player_id'] ?? 0 );
+		check_admin_referer( 'kurs_merge_players_' . $keep );
+		$drop = absint( $_POST['merge_from'] ?? 0 );
+		$name = get_the_title( $drop );
+		$res  = Kurs_Players::merge( $keep, $drop );
+		wp_safe_redirect( self::player_url( $keep, is_wp_error( $res )
+			? [ 'merge_error' => rawurlencode( $res->get_error_message() ) ]
+			: [ 'merged' => rawurlencode( $name ) ] ) );
+		exit;
+	}
+
+	private function do_delete_player(): void {
+		$id = absint( $_POST['player_id'] ?? 0 );
+		check_admin_referer( 'kurs_delete_player_' . $id );
+		$res = Kurs_Players::delete( $id );
+		wp_safe_redirect( is_wp_error( $res )
+			? self::player_url( $id, [ 'delete_error' => rawurlencode( $res->get_error_message() ) ] )
+			: admin_url( 'admin.php?page=kurs-players&deleted=1' ) );
+		exit;
+	}
+
+	public function ajax_set_player_photo(): void {
+		check_ajax_referer( 'kurs_ajax', 'nonce' );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		$player_id = absint( $_POST['player_id'] ?? 0 );
+		$att_id    = absint( $_POST['attachment_id'] ?? 0 );
+		if ( get_post_type( $player_id ) !== 'kurs_igrac' || ! wp_attachment_is_image( $att_id ) ) wp_send_json_error( 'Nevažeći podaci.' );
+		set_post_thumbnail( $player_id, $att_id );
+		wp_send_json_success( [ 'url' => wp_get_attachment_image_url( $att_id, 'medium' ) ] );
+	}
+
 	/** Spremi sve banere (sponzore) ekipe — više slika, svaka sa svojim linkom. */
 	private function do_save_team_banners(): void {
 		$id = absint( $_POST['team_id'] ?? 0 );
@@ -605,7 +703,7 @@ class Kurs_Admin {
 			'team_id'   => $tid,
 			'team_name' => get_post_field( 'post_title', $tid ),
 			'badge'     => kurs_team_badge_html( $tid, 22 ),
-			'roster'    => add_query_arg( [ 'page' => 'kurs-teams', 'action' => 'edit', 'id' => $tid, 'division_id' => $div_id ], admin_url( 'admin.php' ) ),
+			'roster'    => self::roster_url( $tid, $div_id ),
 		] );
 	}
 
@@ -668,10 +766,18 @@ class Kurs_Admin {
 
 		if ( ! $player_id || ! $team_id || ! $division_id ) wp_send_json_error( 'Nevažeći podaci.' );
 		self::guard_unlocked( self::season_of_division( $division_id ) );
-		// Igrač u jednoj ligi igra samo za jednu ekipu (u drugoj ligi iste sezone smije).
+		// Igrač u jednoj ligi igra samo za jednu ekipu (u drugoj ligi iste sezone smije). Iz druge ekipe
+		// iste lige dodaje se kao prijelaz (transfer=1, uz potvrdu): njezine odigrane utakmice čuvaju postavu.
 		$other = Kurs_Season::player_team_in_division( $player_id, $division_id );
 		if ( $other && $other !== $team_id ) {
-			wp_send_json_error( sprintf( '%s je u ovoj ligi već u ekipi „%s". Najprije ga makni iz te ekipe.', get_the_title( $player_id ), get_the_title( $other ) ) );
+			if ( empty( $_POST['transfer'] ) ) {
+				wp_send_json_error( [
+					'code'    => 'other_team',
+					'team'    => get_the_title( $other ),
+					'message' => sprintf( '%s u ovoj ligi igra za „%s".', get_the_title( $player_id ), get_the_title( $other ) ),
+				] );
+			}
+			Kurs_Season::remove_from_squad( $player_id, $other, $division_id );
 		}
 
 		Kurs_Season::add_to_squad( $player_id, $team_id, $division_id, $jersey );
@@ -681,6 +787,7 @@ class Kurs_Admin {
 			'player_name' => get_the_title( $player_id ),
 			'jersey'      => $jersey,
 			'type'        => kurs_player_type( $player_id ),
+			'from'        => $other && $other !== $team_id ? get_the_title( $other ) : '',
 		] );
 	}
 
@@ -1028,6 +1135,24 @@ class Kurs_Admin {
 		wp_send_json_success( [ 'player_id' => $player, 'absent' => $absent ] );
 	}
 
+	/** Utakmica otvorena za ispravak: igrač iz rostera ekipe dodaje se u spremljenu postavu. */
+	public function ajax_record_add_lineup(): void {
+		check_ajax_referer( 'kurs_ajax', 'nonce' );
+		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		$match_id = absint( $_POST['match_id'] ?? 0 );
+		$team_id  = absint( $_POST['team_id'] ?? 0 );
+		$player   = absint( $_POST['player_id'] ?? 0 );
+		$match    = $match_id ? Kurs_Match::get( $match_id ) : null;
+		$div      = $match ? Kurs_Match::division_of( $match_id ) : 0;
+		if ( ! $match || ! $player || ! in_array( $team_id, [ (int) $match->home_team_id, (int) $match->away_team_id ], true )
+			|| Kurs_Season::player_team_in_division( $player, $div ) !== $team_id ) {
+			wp_send_json_error( 'Igrač nije u rosteru te ekipe.' );
+		}
+		self::guard_unlocked( self::season_of_match( $match_id ) );
+		Kurs_Match::add_to_lineup( $match_id, $team_id, $player );
+		wp_send_json_success();
+	}
+
 	public function ajax_record_set_referees(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
 		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
@@ -1073,6 +1198,7 @@ class Kurs_Admin {
 	public function pg_hub():          void { require KURS_DIR . 'admin/views/season-hub.php'; }
 	public function pg_seasons():      void { require KURS_DIR . 'admin/views/seasons.php'; }
 	public function pg_teams():        void { require KURS_DIR . 'admin/views/teams.php'; }
+	public function pg_players():      void { require KURS_DIR . 'admin/views/players.php'; }
 	public function pg_settings():     void { require KURS_DIR . 'admin/views/settings.php'; }
 	// ── Playoff handlers ─────────────────────────────────────────────────────
 

@@ -92,6 +92,18 @@ Nova značajka „Preuzmi ekipe iz sezone X” (prijenos ekipa i rostera s broje
 
 Usklađeni nazivi: akcije nad utakmicom su **Završi utakmicu** / **Otvori za ispravak** (prije „Zaključi” / „Otključaj”, lako zamjenjivo sa „Zaključaj sezonu”); suci u zapisniku „Promijeni”; „Uvrsti ekipe u skupinu”. Uklonjen mrtav kod: `ajax_set_banner` (+ `wp_ajax_kurs_set_banner`), `do_remove_team_banner` (+ akcija `remove_team_banner`), skriveni stari obrazac „Dodaj gol / event” u zapisniku (+ CSS `.kurs-add-event*`), JS `#squad-count-label`.
 
+## 2026-10-27 — igrači, roster u natjecanju, postave utakmica (`KURS_VERSION` 1.19.0, DB 1.12, tema 1.0.39)
+
+Preslagivanje (opisano u `PLUGIN-KURS-LIGA.md`): nova stranica **Igrači** (`kurs-players`: popis, tražilica, godina rođenja,
+fotografija, karijera, spajanje dvostrukih upisa), **roster ekipe na kartici Ekipe natjecanja** (umjesto u „Ekipe i igrači",
+koja je sad „Ekipe"), **prijelaz igrača** u drugu ekipu iste lige uz potvrdu, i **postava spremljena uz utakmicu**
+(`match_players`). Greške riješene usput:
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 36 | `themes/kurskc/page-utakmica.php` | Tijek utakmice skrivao je samo prekršaje — inertni događaji `captain` i `absent` prikazivali su se kao **gol** (ikona gola, oznaka „captain"/„absent"). Sastavi su prikazivali i igrače označene „nije igrao". | Tijek bez `foul`/`captain`/`absent`; sastavi iz postave bez odsutnih. |
+| 37 | `plugins/kurs-liga/includes/class-match.php`, teme (zapisnik, PDF, stranica utakmice, profil igrača) | Sastav utakmice računao se iz **trenutnog** rostera: micanje igrača iz ekipe (odlazak, prijelaz, pogrešan unos) brisalo ga je iz svih odigranih utakmica i iz karijere, a igrač dodan usred sezone dobivao je nastupe i za utakmice prije dolaska. Prijelaz nije bio moguć bez gubitka povijesti. | Tablica `match_players`, `save_lineup()` pri završetku utakmice (migracija za postojeće), `lineup()` / `player_career()` čitaju postavu; prijelaz preko `kurs_add_squad` + `transfer=1`. |
+
 ## Još uvijek otvoreno (svjesno NIJE dirano)
 
 Ovo su rizičnije izmjene ili dizajnerske odluke, ostavljene namjerno:

@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.38'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.39'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.38'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.39'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -268,7 +268,9 @@ Front-end kombinira **WordPress objekte** (ekipe/igrači kao `WP_Post`, njihovi 
 | `Kurs_Season::get_divisions($season_id)` / `get_division($id)` | divizije sezone / jedna divizija |
 | `Kurs_Season::get_phases($division_id)` | faze divizije (objekti `id, name, …`) |
 | `Kurs_Season::get_groups($phase_id)` | grupe faze (objekti `id, name, playoff_spots, …`) |
-| `Kurs_Season::get_squad($team_id, $division_id)` | sastav: redovi `squads` + `player_name`, sort po dresu pa imenu |
+| `Kurs_Season::get_squad($team_id, $division_id)` | *trenutni* roster: redovi `squads` + `player_name`, sort po dresu pa imenu (profil ekipe) |
+| `Kurs_Match::lineup($match_id, $team_id, $division_id)` | sastav **na utakmici** (spremljena postava; prije završetka roster) — za stranicu utakmice |
+| `Kurs_Match::player_career($player_id)` | karijera igrača (profil igrača) |
 | `Kurs_Season::get_team_contexts($team_id)` | konteksti ekipe: `season_id, season_name, league, division_id, division_name` |
 | `Kurs_Match::get($match_id)` | red `matches` + `home_name`, `away_name` |
 | `Kurs_Match::get_events($match_id)` | `match_events` + `player_name`, sort po minuti |
@@ -397,7 +399,7 @@ URL `/utakmica/?match_id=X`. **Guardovi (svaki s `get_footer()` + `return`):** n
 - **Kontekst:** **direktan `$wpdb` upit** `{p}groups g JOIN phases ph JOIN divisions d JOIN seasons s WHERE g.id = %d` → `group_name, division_id, div_name, season_name, phase_name`.
 - **Playoff meč (`group_id = 0`, NOVO 2026-10-16):** kontekst iz grupe je prazan, pa se `division_id` uzima iz `Kurs_Playoff::find_by_match_id($match_id)->division_id` (+ `$po_div = Kurs_Season::get_division()`).
 - **Događaji:** `Kurs_Match::get_events($match_id)` → `match_events` + `player_name`, sort po minuti.
-- **Sastavi:** `Kurs_Season::get_squad($home_team_id, $division_id)` i isto za gosta → redovi `squads` + `player_name` (za playoff mečeve rade tek od 2026-10-16 — ranije prazni jer je `division_id` bio 0).
+- **Sastavi (1.0.39):** `Kurs_Match::lineup($match_id, $team_id, $division_id)` — postava spremljena uz utakmicu (prije završetka trenutni roster lige), **bez igrača označenih „nije igrao”** (`get_absent`); ime igrača vodi na njegov profil. Tijek utakmice ne prikazuje inertne događaje `captain` / `absent` (prije su se prikazivali kao gol — ISPRAVCI #36).
 - **Prikaz:**
   - Breadcrumb (grupna faza): Naslovnica / `div_name` (link `kurs_league_url($division_id, ['tab'=>'raspored'])`) / **„N. kolo"** (link na `kurs_league_url(..., ['tab'=>'kola','kolo'=>N]) . '#kola'`).
   - Breadcrumb (playoff): Naslovnica / naziv lige / „Četvrtfinale | Polufinale | Finale" (link na `kolo=playoff`; mapa `$po_names`, uklj. `3rd` → „Utakmica za 3. mjesto").
@@ -508,7 +510,7 @@ CSS: sekcija „ZA MEDIJE" u `main.css` (`.media-hero*`, `.media-picker*`, `.med
 
 **Guard:** isti kao ekipa (redirect na naslovnicu; `/igraci/` nema arhivu). Breadcrumb vodi na trenutnu ekipu (`kurs_team_url(team, division)`). `$player_id = get_the_ID()`. Prefiks `$p = $wpdb->prefix . KURS_PREFIX`. Gotovo SVE preko **direktnih `$wpdb` upita** (ne koristi metode plugina za glavne podatke):
 
-- **Karijera (prepravljeno 1.18.1, ISPRAVCI #29):** redovi = `squads` igrača u ligama u kojima je ekipa uvrštena (`EXISTS group_teams`); brojke **po retku** preko `Kurs_Match::team_match_ids(team, division)` (završene utakmice lige, skupine + playoff) i `match_events` igrača za tu ekipu: nastupi = utakmice − one s `absent`, golovi `goal`+`penalty`, žuti, crveni. Stari upit (LEFT JOIN `group_teams → groups → phases → matches → match_events`) nije filtrirao ligu na spoju s utakmicama → brojke iz drugih sezona/liga iste ekipe. Po sezoni/diviziji/ekipi računa: `matches_played` (`COUNT(DISTINCT … finished …)`), `goals` (`goal`+`own_goal` filtrirano `e.player_id`), `yellows`, `reds`, `jersey_no`. `GROUP BY s.id, d.id, sq.team_id`, `ORDER BY s.year DESC, s.id DESC, d.sort_order ASC, d.id ASC`.
+- **Karijera (1.0.39):** `Kurs_Match::player_career($player_id)` — retci sezona × liga × ekipa iz **spremljenih postava utakmica** (ostaju i nakon prijelaza ili odlaska iz ekipe) + trenutni roster; nastupi = odigrane utakmice u postavi bez „nije igrao”, golovi/kartoni strogo po ligi (skupine + playoff). Napomena „isti igrač, više divizija” broji različite lige (prijelaz unutar lige se ne broji). Godinu rođenja (`_kurs_player_birthyear`) i fotografiju (istaknuta slika) upisuje admin → **Igrači**.
 - **Totali karijere:** `array_sum(array_column($career, …))` za golove, utakmice, žute, crvene.
 - **Hero:** trenutna ekipa (`$career[0]`, najnovija sezona), broj dresa, golovi/utakmice/kartoni.
 - **Karijerna tablica** (`.career-table`): grupirano po sezoni (`$rows_buffer`) s podzbrojevima po sezoni (ako >1 redak) i ukupnim `tfoot` redom. Badge divizije obojan `igrac_color($league)`.
@@ -553,7 +555,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.38'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.39'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.

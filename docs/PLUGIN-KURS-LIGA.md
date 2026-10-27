@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.18.1'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.19.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -35,9 +35,10 @@ Definirane konstante:
 4. `includes/class-cpt.php`
 5. `includes/class-season.php`
 6. `includes/class-match.php`
-7. `includes/class-ticker.php`
-8. `includes/class-rounds.php` — **NOVO 2026-10-16** (`Kurs_Rounds`, pregled po kolima)
-9. `includes/class-roles.php`
+7. `includes/class-players.php` — **1.19.0** (`Kurs_Players`, registar igrača: duplikati, spajanje, brisanje)
+8. `includes/class-ticker.php`
+9. `includes/class-rounds.php` — **NOVO 2026-10-16** (`Kurs_Rounds`, pregled po kolima)
+10. `includes/class-roles.php`
 
 **Inicijalizacija:**
 - `new Kurs_CPT();` — registrira CPT-ove (kuka se na `init`).
@@ -91,6 +92,7 @@ kurs-liga/
 │   ├── class-season.php             — Kurs_Season (COMPETITIONS + scaffold; sezone→divizije→faze→grupe→roster)
 │   ├── class-match.php              — Kurs_Match (utakmice, eventi, round-robin, poredak, strijelci)
 │   ├── class-playoff.php            — Kurs_Playoff (bracket, seeding, napredovanje)
+│   ├── class-players.php            — Kurs_Players (registar igrača: duplikati, spajanje, brisanje) — 1.19.0
 │   ├── class-rounds.php             — Kurs_Rounds (pregled po kolima) — NOVO 2026-10-16
 │   ├── class-ticker.php             — Kurs_Ticker (live ticker za header)
 │   ├── class-roles.php              — Kurs_Roles (KURS_CAP za urednike)
@@ -109,7 +111,9 @@ kurs-liga/
         ├── hub-settings.php         —   kartica Postavke (naziv/godina/status/faulovi, suci sezone, zaključavanje, brisanje)
         ├── seasons.php              — „Sve sezone": popis po natjecanju + forma „Nova sezona"
         ├── settings.php             — „Postavke": ticker izvan sezone (+ linkovi na suce u postavkama natjecanja)
-        ├── teams.php                — „Ekipe i igrači": registar ekipa + uređivanje ekipe (logo, baneri, igrači po ligi)
+        ├── teams.php                — „Ekipe": registar ekipa + podaci ekipe (logo, baneri) + popis liga → roster
+        ├── players.php              — „Igrači" (1.19.0): registar igrača, podaci, karijera, spajanje
+        ├── roster-panel.php         — roster ekipe u ligi (uključuje ga hub-teams.php, ?roster=)
         ├── match-record.php         — zapisnik utakmice (skrivena kurs-match-record)
         └── match-record-pdf.php     — standalone print/PDF view
 ```
@@ -137,7 +141,7 @@ squads (roster)  ── igrač pripada ekipi unutar divizije
 
 > Od 2026-10-16 ovu strukturu kreira **isključivo** `Kurs_Season::scaffold()` pri kreiranju sezone (vidi §4.1). Faza tipa `'playoff'` se više ne kreira — playoff živi samo u `playoff_matches`.
 
-### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.11'`)
+### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.12'`)
 
 Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Niže se navode kratka imena.
 
@@ -148,7 +152,8 @@ Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Ni
 | `phases` | id, division_id, name, **type** (DEFAULT 'group'), sort_order; KEY idx_division |
 | `groups` | id, phase_id, name, **playoff_spots** (TINYINT, DB DEFAULT 2 — ali `create_group()` uvijek upisuje vrijednost iz divizije, 0 bez playoffa); KEY idx_phase |
 | `group_teams` | id, group_id, team_id (BIGINT, = post `kurs_ekipa`); **UNIQUE(group_id, team_id)** |
-| `squads` | id, player_id, team_id, division_id, jersey_no (TINYINT, nullable); **UNIQUE(player_id, team_id, division_id)** |
+| `squads` | id, player_id, team_id, division_id, jersey_no (TINYINT, nullable); **UNIQUE(player_id, team_id, division_id)** — *trenutni* roster |
+| `match_players` | id, match_id, team_id, player_id, jersey_no (nullable); **UNIQUE(match_id, player_id)**, KEY idx_player — **postava utakmice** spremljena pri završetku (od DB 1.12; vidi §4.2 „Postava utakmice”) |
 | `matches` | id, group_id (**0 = playoff zapisnik**), home_team_id, away_team_id, home_score, away_score (nullable TINYINT), match_date (DATETIME), round (TINYINT), status (DEFAULT 'scheduled'), **referee1/referee2**, created_at; KEY idx_group, idx_status |
 | `match_events` | id, match_id, team_id, player_id (nullable), **event_type** (VARCHAR(20): `goal\|penalty\|own_goal\|yellow_card\|second_yellow\|red_card\|foul` + inertni `captain`/`absent`), minute, **half** (1\|2), **scored_for** (nullable — mrtav stupac); KEY idx_match, idx_player |
 | `playoff_matches` | id, division_id, **round** ('qf'\|'sf'\|'final'\|'3rd'), **slot**, home_team_id, away_team_id, home_score, away_score (sve nullable), status (DEFAULT 'scheduled'), match_date, **home_pen**/**away_pen** (penali — samo kod neriješenog, od DB 1.11), **home_label**/**away_label** (npr. "A1", "QF1-W"), **match_id** (FK → `matches.id`, zapisnik); KEY idx_division, idx_round |
@@ -158,6 +163,7 @@ Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Ni
 Usporedi `get_option('kurs_db_version')` s `DB_VERSION`; ako je niže:
 - pozove `install()` — `dbDelta` idempotentno (re)kreira tablice i **dodaje stupce koji nedostaju** (`groups.playoff_spots` iz v1.2, `playoff_matches.match_id` iz v1.5, a isto tako i kasniji `locked`, `max_fouls_per_half`, `has_playoff`, `advance_per_group`, `referee1/2`, `half` do v1.9; svi su dio `CREATE TABLE` definicija).
 - v1.1: `ALTER TABLE seasons MODIFY league VARCHAR(100)` (valjan MySQL `MODIFY`).
+- v1.12: tablica `match_players`; zatim (uvjet je opcija `kurs_lineups_v1`, ne verzija — prekinuta migracija se ponovi) `Kurs_Match::backfill_lineups()`: svaka odigrana utakmica bez postave dobije je iz tadašnjeg rostera + igrača s događajima.
 
 > ✅ **ISPRAVLJENO (ISPRAVCI #1):** ranije su se `playoff_spots`/`match_id` dodavali preko `ADD COLUMN IF NOT EXISTS` (nevalidan MySQL → SQL greška u `debug.log`); sada ih dodaje `dbDelta`.
 
@@ -265,9 +271,16 @@ Sustav služi isključivo KURS-u, pa je struktura natjecanja **konstanta**, ne p
 |---|---|
 | `get_squad($team_id,$division_id)` | Roster + `player_name` (JOIN posts), `ORDER BY jersey_no, post_title`. |
 | `add_to_squad($player_id,$team_id,$division_id,$jersey=0)` | `$wpdb->replace` (upsert po UNIQUE). `jersey_no = $jersey ?: null` (0 → NULL). |
-| `remove_from_squad($player_id,$team_id,$division_id)` | Brisanje. |
+| `remove_from_squad($player_id,$team_id,$division_id)` | Brisanje. Odigrane utakmice čuvaju svoju postavu (`match_players`), pa micanje/prijelaz ne mijenja povijest. |
+| `player_team_in_division($player_id,$division_id)` | Ekipa igrača u ligi (0 ako je nema) — pravilo: u jednoj ligi igrač igra za jednu ekipu. |
 
 ### 4.2 `Kurs_Match` — utakmice, eventi, poredak (`includes/class-match.php`)
+
+> **Postava utakmice (1.19.0, tablica `match_players`).** Sastav ekipe na utakmici više se ne izvodi iz *trenutnog* rostera (micanje igrača iz ekipe brisalo ga je iz svih starih utakmica i iz karijere). `finish()` poziva **`save_lineup($id)`**: postava obiju ekipa = tadašnji roster lige + igrači koji za tu ekipu imaju događaj; postojeća postava se **ne prepisuje** (utakmica otvorena za ispravak zadržava sastav, samo se dopunjuje). **`lineup($match_id, $team_id, $division_id = 0)`** = spremljena postava, a dok je nema trenutni roster (+ igrači s događajima), sort po dresu pa imenu — **jedini izvor za zapisnik, PDF i javnu stranicu utakmice** (ne `get_squad`). Ostalo: `division_of($match_id)` (skupina ili playoff zapisnik → liga), `has_lineup()`, `add_to_lineup()` (izostavljeni igrač iz rostera, zapisnik → AJAX `kurs_record_add_lineup`), `backfill_lineups()` (migracija, demo podaci). Tko nije igrao i dalje je event `absent`. Brisanje utakmice/skupine/bracketa briše i njezinu postavu.
+>
+> **`player_career($player_id)`** (1.19.0) — karijera po sezoni × ligi × ekipi: nastupi (odigrane utakmice iz postave bez `absent`), golovi (`goal`+`penalty`), žuti, crveni (`red_card`+`second_yellow`); retci iz postava (ostaju i nakon prijelaza, `in_roster=false`) + trenutni roster ekipa uvrštenih u ligu (`in_roster=true`). Koriste ga profil igrača u temi i admin stranica Igrači.
+>
+> **`Kurs_Players`** (`includes/class-players.php`, 1.19.0) — registar igrača: `normalized_name()`, `duplicate_groups()` / `same_name()` (isto ime bez dijakritika), `totals($ids)` (nastupi/golovi), `current_teams($ids)` (ekipe u aktivnim sezonama), `has_history()`, **`delete()`** (samo bez utakmica/događaja; briše i rostere + zadanog kapetana), **`merge($keep, $drop)`** (rosteri, postave, događaji, kapetan prelaze na `$keep`, prazna fotografija/godina se dopune, `$drop` se briše; u zajedničkoj utakmici je igrao ako je igrao bilo koji zapis; **odbija** ako su u istoj ligi u različitim ekipama).
 
 **Utakmice** (`matches`)
 
@@ -448,7 +461,7 @@ Jedna klasa registrira meni, asset-e, POST forme (`admin_init`) i AJAX (`wp_ajax
 
 **Informacijska arhitektura (restrukturirano 2026-10-16, `KURS_VERSION` 1.16.0).** Vlasnik je stari admin opisao kao „mrvice razbacane posvuda" (Sezone, Utakmice, skriveni „Postavi ligu" i Roster, Ekipe), a nije bilo jasno pripadaju li ekipe i utakmice nekoj ligi. Sada:
 - **svako natjecanje ima svoju stranicu** (`kurs-kc` = KC Liga, `kurs-pan` = Pan Ljetna liga) — aktualna sezona + odabir starijih, sve o sezoni u karticama **Pregled · Ekipe · Utakmice · Postavke**;
-- **Ekipe i igrači** (`kurs-teams`) su **zajednički registar** klubova (klub igra više sezona i oba natjecanja); u ligu se ekipa uvrštava na kartici Ekipe natjecanja, a igrači (roster) se vode po ligi;
+- **Ekipe** (`kurs-teams`) i **Igrači** (`kurs-players`, od 1.19.0) su **zajednički registri** (klub i igrač igraju više sezona i oba natjecanja); u ligu se ekipa uvrštava na kartici Ekipe natjecanja, a **roster** (igrači ekipe u ligi, s brojevima dresova) je na istoj kartici → „N igr.” (`?tab=ekipe&roster=&division_id=`, od 1.19.0);
 - **Sve sezone** (`kurs-seasons`) = arhiva po natjecanju + kreiranje nove sezone; **Postavke** (`kurs-settings`) = opće postavke (ticker; suci su od 1.17.0 po sezoni u kartici Postavke natjecanja);
 - **Pregled** (`kurs-dashboard`) = ulaz u oba natjecanja + ono što traži pažnju.
 
@@ -461,7 +474,8 @@ Top-level: `add_menu_page('KURS Liga', 'KURS Liga', KURS_CAP, 'kurs-dashboard', 
 | `kurs-dashboard` | Pregled | `pg_dashboard()` | `dashboard.php` | vidljiva |
 | `kurs-kc` | KC Liga | `pg_hub()` | `season-hub.php` (+ `hub-*.php`) | vidljiva — stranica natjecanja `kc_liga` |
 | `kurs-pan` | Pan Ljetna liga | `pg_hub()` | `season-hub.php` (+ `hub-*.php`) | vidljiva — stranica natjecanja `pan_ljetna` |
-| `kurs-teams` | Ekipe i igrači | `pg_teams()` | `teams.php` | vidljiva |
+| `kurs-teams` | Ekipe | `pg_teams()` | `teams.php` | vidljiva |
+| `kurs-players` | Igrači | `pg_players()` | `players.php` | vidljiva (1.19.0) |
 | `kurs-seasons` | Sve sezone | `pg_seasons()` | `seasons.php` | vidljiva |
 | `kurs-settings` | Postavke | `pg_settings()` | `settings.php` | vidljiva |
 | `kurs-match-record` | Zapisnik | `pg_match_record()` | `match-record.php` (+ `-pdf.php`) | **skrivena** (parent `null`) — otvara se iz utakmice |
@@ -488,7 +502,7 @@ Top-level: `add_menu_page('KURS Liga', 'KURS Liga', KURS_CAP, 'kurs-dashboard', 
 |---|---|
 | `kurs-season-setup&season_id=` (+ `created`, `groups_saved`, `groups_error`) | `hub_url($sid, 'ekipe', …)` |
 | `kurs-matches&season_id=` (+ `group_id`, `playoff_div`, `generated`, `reset`, `generated_season`) | `hub_url($sid, 'utakmice', …)`; bez `season_id` sezona se izvodi iz `group_id` (`season_of_group`) |
-| `kurs-roster&team_id=&division_id=` | `kurs-teams&action=edit&id=<team_id>&division_id=` |
+| `kurs-roster&team_id=&division_id=` | `Kurs_Admin::roster_url(team, division)` → stranica natjecanja → Ekipe → roster (1.19.0) |
 | `kurs-seasons&action=edit&id=` | `hub_url($id, 'postavke')` |
 
 ### 5.3 Asseti — `assets($hook)` (hook `admin_enqueue_scripts`)
@@ -528,6 +542,10 @@ Provjeri `KURS_CAP` + `$_POST['kurs_action']`, pa `match()` na `sanitize_key($_P
 | `delete_team` | `kurs_delete_team` | `do_delete_team` | **Guard (1.16.0):** ako ekipa ima ijednu utakmicu u `matches` (domaćin ili gost, bilo koja sezona) → **ne briše**. Inače briše retke `group_teams` i `squads` te ekipe, pa `wp_delete_post(id, true)`. | `kurs-teams&in_use=<N>` (notice „ne može se obrisati — možeš joj promijeniti naziv") ili `kurs-teams&deleted=1` |
 | `remove_team_logo` / `remove_team_banner` / `remove_team_photo` | `kurs_remove_logo_<id>` / `kurs_remove_banner_<id>` / `kurs_remove_photo_<id>` | `do_remove_team_*` | `delete_post_thumbnail` / brisanje meta `_kurs_team_banner` / `_kurs_team_photo` | `redirect_to` ili `kurs-teams` |
 | `save_team_banners` | `kurs_save_banners_<id>` | `do_save_team_banners` | meta `_kurs_team_banners` (JSON `[{id,link}]`) | `redirect_to` ili `kurs-teams` |
+| `add_player` / `edit_player` | `kurs_add_player` / `kurs_edit_player_<id>` | `do_add_player` / `do_edit_player` | ime, `_kurs_player_type`, `_kurs_player_birthyear` (1940 … tekuća−5, inače se briše); isto ime → `exists=ID` | `kurs-players&action=edit` (`created` / `updated`) |
+| `remove_player_photo` | `kurs_remove_player_photo_<id>` | `do_remove_player_photo` | `delete_post_thumbnail` | podaci igrača |
+| `merge_players` | `kurs_merge_players_<id>` | `do_merge_players` | `Kurs_Players::merge(id, merge_from)` | podaci igrača (`merged` / `merge_error`) |
+| `delete_player` | `kurs_delete_player_<id>` | `do_delete_player` | `Kurs_Players::delete` (igrač s utakmicama → `delete_error`) | `kurs-players&deleted=1` |
 | `save_season_referees` | `kurs_save_season_referees` | `do_save_season_referees` | `Kurs_Season::set_referees(season_id, retci ref_ime[]/ref_prezime[])` → `seasons.referees` | `hub(postavke, refs_saved=1)` |
 | `save_ticker_settings` | `kurs_ticker_settings` | `do_save_ticker_settings` | opcija `kurs_ticker_offseason` (`champions`\|`hidden`) + `Kurs_Ticker::flush()` | `kurs-settings&ticker_saved=1` |
 | `generate_playoff` | `kurs_generate_playoff` | `do_generate_playoff` | `Kurs_Playoff::generate(did)` (divizija bez `has_playoff` → samo redirect na `hub('utakmice')`) | `hub('utakmice', playoff_div, generated=1)` |
@@ -556,7 +574,9 @@ Svaka: `check_ajax_referer('kurs_ajax','nonce')` + `KURS_CAP`. Greške dodjele e
 | `kurs_assign_team` | `ajax_assign_team` | **Guardovi (1.16.0), redom:** `group_id` mora postojati i `team_id` mora biti `kurs_ekipa` („Nepoznata ekipa."); sezona skupine ne smije biti zaključana („Sezona je zaključana."); ekipa ne smije već biti u nekoj skupini **iste lige** (`Kurs_Season::team_group_in_division`) — „Ekipa je već u ovoj ligi." / „Ekipa je već u skupini „X" — ekipa igra samo u jednoj skupini.". Zatim `assign_team(gid,tid)` → `{team_id, team_name, badge (kurs_team_badge_html 22px), roster (URL kurs-teams&action=edit&id=&division_id=)}` — JS iz toga odmah crta red s badgeom i linkom „0 igr." |
 | `kurs_remove_team` | `ajax_remove_team` | **Guardovi (1.16.0):** zaključana sezona → greška; ekipa koja u toj skupini već ima utakmica (`Kurs_Season::team_match_count`) → „Ekipa već ima N utakmica u ovoj ligi. Najprije ih obriši u kartici Utakmice, pa je onda makni iz lige.". Inače `remove_team(gid,tid)`. |
 | `kurs_set_logo` / `kurs_set_banner` / `kurs_set_photo` | `ajax_set_*` | `set_post_thumbnail` / meta `_kurs_team_banner` / `_kurs_team_photo` → `{url}` |
-| `kurs_add_squad` | `ajax_add_squad` | `add_to_squad(player,team,division,jersey)`. **Guard (1.17.1):** igrač koji je u toj ligi već u rosteru druge ekipe → greška „X je u ovoj ligi već u ekipi „Y\"…\" (`Kurs_Season::player_team_in_division`). U drugoj ligi iste sezone smije igrati. |
+| `kurs_add_squad` | `ajax_add_squad` | `add_to_squad(player,team,division,jersey)`. Igrač koji je u toj ligi u rosteru druge ekipe → `{code:'other_team', team, message}`; JS pita „Prebaciti ga u ovu ekipu?” i ponovi s **`transfer=1`** = **prijelaz** (makne ga iz stare ekipe; njezine odigrane utakmice čuvaju postavu), odgovor ima `from`. U drugoj ligi iste sezone smije igrati. |
+| `kurs_record_add_lineup` | `ajax_record_add_lineup` | utakmica otvorena za ispravak sa spremljenom postavom: igrač iz rostera te ekipe (u toj ligi) → `Kurs_Match::add_to_lineup` (1.19.0) |
+| `kurs_set_player_photo` | `ajax_set_player_photo` | fotografija igrača = istaknuta slika `kurs_igrac` (provjera tipa posta i `wp_attachment_is_image`) (1.19.0) |
 | `kurs_remove_squad` | `ajax_remove_squad` | `remove_from_squad(...)` |
 | `kurs_quick_add_player` | `ajax_quick_add_player` | `wp_insert_post(kurs_igrac)` + opcionalno `add_to_squad` |
 | `kurs_search_players` | `ajax_search_players` | LIKE pretraga `kurs_igrac` po `post_title`, LIMIT 10 → `[{id,name}]` |
@@ -591,7 +611,8 @@ Svaka: `check_ajax_referer('kurs_ajax','nonce')` + `KURS_CAP`. Greške dodjele e
 - Notice: `created=1` („Sezona je kreirana s … Sad uvrsti ekipe u lige, pa generiraj raspored."), `groups_saved=1`, `groups_error=<poruka>`.
 - **Zaključana sezona** → samo pregled (po skupini ekipe s brojem igrača i linkom na igrače) i `return`.
 - **Preuzmi ekipe iz sezone X** (1.18.0, `<details class="kurs-panel kurs-carry">`, otvoren dok sezona nema nijednu ekipu): ekipe prethodne sezone natjecanja koje još nisu u ovoj sezoni; po retku badge, naziv, broj igrača (prošla liga u tooltipu) i `<select name="carry[div:team]">` s „— ne igra —" + skupinama sezone (predložena: `carry_over_defaults`). Kvačica „Prenesi i igrače s brojevima dresova" (zadano uključena), gumbi „Sve kao prošle sezone" / „Nijedna" (admin.js, `data-default`). Notice `carried` / `carried_players` / `carried_skipped`. Igrače koji više ne igraju operater miče iz rostera.
-- **Uvod `.kurs-hub-intro`:** ekipa (klub) se upisuje jednom u „Ekipe i igrači" i može igrati više sezona — ovdje se samo uvrštava u ligu; igrači se uređuju klikom na „N igr.".
+- **Uvod `.kurs-hub-intro`:** ekipa (klub) se upisuje jednom u „Ekipe" i može igrati više sezona — ovdje se samo uvrštava u ligu; igrači (roster) se uređuju klikom na „N igr.".
+- **Roster ekipe (1.19.0)** — `?roster=TEAM&division_id=LIGA` (link „N igr.”, `Kurs_Admin::roster_url()`; ekipa mora biti u toj ligi sezone, inače se prikaže kartica): „← Sve ekipe sezone”, izbornik za prelazak na roster druge ekipe sezone (po ligama, s brojem igrača), naslov s badgeom, **`roster-panel.php`** (tablica s dresom, ↗ na podatke igrača, Uredi / ×; „Dodaj postojećeg igrača” — igrači iz druge ekipe iste lige označeni „— sada: Ekipa” = prijelaz; „Kreiraj novog igrača” s autocompleteom i duplikat-modalom) i bočni panel (kapetan, trener, „Podaci ekipe”, javni profil). Zaključana sezona → roster samo za pregled. Ovo je **jedino mjesto za uređivanje rostera**.
 - **Struktura `.kurs-structure` / `.kurs-div-card`** po ligi (boja, ikona, broj ekipa, format „N skupine · po 2 najbolje u četvrtfinale|polufinale" ili „svatko sa svakim jednom · bez playoffa"). Za Pan (`comp['groups']`) forma **Broj skupina** (`set_group_count`, select iz `PAN_GROUP_OPTIONS`); kad bracket postoji → „Playoff je generiran — broj skupina je zaključan". Sezona bez divizija → poruka (obriši u Postavkama i kreiraj ponovno) i `return`.
 - `window.KursTeams` (JSON za client-side autocomplete) + `<template id="kurs-pool-assign-tpl">` (gumbi „uvrsti u…" koje JS kopira za novo kreiranu ekipu).
 - **Sve ekipe** (`.kurs-team-pool`, `#kurs-team-pool-list`): cijeli registar `kurs_ekipa`, **neuvrštene u ovoj sezoni prve** (zatim abecedno, `strcoll`), brojač `#kurs-pool-free-count`. Svaki `.kurs-team-pill` ima gumbe **`.kurs-pool-assign[data-group-id]`** za svaku ligu/skupinu sezone s kratkim labelama (*KC Liga* / *Bez briga* / *A B C D*). Uvrštena ekipa dobiva `.is-assigned` (prigušena, „✓" iz CSS-a, gumbi skriveni) i tooltip „Igra u: …". Ispod „+ Nova ekipa" (`#new-team-name-setup` + `#btn-create-team-setup` → `kurs_create_team`).
@@ -616,7 +637,7 @@ Svaka: `check_ajax_referer('kurs_ajax','nonce')` + `KURS_CAP`. Greške dodjele e
 #### Ostale stranice
 
 **`dashboard.php`** („Pregled", `kurs-dashboard`) — **prepisano 2026-10-16.**
-- Zaglavlje: gumbi „Ekipe i igrači" i „Za medije ↗" (`/za-medije/`).
+- Zaglavlje: gumbi „Ekipe", „Igrači" i „Za medije ↗" (`/za-medije/`).
 - **Dvije kartice natjecanja** `.kurs-comp-card--kc|pan` (petlja po `HUBS`, sezona = `current_for_league`): naziv sezone (+ „🔒 zaključana" / „arhiva"); po ligi red **„N ekipa · X. kolo od Y · vodi …"** (ili „Y kola, još se nije igralo" / „bez rasporeda"; vodeći samo za ligu s jednom skupinom); gumbi **Otvori** (stranica natjecanja) / **Utakmice** / **Ekipe** (`hub_url`).
 - **Što traži pažnju** — preko svih **aktivnih nezaključanih** sezona (`s.status='active' AND s.locked=0`; i playoff zapisnici preko `playoff_matches`): *Čeka rezultat* (neodigrane s prošlim datumom, LIMIT 10, „Unesi zapisnik"), *Ovaj tjedan* (od sada do ponoći za 8 dana, LIMIT 20), *Zadnji rezultati* (LIMIT 8, link na zapisnik). Oznaka lige `.kurs-league-tag--kc|lbb|pan` + „N. kolo" ili playoff runda.
 - **Uklonjeno:** stare stat kartice (aktivne sezone, broj ekipa/igrača), CTA „Dodaj igrača" / kreiranje sezone, forme tickera i baze sudaca (→ `settings.php`).
@@ -629,10 +650,14 @@ Svaka: `check_ajax_referer('kurs_ajax','nonce')` + `KURS_CAP`. Greške dodjele e
 - Notice: `deleted`, `locked`/`unlocked` (fallback od `toggle_season_lock`), `invalid=1` („Odaberi natjecanje i ispravnu godinu"), `exists=<id>` („Sezona X već postoji — Otvori je →" na hub).
 - **Forma za uređivanje sezone je uklonjena** — premještena u karticu Postavke (stari `?action=edit&id=` preusmjerava tamo).
 
-**`teams.php`** („Ekipe i igrači", `kurs-teams`) — dva moda:
+**`teams.php`** („Ekipe”, `kurs-teams`) — dva moda:
 - **Lista** (default) — **prepisano 2026-10-16.** Uvod `.kurs-hub-intro` (popis svih klubova; u ligu se uvrštava na stranici natjecanja → Ekipe, igrači se uređuju unutar ekipe za svaku ligu posebno). Filter pilule **Sve / Igraju sada / Bez lige** (`?filter=aktualne|bez`, s brojevima; „sada" = aktualne sezone oba natjecanja po `current_for_league`). Red `.kurs-team-row`: badge, ime (→ uređivanje), **oznake liga u aktualnim sezonama** (`.kurs-league-tag--kc|lbb|pan` → `hub_url(…, 'ekipe')`; uz ligu s više skupina i naziv skupine) ili „Ne igra u aktualnim sezonama", „· ranije N sezona", broj **različitih** igrača (svi rosteri ekipe), „✎ Uredi" i brisanje (`delete_team`, guard `in_use`). Desno forma **Nova ekipa** (`add_team`, color picker `kurs_color_picker_html()` — 12 preset boja + kotačić + hex). Notice `added` / `updated` / `deleted` / `in_use=N`.
-- **Uređivanje** (`?action=edit&id=[&division_id=]`; `return` prije liste): breadcrumb KURS Liga / Ekipe i igrači / ekipa; ispod imena **oznake liga** (do 4 konteksta iz `get_team_contexts`, link na hub Ekipe te sezone); gumb **„← Natrag na ligu"** kad je stranica otvorena s `division_id` (iz kartice Ekipe ili ljestvice), inače „← Sve ekipe". Lijevo: Osnovno (`edit_team` — naziv, boja, trener/predstavnik, zadani kapetan), logo (`.kurs-logo-btn` → `kurs_set_logo`; `remove_team_logo`), baneri sponzora (`save_team_banners`), slika momčadi (`kurs_set_photo`). Desno: **Igrači** — „popis se vodi po ligi i sezoni": odabir lige (GET `division_id` iz `get_team_contexts`; zadano najnovija), skriveni `#kurs-roster-ctx[data-team-id][data-division-id]` (čita ga JS), tablica `#kurs-squad-list` (inline uređivanje → `kurs_update_squad_player`, uklanjanje → `kurs_remove_squad`), „Dodaj postojećeg igrača" (`#btn-add-squad` → `kurs_add_squad`), „Kreiraj novog igrača" (`kurs_quick_add_player`, autocomplete `kurs_search_players`, duplikat-modal `#kurs-dup-modal`). Ekipa bez ijedne lige → objašnjenje + gumbi „KC Liga → Ekipe" / „Pan Ljetna liga → Ekipe".
-- Ovo je **jedino mjesto za roster** — skrivena stranica `kurs-roster` (`roster.php`) je obrisana, a njen URL preusmjerava ovamo.
+- **Uređivanje** (`?action=edit&id=[&division_id=]`; `return` prije liste): breadcrumb KURS Liga / Ekipe / ekipa; ispod imena **oznake liga** (do 4 konteksta iz `get_team_contexts`, link na hub Ekipe te sezone); gumb **„← Natrag na ligu"** kad je stranica otvorena s `division_id` (iz kartice Ekipe ili ljestvice), inače „← Sve ekipe". Lijevo: Osnovno (`edit_team` — naziv, boja, trener/predstavnik, zadani kapetan), logo (`.kurs-logo-btn` → `kurs_set_logo`; `remove_team_logo`), baneri sponzora (`save_team_banners`), slika momčadi (`kurs_set_photo`). Desno (1.19.0): **Igrači po ligama** — za svaki kontekst (`get_team_contexts`) liga, sezona, broj igrača i link „Roster →” (`roster_url`); gumb „← Natrag na roster” kad je otvoreno s `division_id` lige ekipe. Ekipa bez ijedne lige → objašnjenje + gumbi „KC Liga → Ekipe” / „Pan Ljetna liga → Ekipe”.
+- Roster se od 1.19.0 **ne uređuje ovdje** nego na stranici natjecanja (vidi `hub-teams.php`); stari `kurs-roster` URL vodi na roster u natjecanju.
+
+**`players.php`** („Igrači”, `kurs-players`, 1.19.0) — dva moda:
+- **Popis:** uvod, filter pilule **Svi / Igraju sada / Bez ekipe / Isto ime** (`?filter=sada|bez|duplikati`; „sada” = roster ekipe uvrštene u ligu aktivne sezone), tražilica (`?s=`, WP pretraga po imenu — collation ignorira dijakritike), tablica (ime → podaci, GLM, oznaka „isto ime”, godina rođenja, ekipe sada kao oznake lige → roster, nastupi, golovi — `Kurs_Players::totals`), paginacija po 50; desno forma **Novi igrač** (`add_player`).
+- **Podaci igrača** (`?action=edit&id=`): zaglavlje (fotografija/inicijal, pozicija, godina, ukupno nastupa/golova, javni profil); lijevo **Osnovno** (`edit_player`: ime, pozicija, godina rođenja), **Fotografija** (`.kurs-player-photo-btn` → `kurs_set_player_photo`; `remove_player_photo`), **Brisanje** (samo bez utakmica); desno **Karijera** (`Kurs_Match::player_career` — ekipa u rosteru → link na roster, inače „(otišao)”) i **Spoji dvostruki upis** (`merge_players`; select s optgroupom „Isto ime” na vrhu).
 
 **`match-record.php`** (zapisnik, `kurs-match-record`) — zahtijeva `?match_id=`. `Kurs_Match::get`. **Playoff meč se detektira po `group_id === 0`** (`$is_playoff`) i vuče info iz playoff tablice (`Kurs_Playoff::find_by_match_id`); obični mečevi JOIN-om dohvaćaju group/phase/division/season. Računa `division_id`/`season_id` + squad domaćina i gosta (`get_squad`). Ako `?format=pdf` → `include match-record-pdf.php; exit`. **Povratni link** (1.16.0) vodi na karticu Utakmice natjecanja — `hub_url($season_id, 'utakmice', ['group_id'] | ['playoff_div'])` s labelom „← <naziv sezone> · Utakmice"; izbornik pritom ostaje otvoren i označava natjecanje (filteri `parent_file`/`submenu_file`, §5.2a).
 Sadržaj: **Hero scoreboard** (badge + rezultat; nezavršeno → live `$ev_home/$ev_away` iz eventa, završeno → spremljeni score; status "U TIJEKU"/"ZAVRŠENO"); **Uredi datum/sat/kolo** (`<details>` → `#btn-save-match-info` → `kurs_update_match`); **Golovi/eventi** (lista `get_events`; nezavršeno → forma "Dodaj" ekipa/igrač/tip/minuta → `#btn-add-event` → `kurs_record_add_event` + brisanje `.kurs-del-event` → `kurs_record_del_event`; tipovi `goal/own_goal/yellow_card/red_card`); **Postave** (squad tablice); **Zaključi utakmicu** (nonce `kurs_finish_match`, action `finish_match`, `from_record=1`; rezultat default `readonly` auto-računat, toggle "Ručni unos" `#finish-manual-toggle`; završeno → status + "Otključaj za ispravke" `reopen_match`); **Potpisi** (print-only: domaćin/sudac/gost). Na dnu `<script>` postavlja `window.Kurs*` (squad JSON, team id, imena, `KursMatchId`, `KursPdfUrl`). Topbar: "Ispiši" (`window.print()`), "Preuzmi PDF" (`#btn-download-pdf` → `?format=pdf` u novom prozoru).
@@ -661,9 +686,9 @@ Sve se vodi sa **stranice natjecanja** (KURS Liga → *KC Liga* ili *Pan Ljetna 
 
 1. **Kreiraj sezonu** — „+ Nova sezona" u zaglavlju stranice natjecanja (→ `kurs-seasons&league=…#nova-sezona`) ili izravno u **Sve sezone**; za natjecanje bez ijedne sezone stranica natjecanja nudi inline „Kreiraj prvu sezonu". Odabiru se samo **natjecanje** i **godina** (za Pan i broj skupina 2/4); naziv, lige, faza „Grupna faza" i skupine nastaju automatski (`default_name()` + `scaffold()`); duplikat (isto natjecanje + godina) se odbija s linkom na postojeću sezonu. Redirect na karticu **Ekipe** (`created=1`).
 2. **(Pan, po potrebi) broj skupina** — kartica Ekipe → forma „Broj skupina" (`set_group_count`) dok skupine koje se brišu nemaju ekipa/utakmica i dok bracket nije generiran.
-3. **Ekipe u ligama** — kartica **Ekipe**: u popisu „Sve ekipe" (neuvrštene su na vrhu) klikni gumb lige/skupine uz ekipu (`.kurs-pool-assign`) ili je potraži u stupcu lige (`kurs_assign_team`); nova ekipa „+ Kreiraj ekipu" (AJAX `kurs_create_team`) ili u **Ekipe i igrači**. Ekipa igra u **jednoj skupini po ligi**; iz lige se miče `×` (`kurs_remove_team`) samo dok nema utakmica.
+3. **Ekipe u ligama** — kartica **Ekipe**: u popisu „Sve ekipe" (neuvrštene su na vrhu) klikni gumb lige/skupine uz ekipu (`.kurs-pool-assign`) ili je potraži u stupcu lige (`kurs_assign_team`); nova ekipa „+ Kreiraj ekipu" (AJAX `kurs_create_team`) ili u **Ekipe**. Ekipa igra u **jednoj skupini po ligi**; iz lige se miče `×` (`kurs_remove_team`) samo dok nema utakmica.
 4. **Raspored** — na dnu kartice Ekipe „Generiraj raspored →" (`generate_season_fixtures` = `Kurs_Match::generate_round_robin()` za sve skupine sezone); kasnije „↻ Dopuni raspored" za naknadno dodane ekipe. Alternativno po skupini u kartici **Utakmice** („↻ Generiraj sve" = `kurs_generate_fixtures`) ili ručno („+ Dodaj ručno" = `add_match`). Datume/kola upiši preko ✎ (`kurs_update_match`) — korak „Termini" u Pregledu broji utakmice bez termina.
-5. **Igrači (roster)** — klik na **„N igr."** uz ekipu u kartici Ekipe (ili na ime ekipe u ljestvici) otvara `kurs-teams&action=edit&id=&division_id=` s igračima te ekipe u toj ligi: dodaj postojeće/nove igrače (`kurs_add_squad`, `kurs_quick_add_player`, `kurs_update_squad_player`); „← Natrag na ligu" vraća na karticu Ekipe. Isto je dostupno iz **Ekipe i igrači → Uredi** (odabir lige u panelu Igrači).
+5. **Igrači (roster)** — klik na **„N igr."** uz ekipu u kartici Ekipe otvara roster te ekipe u toj ligi (na istoj kartici, `?roster=&division_id=`): dodaj postojeće/nove igrače s brojem dresa (`kurs_add_squad`, `kurs_quick_add_player`, `kurs_update_squad_player`); igrač iz druge ekipe iste lige dodaje se kao **prijelaz** (uz potvrdu). Izbornikom „Ekipa:” prelaziš na sljedeću ekipu. Podatke igrača (godina rođenja, fotografija, spajanje duplikata) uređuješ u **Igrači**.
 6. **Rezultati / zapisnik** — kartica Pregled (i glavni Pregled `kurs-dashboard`) ističe **„Čeka rezultat"** → „Unesi zapisnik" otvara `kurs-match-record`: unesi golove i kartone (`kurs_record_add_event`), rezultat se live računa; zaključi (`finish_match`) → bilježi se u tablicu poretka i „Po kolima". Po potrebi otključaj (`reopen_match`). Povratak → kartica Utakmice.
 7. **Za medije** — nakon kola: „Za medije ↗" u zaglavlju stranice natjecanja (ili „Paket za medije ↗" uz Zadnje rezultate) otvara javnu stranicu s paketom rezultata kola (HTML / tekst / PNG) za druge portale.
 8. **Playoff (samo Pan)** — kad su skupine odigrane (korak „Playoff" postaje „Generiraj bracket"): kartica Utakmice → pilula **„🏆 Playoff"** (`playoff_div=`) → generiraj bracket iz ljestvica (`generate_playoff`; lige bez playoffa ga odbijaju), unosi rezultate (`finish_playoff_match`), ručno koriguraj parove/datume (`update_playoff_match`); zapisnik playoff meča preko lazy `ensure_match_record()`.
@@ -709,7 +734,6 @@ Opće postavke (ticker izvan sezone) su u **KURS Liga → Postavke** (`kurs-sett
 - **Datumi:** novi Pregled (`dashboard.php`) i kartica Pregled koriste `date()` s vlastitim kraticama dana (`ned/pon/…`) i `current_time('mysql')` za „sada" — neovisno o lokalizaciji WP-a; ostatak admina mjestimice koristi `date_i18n`. *(✅ `match-record-pdf.php` footer ispravljen na `date_i18n('j.n.Y. \u H:i')` — ISPRAVCI #4.)*
 - **`ajax_search_players`** radi LIKE od 1 znaka, dok JS autocomplete traži min 2 znaka.
 - ✅ **ISPRAVLJENO (ISPRAVCI #5):** u `matches.php` (danas `hub-matches.php`) je naziv tablice `'kurs_groups'` bio hardkodiran umjesto `KURS_PREFIX` konstante; sada koristi `$wpdb->prefix . KURS_PREFIX . 'groups'`.
-- ⚠️ `teams.php` (uređivanje ekipe, popis za zadanog kapetana) i dalje ima hardkodirano `{$wpdb->prefix}kurs_squads` umjesto `KURS_PREFIX` — radi dok je prefiks `kurs_`.
 - `redirect_to` iz `$_POST`: `do_add_team` i `do_toggle_season_lock` ga validiraju kroz `back_to()` (samo `admin_url()`), dok `do_edit_team`, `do_remove_team_*` i `do_save_team_banners` i dalje uzimaju sirovi `esc_url_raw` — open-redirect rizik ublažen jer `wp_safe_redirect` dozvoljava samo lokalne hostove.
 
 **Duplikacija koda:**

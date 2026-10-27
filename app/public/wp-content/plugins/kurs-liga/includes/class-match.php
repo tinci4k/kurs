@@ -126,9 +126,11 @@ class Kurs_Match {
 			'away_score' => $away_score,
 			'status'     => 'finished',
 		], [ 'id' => $id ] );
+		self::save_lineup( $id );
 		do_action( 'kurs_data_changed' );
 	}
 
+	/** Otvaranje za ispravak: spremljena postava ostaje (vidi save_lineup). */
 	public static function reopen( int $id ): void {
 		global $wpdb;
 		$wpdb->update( self::t( 'matches' ), [ 'status' => 'scheduled' ], [ 'id' => $id ] );
@@ -137,9 +139,201 @@ class Kurs_Match {
 
 	public static function delete( int $id ): void {
 		global $wpdb;
-		$wpdb->delete( self::t( 'match_events' ), [ 'match_id' => $id ] );
-		$wpdb->delete( self::t( 'matches' ),      [ 'id' => $id ] );
+		$wpdb->delete( self::t( 'match_events' ),  [ 'match_id' => $id ] );
+		$wpdb->delete( self::t( 'match_players' ), [ 'match_id' => $id ] );
+		$wpdb->delete( self::t( 'matches' ),       [ 'id' => $id ] );
 		do_action( 'kurs_data_changed' );
+	}
+
+	/** Liga (divizija) utakmice: skupina → faza → liga, playoff zapisnik (group_id = 0) → bracket. 0 ako je nema. */
+	public static function division_of( int $match_id ): int {
+		global $wpdb;
+		return (int) $wpdb->get_var( $wpdb->prepare(
+			'SELECT COALESCE( ph.division_id, pm.division_id ) FROM ' . self::t( 'matches' ) . ' m
+			 LEFT JOIN ' . self::t( 'groups' ) . ' g ON g.id = m.group_id
+			 LEFT JOIN ' . self::t( 'phases' ) . ' ph ON ph.id = g.phase_id
+			 LEFT JOIN ' . self::t( 'playoff_matches' ) . ' pm ON m.group_id = 0 AND pm.match_id = m.id
+			 WHERE m.id = %d LIMIT 1',
+			$match_id
+		) );
+	}
+
+	// ── Postava (sastav ekipe spremljen uz utakmicu) ──────────────────────────
+	// match_players = tko je bio u sastavu ekipe na utakmici i s kojim brojem. Upisuje se pri
+	// završetku utakmice iz tadašnjeg rostera, pa kasniji prijelaz ili odlazak igrača ne mijenja
+	// odigrane utakmice. Dok postava nije spremljena, sastav = trenutni roster lige.
+	// Tko iz sastava NIJE igrao i dalje je event 'absent'.
+
+	/** Ima li utakmica spremljenu postavu (za ekipu ili za bilo koju). */
+	public static function has_lineup( int $match_id, int $team_id = 0 ): bool {
+		global $wpdb;
+		return (bool) $wpdb->get_var( $wpdb->prepare(
+			'SELECT COUNT(*) FROM ' . self::t( 'match_players' ) . ' WHERE match_id = %d' . ( $team_id ? ' AND team_id = %d' : '' ),
+			...( $team_id ? [ $match_id, $team_id ] : [ $match_id ] )
+		) );
+	}
+
+	/**
+	 * Sastav ekipe na utakmici (player_id, jersey_no, player_name): spremljena postava, a dok je nema
+	 * trenutni roster lige. Uvijek i igrači koji za tu ekipu imaju događaj (gol, karton…), i kad više
+	 * nisu u rosteru. Poredak: broj dresa, pa ime.
+	 */
+	public static function lineup( int $match_id, int $team_id, int $division_id = 0 ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results( $wpdb->prepare(
+			'SELECT mp.player_id, mp.jersey_no, p.post_title AS player_name
+			 FROM ' . self::t( 'match_players' ) . ' mp JOIN ' . $wpdb->posts . ' p ON p.ID = mp.player_id
+			 WHERE mp.match_id = %d AND mp.team_id = %d',
+			$match_id, $team_id
+		) ) ?: [];
+		if ( ! $rows ) {
+			$division_id = $division_id ?: self::division_of( $match_id );
+			$rows        = $division_id ? Kurs_Season::get_squad( $team_id, $division_id ) : [];
+		}
+		$have = array_flip( array_map( fn( $r ) => (int) $r->player_id, $rows ) );
+		foreach ( $wpdb->get_results( $wpdb->prepare(
+			'SELECT DISTINCT e.player_id, p.post_title AS player_name
+			 FROM ' . self::t( 'match_events' ) . ' e JOIN ' . $wpdb->posts . " p ON p.ID = e.player_id
+			 WHERE e.match_id = %d AND e.team_id = %d AND e.event_type NOT IN ( 'absent', 'foul' )",
+			$match_id, $team_id
+		) ) ?: [] as $r ) {
+			if ( isset( $have[ (int) $r->player_id ] ) ) continue;
+			$r->jersey_no = null;
+			$rows[]       = $r;
+		}
+		usort( $rows, fn( $a, $b ) => ( (int) $a->jersey_no <=> (int) $b->jersey_no ) ?: strcoll( $a->player_name, $b->player_name ) );
+		return $rows;
+	}
+
+	/**
+	 * Spremi postavu obiju ekipa (pri završetku utakmice). Postojeća postava se ne prepisuje rosterom
+	 * — utakmica otvorena za ispravak zadržava svoj sastav; dopunjuje se samo igračima s događajima.
+	 */
+	public static function save_lineup( int $match_id ): void {
+		global $wpdb;
+		$m = self::get( $match_id );
+		if ( ! $m ) return;
+		$div = self::division_of( $match_id );
+		foreach ( [ (int) $m->home_team_id, (int) $m->away_team_id ] as $tid ) {
+			foreach ( self::lineup( $match_id, $tid, $div ) as $r ) {
+				self::insert_lineup_row( $match_id, $tid, (int) $r->player_id, (int) $r->jersey_no );
+			}
+		}
+	}
+
+	/**
+	 * Dodaj igrača iz rostera u spremljenu postavu (utakmica otvorena za ispravak, a igrač je
+	 * izostavljen). Bez spremljene postave nije potrebno — tada je sastav ionako roster.
+	 */
+	public static function add_to_lineup( int $match_id, int $team_id, int $player_id ): void {
+		$div = self::division_of( $match_id );
+		$sq  = $div ? array_values( array_filter( Kurs_Season::get_squad( $team_id, $div ), fn( $s ) => (int) $s->player_id === $player_id ) ) : [];
+		self::insert_lineup_row( $match_id, $team_id, $player_id, $sq ? (int) $sq[0]->jersey_no : 0 );
+	}
+
+	private static function insert_lineup_row( int $match_id, int $team_id, int $player_id, int $jersey ): void {
+		global $wpdb;
+		$wpdb->query( $wpdb->prepare(
+			'INSERT IGNORE INTO ' . self::t( 'match_players' ) . ' (match_id, team_id, player_id, jersey_no) VALUES (%d, %d, %d, ' . ( $jersey ? (int) $jersey : 'NULL' ) . ')',
+			$match_id, $team_id, $player_id
+		) );
+	}
+
+	/** Završene utakmice bez spremljene postave dobivaju je iz trenutnog rostera (migracija, demo podaci). Vraća broj utakmica. */
+	public static function backfill_lineups(): int {
+		global $wpdb;
+		$ids = $wpdb->get_col(
+			'SELECT m.id FROM ' . self::t( 'matches' ) . " m WHERE m.status = 'finished'
+			 AND NOT EXISTS ( SELECT 1 FROM " . self::t( 'match_players' ) . ' mp WHERE mp.match_id = m.id )'
+		);
+		foreach ( $ids as $id ) self::save_lineup( (int) $id );
+		return count( $ids );
+	}
+
+	/**
+	 * Karijera igrača po sezoni, ligi i ekipi: nastupi (završene utakmice u postavi, bez „nije igrao"),
+	 * golovi, žuti, crveni. Ekipe iz spremljenih postava (ostaju i nakon prijelaza) + trenutni roster
+	 * ekipa uvrštenih u ligu (i prije prve utakmice). Redovi kao u profilu igrača, najnovija sezona prva.
+	 */
+	public static function player_career( int $player_id ): array {
+		global $wpdb;
+		$rows = [];
+		$row  = function ( int $div, int $team ) use ( &$rows ): object {
+			return $rows[ "$div:$team" ] ??= (object) [
+				'division_id' => $div, 'team_id' => $team, 'jersey_no' => null, 'in_roster' => false,
+				'matches_played' => 0, 'goals' => 0, 'yellows' => 0, 'reds' => 0,
+			];
+		};
+
+		$apps = $wpdb->get_results( $wpdb->prepare(
+			'SELECT mp.match_id, mp.team_id, mp.jersey_no, COALESCE( ph.division_id, pm.division_id ) AS division_id,
+			        EXISTS ( SELECT 1 FROM ' . self::t( 'match_events' ) . " e WHERE e.match_id = mp.match_id AND e.player_id = mp.player_id AND e.event_type = 'absent' ) AS absent
+			 FROM " . self::t( 'match_players' ) . ' mp
+			 JOIN ' . self::t( 'matches' ) . ' m ON m.id = mp.match_id
+			 LEFT JOIN ' . self::t( 'groups' ) . ' g ON g.id = m.group_id
+			 LEFT JOIN ' . self::t( 'phases' ) . ' ph ON ph.id = g.phase_id
+			 LEFT JOIN ' . self::t( 'playoff_matches' ) . " pm ON m.group_id = 0 AND pm.match_id = m.id
+			 WHERE mp.player_id = %d AND m.status = 'finished'
+			 ORDER BY m.match_date, m.id",
+			$player_id
+		) ) ?: [];
+		$in_row = []; // match_id → redak karijere
+		foreach ( $apps as $a ) {
+			if ( ! (int) $a->division_id ) continue;
+			$r = $row( (int) $a->division_id, (int) $a->team_id );
+			if ( ! (int) $a->absent ) $r->matches_played++;
+			if ( $a->jersey_no ) $r->jersey_no = (int) $a->jersey_no; // zadnji broj s kojim je igrao
+			$in_row[ (int) $a->match_id ] = $r;
+		}
+		foreach ( $wpdb->get_results( $wpdb->prepare(
+			"SELECT match_id, SUM( event_type IN ('goal','penalty') ) AS goals, SUM( event_type = 'yellow_card' ) AS yellows,
+			        SUM( event_type IN ('red_card','second_yellow') ) AS reds
+			 FROM " . self::t( 'match_events' ) . ' WHERE player_id = %d GROUP BY match_id',
+			$player_id
+		) ) ?: [] as $e ) {
+			if ( ! isset( $in_row[ (int) $e->match_id ] ) ) continue; // samo završene utakmice iz postave
+			$r = $in_row[ (int) $e->match_id ];
+			$r->goals   += (int) $e->goals;
+			$r->yellows += (int) $e->yellows;
+			$r->reds    += (int) $e->reds;
+		}
+
+		foreach ( $wpdb->get_results( $wpdb->prepare(
+			'SELECT sq.team_id, sq.division_id, sq.jersey_no FROM ' . self::t( 'squads' ) . ' sq
+			 WHERE sq.player_id = %d AND EXISTS ( SELECT 1 FROM ' . self::t( 'group_teams' ) . ' gt
+			   JOIN ' . self::t( 'groups' ) . ' g ON g.id = gt.group_id JOIN ' . self::t( 'phases' ) . ' ph ON ph.id = g.phase_id
+			   WHERE gt.team_id = sq.team_id AND ph.division_id = sq.division_id )',
+			$player_id
+		) ) ?: [] as $sq ) {
+			$r            = $row( (int) $sq->division_id, (int) $sq->team_id );
+			$r->in_roster = true;
+			if ( $sq->jersey_no ) $r->jersey_no = (int) $sq->jersey_no;
+		}
+		if ( ! $rows ) return [];
+
+		$divs = [];
+		foreach ( $wpdb->get_results(
+			'SELECT d.id, d.name, d.sort_order, s.id AS season_id, s.name AS season_name, s.year, s.league
+			 FROM ' . self::t( 'divisions' ) . ' d JOIN ' . self::t( 'seasons' ) . ' s ON s.id = d.season_id
+			 WHERE d.id IN (' . implode( ',', array_unique( array_map( fn( $r ) => (int) $r->division_id, $rows ) ) ) . ')'
+		) as $d ) $divs[ (int) $d->id ] = $d;
+
+		$out = [];
+		foreach ( $rows as $r ) {
+			$d = $divs[ $r->division_id ] ?? null;
+			if ( ! $d ) continue;
+			$r->season_id     = (int) $d->season_id;
+			$r->season_name   = $d->season_name;
+			$r->season_year   = (int) $d->year;
+			$r->league        = $d->league;
+			$r->division_name = $d->name;
+			$r->sort_order    = (int) $d->sort_order;
+			$r->team_name     = get_the_title( $r->team_id );
+			$out[]            = $r;
+		}
+		usort( $out, fn( $a, $b ) => [ $b->season_year, $b->season_id, $a->sort_order, $a->division_id, (int) $b->in_roster, $a->team_name ]
+			<=> [ $a->season_year, $a->season_id, $b->sort_order, $b->division_id, (int) $a->in_roster, $b->team_name ] );
+		return $out;
 	}
 
 	// ── Događaji ──────────────────────────────────────────────────────────────

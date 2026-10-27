@@ -6,7 +6,7 @@
 
 ## TL;DR za AI
 
-**kurskc.hr** je WordPress stranica za **KURS (Koprivnička udruga za rekreativni sport)** koja vodi malonogometne lige (**KC liga** — zima/dvorana, lige *KC Liga* + *Liga bez briga*; **Pan ljetna liga** — ljeto/trava, skupine + playoff). Sustav se sastoji od **dva odvojena dijela**: (1) vlastiti plugin **`kurs-liga`** koji nosi cijelu natjecateljsku domenu — sezone, divizije, faze, grupe, utakmice, događaje i playoff — preko **9 custom DB tablica `wp_kurs_*`** plus dva CPT-a `kurs_ekipa` i `kurs_igrac`; i (2) vlastita tema **`kurskc`** koja prikazuje te podatke na front-endu i registrira CPT `vijest`. Domenske klase plugina (`Kurs_Season`, `Kurs_Match`, `Kurs_Playoff`, `Kurs_Rounds`) su static-only i rade izravno preko `$wpdb`; admin sloj (`Kurs_Admin`) obrađuje sve forme i AJAX. **Admin je organiziran po natjecanjima** (od `KURS_VERSION` 1.16.0): izbornik KURS Liga → Pregled · **KC Liga** (`kurs-kc`) · **Pan Ljetna liga** (`kurs-pan`) · Ekipe i igrači · Sve sezone · Postavke; stranica natjecanja ima kartice Pregled / Ekipe / Utakmice / Postavke za odabranu sezonu. **Od 2026-10-16 struktura natjecanja je hardkodirana** (`Kurs_Season::COMPETITIONS`) — sustav služi isključivo KURS-u. **Lokalni razvoj** je preko Local by Flywheel (`http://kurshr.local`, DB `local`, root/root, WP korijen `app/public/`).
+**kurskc.hr** je WordPress stranica za **KURS (Koprivnička udruga za rekreativni sport)** koja vodi malonogometne lige (**KC liga** — zima/dvorana, lige *KC Liga* + *Liga bez briga*; **Pan ljetna liga** — ljeto/trava, skupine + playoff). Sustav se sastoji od **dva odvojena dijela**: (1) vlastiti plugin **`kurs-liga`** koji nosi cijelu natjecateljsku domenu — sezone, divizije, faze, grupe, utakmice, događaje i playoff — preko **9 custom DB tablica `wp_kurs_*`** plus dva CPT-a `kurs_ekipa` i `kurs_igrac`; i (2) vlastita tema **`kurskc`** koja prikazuje te podatke na front-endu i registrira CPT `vijest`. Domenske klase plugina (`Kurs_Season`, `Kurs_Match`, `Kurs_Playoff`, `Kurs_Rounds`) su static-only i rade izravno preko `$wpdb`; admin sloj (`Kurs_Admin`) obrađuje sve forme i AJAX. **Admin je organiziran po natjecanjima** (od `KURS_VERSION` 1.16.0): izbornik KURS Liga → Pregled · **KC Liga** (`kurs-kc`) · **Pan Ljetna liga** (`kurs-pan`) · Ekipe · Igrači · Sve sezone · Postavke; stranica natjecanja ima kartice Pregled / Ekipe / Utakmice / Postavke za odabranu sezonu. **Od 2026-10-16 struktura natjecanja je hardkodirana** (`Kurs_Season::COMPETITIONS`) — sustav služi isključivo KURS-u. **Lokalni razvoj** je preko Local by Flywheel (`http://kurshr.local`, DB `local`, root/root, WP korijen `app/public/`).
 
 **Napomena:** Korijenski `CLAUDE.md` **ažuriran je 2026-06-22 i dopunjen 2026-10-16** (fiksna struktura, `Kurs_Rounds`, „Po kolima", „Za medije", demo podaci, Local gotcha, admin po natjecanjima + `Kurs_Admin::hub_url()`). Točan model podataka sažet je u sekciji **Ključne činjenice** na dnu.
 
@@ -23,9 +23,10 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.18.1'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
-| `includes/class-database.php` | Sve 9 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.11'`, migracije (`maybe_upgrade()`) |
+| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.19.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
+| `includes/class-database.php` | Sve 10 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.12'`, migracije (`maybe_upgrade()`) |
 | `includes/class-cpt.php` | CPT-ovi `kurs_ekipa` (slug `ekipe`) i `kurs_igrac` (slug `igraci`) |
+| `includes/class-players.php` | `Kurs_Players` (1.19.0) — registar igrača: duplikati istog imena, zbroj nastupa/golova, ekipe u aktivnim sezonama, **spajanje** i brisanje igrača |
 | `includes/class-season.php` | `Kurs_Season` — **`COMPETITIONS`** (fiksna natjecanja) + `scaffold()` / `set_group_count()`; CRUD nad sezone/divizije/faze/grupe/group_teams/squads (static) |
 | `includes/class-match.php` | `Kurs_Match` — utakmice, događaji, **`generate_round_robin()`**, **`get_standings($gid, ?$max_round)`** (ljestvica), **`get_top_scorers()`** |
 | `includes/class-playoff.php` | `Kurs_Playoff` — playoff bracket (generate/seeding/advance/reset) |
@@ -35,14 +36,14 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 | `includes/helpers.php` | Prezentacijski helperi (`kurs_team_color/_text_color/_badge_html`, `kurs_league_icon`, **`kurs_league_url`**…) + dijeljeni renderi (`kurs_render_standings`, `kurs_render_playoff_bracket`, **`kurs_render_round_results/_scorers`**) |
 | `admin/class-admin.php` | `Kurs_Admin` — sav admin: meni (`HUBS`), **`hub_url()`** (linkovi na stranicu natjecanja), preusmjeravanje starih slugova (`redirect_legacy_pages`), asseti, POST forme (`handle_forms`), AJAX (s guardovima za ekipe), `compute_score()` |
 | `admin/assets/admin.css` / `admin.js` | Admin stilovi (~2750 lin., sekcija „STRANICA NATJECANJA") i JS (flatpickr, AJAX interakcije, `assignTeam`/`markPool`) |
-| `admin/views/*.php` | Admin viewovi: `dashboard` (Pregled), **`season-hub`** (stranica natjecanja) + kartice `hub-overview` / `hub-teams` / `hub-matches` / `hub-settings`, `seasons` (Sve sezone), `teams` (Ekipe i igrači + roster), `settings` (Postavke), `match-record`, `match-record-pdf`. *(Obrisani 2026-10-16: `season-setup`, `roster`, `playoff`; `matches` → `hub-matches`.)* |
+| `admin/views/*.php` | Admin viewovi: `dashboard` (Pregled), **`season-hub`** (stranica natjecanja) + kartice `hub-overview` / `hub-teams` / `hub-matches` / `hub-settings`, `seasons` (Sve sezone), `teams` (Ekipe), `players` (Igrači), `roster-panel` (roster ekipe u kartici Ekipe), `settings` (Postavke), `match-record`, `match-record-pdf`. *(Obrisani 2026-10-16: `season-setup`, `roster`, `playoff`; `matches` → `hub-matches`.)* |
 
 ### Tema `kurskc` — front-end
 `app/public/wp-content/themes/kurskc/`
 
 | Putanja | Opis |
 |---|---|
-| `functions.php` | `KURSKC_VERSION='1.0.38'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
+| `functions.php` | `KURSKC_VERSION='1.0.39'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
 | `style.css` | Samo theme header (Version 1.0.0 — nedosljedno s functions.php) |
 | `inc/post-types.php` | Registrira SAMO CPT `vijest` + taksonomiju `vijest_kategorija` |
 | `inc/enqueue.php` | Google Fonts + `kurskc-main` CSS/JS |
@@ -77,7 +78,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 | Datoteka | Čitaj kada… |
 |---|---|
 | **`ARHITEKTURA.md`** | Trebaš pregled cijelog sustava: kako se plugin i tema povezuju, podjela slojeva (domena/admin/front-end), tok podataka (CPT + custom tablice), ER hijerarhija na visokoj razini. Počni ovdje za "veliku sliku". |
-| **`BAZA-PODATAKA.md`** | Radiš s podacima: shema svih 9 tablica `wp_kurs_*` (stupci, tipovi, indeksi), veze prema `wp_posts` (`kurs_ekipa`/`kurs_igrac`), sustav verzioniranja sheme (`DB_VERSION`, migracije), seed. Bitno za svaku izmjenu DB upita ili sheme. |
+| **`BAZA-PODATAKA.md`** | Radiš s podacima: shema svih 10 tablica `wp_kurs_*` (stupci, tipovi, indeksi), veze prema `wp_posts` (`kurs_ekipa`/`kurs_igrac`), sustav verzioniranja sheme (`DB_VERSION`, migracije), seed. Bitno za svaku izmjenu DB upita ili sheme. |
 | **`PLUGIN-KURS-LIGA.md`** | Mijenjaš natjecateljsku logiku: domenske klase (`Kurs_Season` s `COMPETITIONS`/`scaffold`, `Kurs_Match`, `Kurs_Playoff`, `Kurs_Rounds`), izračun ljestvice (UEFA/HNS sortiranje), bodovanje, playoff seeding/advance, round-robin generator, helperi/renderi, te cijeli admin sloj (`Kurs_Admin`, izbornik i stranice natjecanja, `hub_url()`, legacy redirecti, forme, AJAX, viewovi, zapisnik, PDF, workflow operatera). |
 | **`TEMA-KURSKC.md`** | Radiš na front-endu/izgledu: template hijerarhija, Liga Hub (uklj. „Po kolima") i Centar utakmice, „Za medije" (`page-za-medije.php` + `inc/media-kit.php`), naslovnica („Iz lige"), profili ekipe/igrača, header/footer, navigacija, CPT `vijest`, CSS varijable i komponente, JS. |
 | **`POSTAVKE-I-KONVENCIJE.md`** | Trebaš okruženje i konvencije: Local setup (portovi, **php-cgi gotcha**), DB pristup, debug, **demo podaci** (`tools/demo-podaci.php`), naming (prefiksi `kurs_`/`kurskc_`/`_kurs_`), CSS boje, hookovi, te audit neusklađenosti CLAUDE.md vs kod i poznate greške iz debug.log. |
@@ -155,4 +156,4 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 ---
 
-*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.18.1` vs DB `DB_VERSION=1.11`; tema `KURSKC_VERSION=1.0.38` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*
+*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.19.0` vs DB `DB_VERSION=1.12`; tema `KURSKC_VERSION=1.0.39` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*

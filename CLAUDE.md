@@ -48,7 +48,8 @@ Hijerarhija:
 seasons → divisions → phases → groups → group_teams (ekipe u grupi)
                                       → matches → match_events (golovi/kartoni)
 divisions → playoff_matches (bracket: qf/sf/final; zapisnik = matches s group_id=0)
-squads = roster (igrač × ekipa × divizija)
+squads = roster (igrač × ekipa × divizija) — TRENUTNI
+match_players = postava utakmice (spremljena pri završetku; povijest ne ovisi o rosteru)
 ```
 Stupci `*_team_id` / `*_player_id` su `wp_posts.ID` CPT-ova `kurs_ekipa`/`kurs_igrac`
 (**nema** DB foreign-key constraintova — integritet samo u kodu).
@@ -67,8 +68,9 @@ Organiziran **po natjecanjima** (od `KURS_VERSION` 1.16.0), sve iza `KURS_CAP`:
 | Slug | Stranica |
 |------|----------|
 | `kurs-dashboard` | **Pregled** — oba natjecanja (aktualna sezona) + „Čeka rezultat" / „Ovaj tjedan" / „Zadnji rezultati" |
-| `kurs-kc`, `kurs-pan` | **Stranica natjecanja** (`season-hub.php`) — sezona (`?season_id=`, zadano aktualna) u karticama `?tab=` pregled / ekipe / utakmice / postavke (`hub-overview/teams/matches/settings.php`; ekipe = uvrštavanje + **prijenos ekipa i rostera iz prošle sezone**; postavke = sezona, **suci sezone**, zaključavanje) |
-| `kurs-teams` | **Ekipe i igrači** — zajednički registar klubova; igrači (roster) se vode po ligi na uređivanju ekipe (`&action=edit&id=&division_id=`) |
+| `kurs-kc`, `kurs-pan` | **Stranica natjecanja** (`season-hub.php`) — sezona (`?season_id=`, zadano aktualna) u karticama `?tab=` pregled / ekipe / utakmice / postavke (`hub-overview/teams/matches/settings.php`; ekipe = uvrštavanje + **prijenos ekipa i rostera iz prošle sezone** + **roster ekipe** `&roster=&division_id=` (`roster-panel.php`, link `Kurs_Admin::roster_url()`); postavke = sezona, **suci sezone**, zaključavanje) |
+| `kurs-teams` | **Ekipe** — zajednički registar klubova (logo, boja, trener, kapetan, sponzori) + popis liga s linkom na roster |
+| `kurs-players` | **Igrači** — registar igrača (`players.php`, `Kurs_Players`): tražilica, pozicija/godina rođenja/fotografija, karijera, spajanje dvostrukih upisa |
 | `kurs-seasons` | **Sve sezone** — arhiva po natjecanju + „Nova sezona" |
 | `kurs-settings` | **Postavke** — ticker izvan sezone (suci se vode po sezoni: stranica natjecanja → Postavke) |
 
@@ -101,6 +103,9 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   i `kurskc_active_league`).
 - **Zaključana sezona** — svaki admin handler koji mijenja utakmice, zapisnik, playoff ili roster
   počinje s `self::guard_unlocked( $season_id, $back )` (`admin/class-admin.php`); novi handler isto.
+- **Sastav ekipe na utakmici** samo preko `Kurs_Match::lineup($match_id, $team_id)` (postava spremljena pri
+  završetku u `match_players`), **ne** `Kurs_Season::get_squad()` (to je trenutni roster). Karijera igrača =
+  `Kurs_Match::player_career()`. Prijelaz igrača u drugu ekipu iste lige = `kurs_add_squad` s `transfer=1`.
 - **Pobjednik playoff meča** samo preko `Kurs_Playoff::winner_side()` (kod neriješenog odlučuju
   penali `playoff_matches.home_pen/away_pen`) — nikad `home_score > away_score`.
 - **Ovisnost teme o pluginu**: `functions.php` uvjetno učita plugin `helpers.php`, a
@@ -123,5 +128,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.18.1` vs
-  `DB_VERSION=1.11`; tema `KURSKC_VERSION=1.0.38` vs `style.css` 1.0.0.
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.19.0` vs
+  `DB_VERSION=1.12`; tema `KURSKC_VERSION=1.0.39` vs `style.css` 1.0.0.

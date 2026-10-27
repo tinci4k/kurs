@@ -306,6 +306,7 @@ class Kurs_Playoff {
 		if ( ! $pm->home_team_id || ! $pm->away_team_id ) {
 			if ( ! $has_events ) {
 				$wpdb->delete( $matches, [ 'id' => $mid, 'group_id' => 0 ] );
+				$wpdb->delete( $wpdb->prefix . KURS_PREFIX . 'match_players', [ 'match_id' => $mid ] );
 				$wpdb->update( self::t('playoff_matches'), [ 'match_id' => null ], [ 'id' => $id ] );
 			}
 			return;
@@ -341,6 +342,7 @@ class Kurs_Playoff {
 		if ( ! $mid ) return null;
 
 		$wpdb->update( self::t('playoff_matches'), [ 'match_id' => $mid ], [ 'id' => $playoff_match_id ] );
+		if ( $pm->status === 'finished' ) Kurs_Match::save_lineup( $mid ); // meč završen u bracketu prije zapisnika
 		return $mid;
 	}
 
@@ -475,6 +477,7 @@ class Kurs_Playoff {
 		if ( $mids ) {
 			$in = implode( ',', $mids ); // samo intovi
 			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . KURS_PREFIX . "match_events WHERE match_id IN ($in)" );
+			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . KURS_PREFIX . "match_players WHERE match_id IN ($in)" );
 			$wpdb->query( 'DELETE FROM ' . $wpdb->prefix . KURS_PREFIX . "matches WHERE group_id = 0 AND id IN ($in)" );
 		}
 		$wpdb->delete( self::t('playoff_matches'), [ 'division_id' => $division_id ] );

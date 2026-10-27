@@ -2013,6 +2013,10 @@ details[open].kurs-record-edit-details summary::before { content: '▾ '; }
 .kurs-sq-row.is-absent td { opacity: .5; }
 .kurs-sq-row.is-absent .kurs-sq-name { text-decoration: line-through; }
 .kurs-sq-row.is-absent .kurs-sq-absent { border-color: var(--ka-red); color: var(--ka-red); opacity: 1; }
+/* Utakmica otvorena za ispravak: spremljena postava + dodavanje izostavljenog igrača iz rostera */
+.kurs-lineup-note { margin: 8px 0 0; font-size: 11px; color: var(--ka-muted); }
+.kurs-lineup-add { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.kurs-lineup-add__sel { flex: 1; min-width: 0; font-size: 12px; }
 .kurs-sq-jersey {
 	width: 36px;
 	font-family: var(--font-mono);
@@ -2740,6 +2744,66 @@ a.kurs-league-tag:hover { filter: brightness(.95); }
 .kurs-team-row__players { font-family: var(--font-cond); font-weight: 800; font-size: 18px; text-align: right; color: var(--ka-dark); white-space: nowrap; }
 .kurs-team-row__players span { font-family: var(--font-mono); font-size: 9px; font-weight: 400; color: var(--ka-muted); text-transform: uppercase; }
 .kurs-team-ctx { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+
+/* Roster ekipe na stranici natjecanja (Ekipe → „N igr.") */
+.kurs-roster-hd { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; }
+.kurs-roster-hd__switch { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.kurs-roster-hd__switch select { max-width: 280px; }
+.kurs-roster-title { display: flex; align-items: center; gap: 12px; margin: 0 0 14px; }
+.kurs-roster-title h2 { margin: 0; font-family: var(--font-cond); font-weight: 800; font-size: 24px; }
+.kurs-roster-layout { display: grid; grid-template-columns: 1fr 280px; gap: 16px; align-items: start; }
+.kurs-roster-side { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.kurs-roster-side p { margin: 0; font-size: 13px; }
+.kurs-roster__n { font-family: var(--font-mono); font-size: 11px; font-weight: 400; }
+.kurs-roster__profile { margin-left: 4px; color: var(--ka-muted); text-decoration: none; font-size: 12px; }
+.kurs-roster__profile:hover { color: var(--ka-red); }
+
+/* Ekipa → igrači po ligama */
+.kurs-ctx-roster {
+	display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;
+	padding: 11px 18px; border-bottom: 1px solid #f5f5ef; color: var(--ka-dark); text-decoration: none;
+}
+.kurs-ctx-roster:hover { background: #fafaf6; }
+.kurs-ctx-roster strong { display: block; font-family: var(--font-cond); font-size: 15px; }
+.kurs-ctx-roster .kurs-muted { font-size: 11px; }
+.kurs-ctx-roster__n { font-family: var(--font-cond); font-weight: 800; font-size: 16px; }
+.kurs-ctx-roster__n.is-empty { color: var(--ka-red); }
+.kurs-ctx-roster__go { font-family: var(--font-cond); font-weight: 700; font-size: 12px; text-transform: uppercase; color: var(--ka-muted); }
+
+/* Igrači */
+.kurs-players-hd { gap: 10px; flex-wrap: wrap; }
+.kurs-players-search input { width: 220px; }
+.kurs-players-table td, .kurs-players-table th { vertical-align: middle; }
+.kurs-players-table td:nth-child(n+4), .kurs-players-table th:nth-child(n+4) { text-align: center; width: 54px; }
+.kurs-players-table td:nth-child(2) { width: 54px; }
+.kurs-players-table td:nth-child(3) .kurs-league-tag { margin: 1px 3px 1px 0; }
+.kurs-players-table__name { font-family: var(--font-cond); font-weight: 700; font-size: 14.5px; color: var(--ka-dark); text-decoration: none; }
+.kurs-players-table__name:hover { color: var(--ka-red); }
+.kurs-dupe-tag { margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: #fff4d6; color: #8a6314; font-size: 10px; text-transform: uppercase; font-family: var(--font-mono); }
+.kurs-pager { padding: 12px 18px; display: flex; gap: 4px; flex-wrap: wrap; }
+.kurs-pager .page-numbers { padding: 4px 10px; border: 1px solid var(--ka-border); border-radius: 4px; text-decoration: none; color: var(--ka-dark); }
+.kurs-pager .page-numbers.current { background: var(--ka-dark); border-color: var(--ka-dark); color: #fff; }
+.kurs-player-hd { display: flex; align-items: center; gap: 14px; }
+.kurs-player-photo {
+	width: 72px; height: 88px; border-radius: 6px; overflow: hidden; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+	background: var(--ka-bg); border: 1px solid var(--ka-border); font-family: var(--font-cond); font-weight: 800; font-size: 28px; color: var(--ka-muted);
+}
+.kurs-player-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kurs-player-photo--sm { width: 44px; height: 54px; font-size: 20px; }
+.kurs-player-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kurs-form-col label.kurs-field-label { display: flex; flex-direction: column; gap: 4px; }
+.kurs-career-table td, .kurs-career-table th { vertical-align: middle; }
+.kurs-career-table td:nth-child(n+4), .kurs-career-table th:nth-child(n+4) { text-align: center; }
+.kurs-career-table .kurs-badge, .kurs-career-table td:nth-child(3) > :first-child { vertical-align: middle; margin-right: 4px; }
+.kurs-merge-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.kurs-merge-form select { flex: 1; min-width: 200px; }
+.kurs-panel--danger .kurs-panel__title { color: #a50c17; }
+
+@media (max-width: 782px) {
+	.kurs-roster-layout { grid-template-columns: 1fr; }
+	.kurs-players-search input { width: 100%; }
+	.kurs-players-table td:nth-child(2), .kurs-players-table th:nth-child(2) { display: none; }
+}
 
 @media (max-width: 782px) {
 	.kurs-hub-hd { padding: 14px 16px; }

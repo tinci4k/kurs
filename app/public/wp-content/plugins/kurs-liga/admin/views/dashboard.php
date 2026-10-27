@@ -42,7 +42,8 @@ $rec_url  = fn( $m ) => admin_url( 'admin.php?page=kurs-match-record&match_id=' 
 	<div class="kurs-page-hd">
 		<h1>Pregled</h1>
 		<div style="display:flex;gap:8px;flex-wrap:wrap;">
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>" class="kurs-btn kurs-btn--outline kurs-btn--sm">Ekipe i igrači</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>" class="kurs-btn kurs-btn--outline kurs-btn--sm">Ekipe</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-players' ) ); ?>" class="kurs-btn kurs-btn--outline kurs-btn--sm">Igrači</a>
 			<a href="<?php echo esc_url( home_url( '/za-medije/' ) ); ?>" class="kurs-btn kurs-btn--outline kurs-btn--sm" target="_blank" rel="noopener">Za medije &#8599;</a>
 		</div>
 	</div>

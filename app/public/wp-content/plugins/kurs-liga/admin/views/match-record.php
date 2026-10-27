@@ -39,8 +39,9 @@ if ( ! $season_id && $division_id ) {
 
 $season_locked = Kurs_Season::is_locked( $season_id ); // konačni podaci — server odbija izmjene, sučelje ih skriva
 
-$home_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->home_team_id, $division_id ) : [];
-$away_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->away_team_id, $division_id ) : [];
+// Sastav: spremljena postava utakmice (od završetka), a dotad trenutni roster lige.
+$home_squad  = $division_id ? Kurs_Match::lineup( $match_id, (int) $match->home_team_id, $division_id ) : [];
+$away_squad  = $division_id ? Kurs_Match::lineup( $match_id, (int) $match->away_team_id, $division_id ) : [];
 $events      = Kurs_Match::get_events( $match_id );
 
 $ev_home = 0; $ev_away = 0;
@@ -91,6 +92,20 @@ $last_ev_id  = 0;
 foreach ( $events as $ev ) {
 	if ( (int) $ev->id > $last_ev_id ) { $last_ev_id = (int) $ev->id; $cur_half = ( (int) $ev->half === 2 ) ? 2 : 1; }
 }
+// Utakmica otvorena za ispravak čuva postavu spremljenu pri završetku (promjene rostera je ne mijenjaju);
+// igrača iz rostera koji je izostavljen operater može dodati u postavu.
+$lineup_add_html = function ( int $team_id, array $lineup ) use ( $match_id, $division_id, $is_finished, $season_locked ): string {
+	if ( $is_finished || $season_locked || ! $division_id || ! Kurs_Match::has_lineup( $match_id, $team_id ) ) return '';
+	$in   = array_map( fn( $r ) => (int) $r->player_id, $lineup );
+	$miss = array_filter( Kurs_Season::get_squad( $team_id, $division_id ), fn( $s ) => ! in_array( (int) $s->player_id, $in, true ) );
+	$html = '<p class="kurs-lineup-note no-print">Postava je spremljena pri završetku utakmice — promjene rostera na nju ne utječu.</p>';
+	if ( ! $miss ) return $html;
+	$html .= '<div class="kurs-lineup-add no-print"><select class="kurs-lineup-add__sel" aria-label="Igrač iz rostera"><option value="">Igrač iz rostera…</option>';
+	foreach ( $miss as $s ) {
+		$html .= '<option value="' . (int) $s->player_id . '">' . ( $s->jersey_no ? (int) $s->jersey_no . ' · ' : '' ) . esc_html( $s->player_name ) . '</option>';
+	}
+	return $html . '</select><button type="button" class="kurs-btn kurs-btn--outline kurs-btn--xs kurs-lineup-add__btn" data-team-id="' . $team_id . '">+ Dodaj u postavu</button></div>';
+};
 // Prekršaji se NE prikazuju u tijeku utakmice (samo kao brojač) — filtriraj ih.
 $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( $e->event_type, [ 'foul', 'captain', 'absent' ], true ) ) );
 ?>
@@ -355,6 +370,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					<?php endforeach; ?>
 				</table>
 				<?php endif; ?>
+				<?php echo $lineup_add_html( (int) $match->home_team_id, $home_squad ); ?>
 			</div>
 			<div class="kurs-record-squad">
 				<h3 class="kurs-record-section__title">
@@ -397,6 +413,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					<?php endforeach; ?>
 				</table>
 				<?php endif; ?>
+				<?php echo $lineup_add_html( (int) $match->away_team_id, $away_squad ); ?>
 			</div>
 		</div>
 

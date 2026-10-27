@@ -558,6 +558,22 @@ jQuery( function ( $ ) {
 		frame.open();
 	} );
 
+	// Igrači: fotografija igrača (Media Library) → istaknuta slika
+	$( document ).on( 'click', '.kurs-player-photo-btn', function ( e ) {
+		e.preventDefault();
+		const player_id = $( this ).data( 'player-id' );
+		if ( typeof wp === 'undefined' || ! wp.media ) { alert( 'WordPress Media Library nije dostupna. Osvježi stranicu i pokušaj ponovo.' ); return; }
+		const frame = wp.media( { title: 'Fotografija igrača', button: { text: 'Postavi fotografiju' }, multiple: false, library: { type: 'image' } } );
+		frame.on( 'select', function () {
+			const att = frame.state().get( 'selection' ).first().toJSON();
+			$.post( url, { action: 'kurs_set_player_photo', nonce, player_id, attachment_id: att.id } ).done( res => {
+				if ( res.success ) location.reload();
+				else alert( res.data || 'Greška pri postavljanju fotografije.' );
+			} );
+		} );
+		frame.open();
+	} );
+
 	// ══════════════════════════════════════════════════════════════════════════
 	// Roster: Autocomplete za "Kreiraj novog igrača"
 	// ══════════════════════════════════════════════════════════════════════════
@@ -667,20 +683,40 @@ jQuery( function ( $ ) {
 
 		if ( ! player_id ) { alert( 'Odaberi igrača.' ); $btn.prop( 'disabled', false ); return; }
 
-		const player_name = $( '#squad-player-select option:selected' ).text();
-
-		$.post( url, { action: 'kurs_add_squad', nonce, player_id, team_id: TEAM_ID, division_id: DIVISION_ID, jersey } )
+		postAddSquad( player_id, jersey )
 			.done( res => {
 				if ( res.success ) {
 					appendSquadRow( res.data );
 					$( '#squad-player-select option[value="' + player_id + '"]' ).remove();
 					$( '#squad-jersey' ).val( '' );
 					refreshExistingPanel();
-				} else {
-					if ( ! ( res.data && res.data.code === 'season_locked' ) ) alert( res.data || 'Greška.' );
+					if ( res.data.from ) showMsg( '#quick-add-msg', '✓ ' + res.data.player_name + ' prebačen iz ekipe „' + res.data.from + '".', 'ok' );
+				} else if ( ! squadQuietError( res ) ) {
+					alert( squadErrorText( res ) );
 				}
 			} ).always( () => $btn.prop( 'disabled', false ) );
 	} );
+
+	/* Dodaj igrača u roster. Igrač koji u ovoj ligi igra za drugu ekipu = prijelaz, uz potvrdu
+	   (njegove odigrane utakmice za tu ekipu ostaju zapisane u postavama). */
+	function postAddSquad( player_id, jersey, transfer ) {
+		return $.post( url, { action: 'kurs_add_squad', nonce, player_id, team_id: TEAM_ID, division_id: DIVISION_ID, jersey, transfer: transfer ? 1 : 0 } )
+			.then( res => {
+				if ( res.success || transfer || ! ( res.data && res.data.code === 'other_team' ) ) return res;
+				if ( ! confirm( res.data.message + '\n\nPrebaciti ga u ovu ekipu? Utakmice koje je odigrao za „' + res.data.team + '" ostaju zapisane za nju.' ) ) {
+					return { success: false, data: { code: 'cancelled' } };
+				}
+				return postAddSquad( player_id, jersey, true );
+			} );
+	}
+
+	function squadQuietError( res ) {
+		return res.data && ( res.data.code === 'season_locked' || res.data.code === 'cancelled' );
+	}
+
+	function squadErrorText( res ) {
+		return typeof res.data === 'string' ? res.data : ( ( res.data && res.data.message ) || 'Greška.' );
+	}
 
 	// ══════════════════════════════════════════════════════════════════════════
 	// Roster: Kreiraj novog igrača + check duplikata
@@ -745,16 +781,16 @@ jQuery( function ( $ ) {
 
 	function doAddExisting( player_id, player_name, jersey ) {
 		showMsg( '#quick-add-msg', 'Dodajem...' );
-		$.post( url, { action: 'kurs_add_squad', nonce, player_id, team_id: TEAM_ID, division_id: DIVISION_ID, jersey } )
+		postAddSquad( player_id, jersey )
 			.done( res => {
 				if ( res.success ) {
 					appendSquadRow( res.data );
 					$( '#squad-player-select option[value="' + player_id + '"]' ).remove();
 					refreshExistingPanel();
-					showMsg( '#quick-add-msg', '✓ ' + h( res.data.player_name ) + ' dodan.', 'ok' );
+					showMsg( '#quick-add-msg', '✓ ' + res.data.player_name + ( res.data.from ? ' prebačen iz ekipe „' + res.data.from + '".' : ' dodan.' ), 'ok' );
 					setTimeout( () => $( '#quick-add-msg' ).fadeOut(), 3000 );
 				} else {
-					showMsg( '#quick-add-msg', res.data || 'Greška.' );
+					showMsg( '#quick-add-msg', squadQuietError( res ) ? '' : squadErrorText( res ) );
 				}
 			} );
 	}
@@ -784,7 +820,7 @@ jQuery( function ( $ ) {
 		const $row        = $( '#squad-row-' + player_id );
 		const player_name = $row.data( 'name' );
 
-		if ( ! confirm( 'Ukloni ' + player_name + ' iz rostera?' ) ) return;
+		if ( ! confirm( 'Maknuti ' + player_name + ' iz rostera? Utakmice koje je već odigrao ostaju zapisane.' ) ) return;
 
 		$( this ).prop( 'disabled', true );
 		$.post( url, { action: 'kurs_remove_squad', nonce, player_id, team_id: TEAM_ID, division_id: DIVISION_ID } )
@@ -886,7 +922,7 @@ jQuery( function ( $ ) {
 		$row.find( '.squad-cell-jersey' ).html(
 			`<span class="kurs-jersey">${jersey_display}</span>`
 		);
-		$row.find( '.squad-cell-name' ).html( `<strong>${h( name )}</strong>${playerTypeTag( type )}` );
+		$row.find( '.squad-cell-name' ).html( `<strong>${h( name )}</strong>${playerTypeTag( type )}${profileLink( player_id )}` );
 		$row.find( '.squad-actions' ).html(
 			`<button class="button button-small kurs-btn-edit-squad" data-player-id="${player_id}">Uredi</button> ` +
 			`<button class="button button-small kurs-btn-rm-squad" data-player-id="${player_id}">&times;</button>`
@@ -896,6 +932,11 @@ jQuery( function ( $ ) {
 	// ══════════════════════════════════════════════════════════════════════════
 	// Helpers
 	// ══════════════════════════════════════════════════════════════════════════
+
+	/* Link na podatke igrača (stranica Igrači) uz ime u rosteru */
+	function profileLink( id ) {
+		return ` <a class="kurs-roster__profile" href="admin.php?page=kurs-players&action=edit&id=${parseInt( id )}" title="Podaci igrača (godina rođenja, fotografija, karijera)">&#8599;</a>`;
+	}
 
 	function playerTypeTag( type ) {
 		return type === 'goalkeeper'
@@ -918,7 +959,7 @@ jQuery( function ( $ ) {
 			        <span class="kurs-jersey">${jersey_display}</span>
 			    </td>
 			    <td class="squad-cell-name">
-			        <strong>${h( data.player_name )}</strong>${playerTypeTag( type )}
+			        <strong>${h( data.player_name )}</strong>${playerTypeTag( type )}${profileLink( data.player_id )}
 			    </td>
 			    <td class="squad-actions" style="text-align:center;">
 			        <button class="button button-small kurs-btn-edit-squad" data-player-id="${data.player_id}">Uredi</button>
@@ -1279,6 +1320,19 @@ jQuery( function ( $ ) {
 					$row.toggleClass( 'is-absent', willAbsent );
 					rebuildSquadFromTable( team_id );
 				}
+			} );
+		} );
+
+		// Utakmica otvorena za ispravak: dodaj izostavljenog igrača iz rostera u spremljenu postavu
+		$( document ).on( 'click', '.kurs-lineup-add__btn', function () {
+			const $btn      = $( this );
+			const player_id = $btn.siblings( '.kurs-lineup-add__sel' ).val();
+			if ( ! player_id ) return;
+			$btn.prop( 'disabled', true );
+			$.post( url, { action: 'kurs_record_add_lineup', nonce, match_id: MATCH_ID, team_id: $btn.data( 'team-id' ), player_id } ).done( res => {
+				if ( res.success ) { location.reload(); return; }
+				if ( ! ( res.data && res.data.code === 'season_locked' ) ) alert( res.data || 'Greška.' );
+				$btn.prop( 'disabled', false );
 			} );
 		} );
 

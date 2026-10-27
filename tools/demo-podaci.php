@@ -36,7 +36,7 @@ function kurs_demo_clean( string $p, string $opt ): void {
 		$ph = Kurs_Season::group_phase( (int) $did );
 		foreach ( $ph ? Kurs_Season::get_groups( (int) $ph->id ) : [] as $g ) {
 			$ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$p}matches WHERE group_id = %d", $g->id ) );
-			if ( $ids ) $wpdb->query( "DELETE FROM {$p}match_events WHERE match_id IN (" . implode( ',', array_map( 'intval', $ids ) ) . ')' );
+			foreach ( $ids ? [ 'match_events', 'match_players' ] : [] as $tbl ) $wpdb->query( "DELETE FROM {$p}{$tbl} WHERE match_id IN (" . implode( ',', array_map( 'intval', $ids ) ) . ')' );
 			$wpdb->delete( "{$p}matches", [ 'group_id' => $g->id ] );
 			$wpdb->delete( "{$p}group_teams", [ 'group_id' => $g->id ] );
 		}
@@ -104,7 +104,7 @@ foreach ( array_slice( $divs, 0, 2 ) as $di => $d ) {
 
 	// isprazni ligu (sezona nema stvarnih podataka) pa posloži demo
 	$old = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM {$p}matches WHERE group_id = %d", $grp->id ) );
-	if ( $old ) $wpdb->query( "DELETE FROM {$p}match_events WHERE match_id IN (" . implode( ',', array_map( 'intval', $old ) ) . ')' );
+	foreach ( $old ? [ 'match_events', 'match_players' ] : [] as $tbl ) $wpdb->query( "DELETE FROM {$p}{$tbl} WHERE match_id IN (" . implode( ',', array_map( 'intval', $old ) ) . ')' );
 	$wpdb->delete( "{$p}matches", [ 'group_id' => $grp->id ] );
 	$wpdb->delete( "{$p}group_teams", [ 'group_id' => $grp->id ] );
 	$wpdb->delete( "{$p}squads", [ 'division_id' => $did ] );
@@ -183,6 +183,8 @@ foreach ( $pan as $m ) {
 }
 echo 'Pan: golovi dodani u ' . count( $pan ) . ' utakmica (' . count( $seed['events'] ) . " golova).\n";
 
+// Odigrane demo utakmice dobivaju postavu (match_players) iz demo rostera — kao da su završene u zapisniku.
+Kurs_Match::backfill_lineups();
 update_option( $opt, $seed, false );
 do_action( 'kurs_data_changed' );
 echo "Gotovo. Brisanje: tools/demo-podaci.php obrisi\n";

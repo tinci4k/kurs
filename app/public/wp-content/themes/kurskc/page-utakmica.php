@@ -48,8 +48,11 @@ if ( $po_match ) {
 	$po_div      = Kurs_Season::get_division( $division_id );
 }
 $events      = Kurs_Match::get_events( $match_id );
-$home_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->home_team_id, $division_id ) : [];
-$away_squad  = $division_id ? Kurs_Season::get_squad( (int) $match->away_team_id, $division_id ) : [];
+/* Sastavi: spremljena postava utakmice (prije završetka = roster lige), bez igrača koji nisu igrali */
+$absent      = Kurs_Match::get_absent( $match_id );
+$played      = fn( array $rows ) => array_filter( $rows, fn( $r ) => ! in_array( (int) $r->player_id, $absent, true ) );
+$home_squad  = $division_id ? $played( Kurs_Match::lineup( $match_id, (int) $match->home_team_id, $division_id ) ) : [];
+$away_squad  = $division_id ? $played( Kurs_Match::lineup( $match_id, (int) $match->away_team_id, $division_id ) ) : [];
 
 $home_badge = kurs_team_badge_html( (int) $match->home_team_id, 64 );
 $away_badge = kurs_team_badge_html( (int) $match->away_team_id, 64 );
@@ -125,7 +128,7 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 		<div class="match-events">
 			<h2 class="match-sec-title">Tijek utakmice</h2>
 			<?php
-			$tl_events = array_filter( $events, fn( $e ) => $e->event_type !== 'foul' );
+			$tl_events = array_filter( $events, fn( $e ) => ! in_array( $e->event_type, [ 'foul', 'captain', 'absent' ], true ) ); // kapetan/„nije igrao" nisu događaji
 			if ( empty( $tl_events ) ) : ?>
 			<p class="tl-empty">Nema evidentiranih događaja.</p>
 			<?php else :
@@ -189,7 +192,7 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 						foreach ( $home_squad as $sq ) : ?>
 					<div class="lineup-player">
 						<span class="lineup-no"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></span>
-						<span><?php echo esc_html( $sq->player_name ); ?></span>
+						<a href="<?php echo esc_url( get_permalink( (int) $sq->player_id ) ); ?>"><?php echo esc_html( $sq->player_name ); ?></a>
 					</div>
 					<?php endforeach; else : ?>
 					<p style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);">Nema prijavljenih igrača.</p>
@@ -214,7 +217,7 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 						foreach ( $away_squad as $sq ) : ?>
 					<div class="lineup-player">
 						<span class="lineup-no"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></span>
-						<span><?php echo esc_html( $sq->player_name ); ?></span>
+						<a href="<?php echo esc_url( get_permalink( (int) $sq->player_id ) ); ?>"><?php echo esc_html( $sq->player_name ); ?></a>
 					</div>
 					<?php endforeach; else : ?>
 					<p style="font-family:var(--font-mono);font-size:10px;color:var(--c-muted);">Nema prijavljenih igrača.</p>

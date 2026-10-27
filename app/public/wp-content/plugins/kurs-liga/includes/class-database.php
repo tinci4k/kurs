@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.11';
+	const DB_VERSION = '1.12';
 
 	public static function install(): void {
 		global $wpdb;
@@ -115,6 +115,19 @@ class Kurs_Database {
 			KEY idx_player (player_id)
 		) $c;" );
 
+		// Postava utakmice: sastav ekipe spremljen pri završetku utakmice (s tadašnjim brojem dresa),
+		// da prijelaz/odlazak igrača iz rostera ne mijenja odigrane utakmice. Vidi Kurs_Match::lineup().
+		dbDelta( "CREATE TABLE {$p}match_players (
+			id        INT UNSIGNED     NOT NULL AUTO_INCREMENT,
+			match_id  INT UNSIGNED     NOT NULL,
+			team_id   BIGINT UNSIGNED  NOT NULL,
+			player_id BIGINT UNSIGNED  NOT NULL,
+			jersey_no TINYINT UNSIGNED DEFAULT NULL,
+			PRIMARY KEY (id),
+			UNIQUE KEY uq_match_player (match_id, player_id),
+			KEY idx_player (player_id)
+		) $c;" );
+
 		// Playoff bracket utakmice
 		dbDelta( "CREATE TABLE {$p}playoff_matches (
 			id           INT UNSIGNED    NOT NULL AUTO_INCREMENT,
@@ -167,6 +180,14 @@ class Kurs_Database {
 				if ( ! Kurs_Season::get_referees( (int) $s->id ) ) Kurs_Season::set_referees( (int) $s->id, $old );
 			}
 			delete_option( 'kurs_referees' );
+		}
+
+		// v1.12 — postave utakmica (match_players): već završene utakmice dobivaju postavu iz
+		// tadašnjeg rostera. Uvjet je opcija, ne verzija baze (isti razlog kao gore).
+		if ( ! get_option( 'kurs_lineups_v1' ) && method_exists( 'Kurs_Match', 'backfill_lineups' )
+			&& version_compare( get_option( 'kurs_db_version', '0' ), '1.12', '>=' ) ) {
+			Kurs_Match::backfill_lineups();
+			update_option( 'kurs_lineups_v1', 1 );
 		}
 	}
 }

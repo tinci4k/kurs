@@ -9,46 +9,13 @@ if ( ! class_exists( 'Kurs_Season' ) || ! class_exists( 'Kurs_Match' ) ) {
 
 get_header();
 
-global $wpdb;
-$p         = $wpdb->prefix . KURS_PREFIX;
 $player_id = (int) get_the_ID();
 $player    = get_post( $player_id );
 $thumb     = get_the_post_thumbnail_url( $player_id, 'large' );
 
-/* ── Karijera: sve sezone × lige × ekipe (roster ekipe koja je u toj ligi) ─────────────── */
-$career = $wpdb->get_results( $wpdb->prepare(
-	"SELECT s.id AS season_id, s.name AS season_name, s.year AS season_year,
-	        d.id AS division_id, d.name AS division_name, s.league AS league,
-	        sq.team_id, t.post_title AS team_name, sq.jersey_no
-	 FROM   {$p}squads sq
-	 JOIN   {$p}divisions d  ON d.id  = sq.division_id
-	 JOIN   {$p}seasons   s  ON s.id  = d.season_id
-	 JOIN   {$wpdb->posts} t ON t.ID  = sq.team_id
-	 WHERE  sq.player_id = %d
-	   AND  EXISTS ( SELECT 1 FROM {$p}group_teams gt JOIN {$p}groups g ON g.id = gt.group_id JOIN {$p}phases ph ON ph.id = g.phase_id
-	                 WHERE gt.team_id = sq.team_id AND ph.division_id = sq.division_id )
-	 ORDER  BY s.year DESC, s.id DESC, d.sort_order ASC, d.id ASC",
-	$player_id
-) );
-/* Brojke strogo po ligi (skupine + playoff): nastupi = završene utakmice ekipe bez onih na kojima je igrač bio odsutan */
-foreach ( $career as $cr ) {
-	$cr->matches_played = $cr->goals = $cr->yellows = $cr->reds = 0;
-	$mids = Kurs_Match::team_match_ids( (int) $cr->team_id, (int) $cr->division_id );
-	if ( ! $mids ) continue;
-	$ev = $wpdb->get_row( $wpdb->prepare(
-		"SELECT SUM(event_type IN ('goal','penalty'))           AS goals,
-		        SUM(event_type = 'yellow_card')                 AS yellows,
-		        SUM(event_type IN ('red_card','second_yellow')) AS reds,
-		        COUNT(DISTINCT CASE WHEN event_type = 'absent' THEN match_id END) AS absent
-		 FROM   {$p}match_events
-		 WHERE  player_id = %d AND team_id = %d AND match_id IN (" . implode( ',', $mids ) . ')',
-		$player_id, (int) $cr->team_id
-	) );
-	$cr->matches_played = count( $mids ) - (int) $ev->absent;
-	$cr->goals          = (int) $ev->goals;
-	$cr->yellows        = (int) $ev->yellows;
-	$cr->reds           = (int) $ev->reds;
-}
+/* ── Karijera: sezone × lige × ekipe iz spremljenih postava utakmica (ostaju i nakon prijelaza)
+   + trenutni roster; nastupi/golovi/kartoni strogo po ligi (skupine + playoff) ─────────────── */
+$career = Kurs_Match::player_career( $player_id );
 
 $current     = $career ? $career[0] : null;
 $cur_sid     = $current ? (int) $current->season_id : 0;
@@ -68,14 +35,14 @@ $jersey    = $current && $current->jersey_no ? (int) $current->jersey_no : 0;
 $birthyear = (int) get_post_meta( $player_id, '_kurs_player_birthyear', true );
 $age       = $birthyear ? ( (int) current_time( 'Y' ) - $birthyear ) : 0;
 
-/* Koliko divizija po sezoni (za isticanje "isti igrač, više divizija") */
+/* Koliko divizija po sezoni (za isticanje "isti igrač, više divizija"; prijelaz unutar lige ne broji se dvaput) */
 $season_counts = [];
 foreach ( $career as $r ) {
-	$season_counts[ $r->season_id ] = ( $season_counts[ $r->season_id ] ?? 0 ) + 1;
+	$season_counts[ $r->season_id ][ $r->division_id ] = true;
 }
 $multi_note = '';
 foreach ( $career as $r ) {
-	if ( ( $season_counts[ $r->season_id ] ?? 0 ) > 1 ) {
+	if ( count( $season_counts[ $r->season_id ] ?? [] ) > 1 ) {
 		$srows = array_filter( $career, fn( $x ) => $x->season_id === $r->season_id );
 		$parts = array_map( fn( $x ) => $x->division_name . ' (' . $x->team_name . ')', $srows );
 		$multi_note = sprintf(

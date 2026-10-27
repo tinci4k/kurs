@@ -515,12 +515,14 @@ class Kurs_Season {
 		);
 		if ( $match_ids ) {
 			$placeholders = implode( ',', array_fill( 0, count( $match_ids ), '%d' ) );
-			$GLOBALS['wpdb']->query(
-				$GLOBALS['wpdb']->prepare(
-					"DELETE FROM " . self::t( 'match_events' ) . " WHERE match_id IN ($placeholders)",
-					...$match_ids
-				)
-			);
+			foreach ( [ 'match_events', 'match_players' ] as $tbl ) {
+				$GLOBALS['wpdb']->query(
+					$GLOBALS['wpdb']->prepare(
+						"DELETE FROM " . self::t( $tbl ) . " WHERE match_id IN ($placeholders)",
+						...$match_ids
+					)
+				);
+			}
 		}
 		$GLOBALS['wpdb']->delete( self::t( 'group_teams' ), [ 'group_id' => $id ] );
 		$GLOBALS['wpdb']->delete( self::t( 'matches' ),     [ 'group_id' => $id ] );
