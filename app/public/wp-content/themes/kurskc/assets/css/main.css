@@ -375,7 +375,7 @@ html { scroll-behavior: smooth; }
 .kurs-hero__main {
   flex: 2;
   border-radius: 6px;
-  min-height: 320px;
+  aspect-ratio: 16 / 9; /* kao kartice vijesti (kurskc_card 800×450); kartice liga se istežu na istu visinu */
   position: relative;
   overflow: hidden;
   display: flex;
@@ -454,12 +454,12 @@ html { scroll-behavior: smooth; }
 .league-card--pan { border-bottom-color: var(--c-pan); }
 .league-card__top { display: flex; align-items: center; justify-content: space-between; }
 .league-card__icon { display: flex; align-items: center; justify-content: center; }
-.league-card__icon svg { height: 44px; width: auto; }
+.league-card__icon svg { height: 52px; width: auto; }
 .league-card__icon img { height: 22px; width: auto; }
 .league-card__type { font-family: var(--font-mono); font-size: 9px; color: #777; text-transform: uppercase; }
 .league-card__name {
   font-family: var(--font-cond); font-weight: 800; font-style: italic;
-  color: #fff; font-size: 28px; text-transform: uppercase; line-height: .9;
+  color: #fff; font-size: 32px; text-transform: uppercase; line-height: .9;
 }
 .league-card__cta { font-family: var(--font-cond); font-weight: 600; color: #9a9ca4; font-size: 13px; text-transform: uppercase; margin-top: 6px; }
 
@@ -1503,7 +1503,7 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
   .team-body, .player-body { flex-direction: column; }
   .team-side, .player-side { width: 100%; }
   .kurs-hero, .hero { flex-direction: column; }
-  .kurs-hero__main { min-height: 240px; }
+  .kurs-hero__main { min-height: 0; }
   .kurs-hero__side { flex-direction: row; }
   .stat-strip { display: grid; grid-template-columns: 1fr 1fr; }
   .news-grid { grid-template-columns: 1fr 1fr; }
@@ -1549,6 +1549,7 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 }
 
 @media (max-width: 600px) {
+  .kurs-hero__main { aspect-ratio: auto; min-height: 240px; } /* naslov u 3–4 retka ne stane u 16:9 → visina prema sadržaju */
   .container { padding-inline: 16px; }
   .site-nav { display: none; }
   .site-nav.is-open {
@@ -1622,7 +1623,7 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 .kc-lead-row { display:flex; gap:20px; margin-bottom:24px; }
 .kc-feature { flex:2; background:#fff; border:1px solid var(--c-border); border-radius:7px; overflow:hidden; display:flex; flex-direction:column; text-decoration:none; color:inherit; transition:box-shadow .15s; }
 .kc-feature:hover { box-shadow:0 6px 22px rgba(0,0,0,.10); }
-.kc-feature__img { position:relative; height:300px; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; background:var(--c-dark2); }
+.kc-feature__img { position:relative; aspect-ratio:16/9; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; background:var(--c-dark2); }
 .kc-feature__img img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .kc-feature__stripe { position:absolute; top:0; left:0; right:0; height:5px; z-index:2; background:linear-gradient(90deg,var(--c-kc) 0 33%,var(--c-pan) 33% 66%,var(--c-gold) 66% 100%); }
 .kc-feature__scrim { position:absolute; inset:0; background:linear-gradient(180deg,rgba(17,19,23,0) 38%,rgba(17,19,23,.92) 100%); }
@@ -1830,7 +1831,7 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
   .kc-feed__title { flex-direction:column; align-items:flex-start; gap:6px; }
   .kc-feed__h { font-size:27px; }
   .kc-feed__count { font-size:10px; }
-  .kc-feature__img { height:210px; }
+  .kc-feature__img { min-height:210px; }
   .kc-feature__title { font-size:21px; }
   .article-hero__inner { padding:24px 18px; }
   .article-hero__title { font-size:28px; }

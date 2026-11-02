@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.43'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.44'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.43'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.44'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -324,7 +324,7 @@ Razlikovanje KC vs Pan u `page-liga.php` ide po **slugu stranice**: `$current_sl
 
 Fokus: vijesti + ulaz u lige + (od 2026-10-16) zadnje kolo aktualnog natjecanja.
 
-- **Vijesti:** `get_posts(...)` (istaknuta + najnovije). Prva je hero (`.kurs-hero__main`), ostale 3 u `.news-grid > .news-card`.
+- **Vijesti:** `get_posts(...)` (istaknuta + najnovije). Prva je hero (`.kurs-hero__main`, **16:9** kao kartice vijesti — kartice liga `.kurs-hero__side` istežu se na istu visinu; ≤600 px visina prema sadržaju, min. 240 px), ostale 3 u `.news-grid > .news-card`. Izdvojena vijest u arhivi (`.kc-feature__img`) je također 16:9 (tema 1.0.44).
 - **Badge vijesti:** `kurskc_badge_color($post_id)` / `kurskc_badge_label($post_id)` iz `inc/news.php` — čitaju taksonomiju **`vijest_kategorija`** (ne `liga`!).
 - **Liga kartice** (`.kurs-hero__side`): dvije statične kartice — KC Liga ("Zima · Dvorana") i Pan Ljetna ("Ljeto · Trava"). Linkovi **hardkodirani** na `home_url('/kc-liga/')` i `home_url('/pan-ljetna/')`; CTA je od 2026-10-16 **„Rezultati · Tablica →"** (ranije „Tablica · Raspored →").
 - **„Iz lige" (NOVO 2026-10-16)** — sekcija između hero dijela i „Najnovije", s linkom „Za medije →" u naslovu. Natjecanje = `kurskc_active_league()`; za **svaku ligu (diviziju) te sezone**:
@@ -556,7 +556,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.43'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.44'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.

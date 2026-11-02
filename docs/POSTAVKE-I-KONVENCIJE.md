@@ -140,7 +140,7 @@ Prefiks tablica: `$wpdb->prefix . KURS_PREFIX` = **`wp_kurs_`**. DB verzija: `Ku
 
 | Element | Konvencija / vrijednost |
 |---|---|
-| Verzija | `KURSKC_VERSION = '1.0.43'` (podigni pri izmjeni `main.css`/`main.js` — cache-busting) |
+| Verzija | `KURSKC_VERSION = '1.0.44'` (podigni pri izmjeni `main.css`/`main.js` — cache-busting) |
 | Putanje | `KURSKC_DIR` = `get_template_directory()`, `KURSKC_URI` = `get_template_directory_uri()` |
 | Funkcije | prefiks `kurskc_` (`kurskc_setup`, `kurskc_create_pages`, `kurskc_register_post_types`, `kurskc_enqueue_assets`, `kurskc_maybe_flush`, `kurskc_active_league`…); plus poneka `kurs_` (`kurs_time_ago`, `kurs_hub_url` u `page-liga.php`) |
 | Klase | `Kurskc_Media_Kit` (`inc/media-kit.php`, 2026-10-16) |
@@ -257,7 +257,7 @@ Sljedeće se ponavljalo u logu. Stavke 1–3 su **ISPRAVLJENE 2026-06-22** (vidi
 - `WP_DEBUG=true`, `WP_DEBUG_LOG=true` (log u `app/public/wp-content/debug.log`), `WP_DEBUG_DISPLAY=false`, `WP_ENVIRONMENT_TYPE=local`.
 - Local: dva php-cgi workera (10008/10009, round-robin) — ako svaki drugi zahtjev visi, restartaj site.
 - Plugin `kurs-liga`: prefiks `kurs_`, klase `Kurs_*`, CPT `kurs_ekipa` + `kurs_igrac`, meta `_kurs_`, DB tablice `wp_kurs_*` (DB_VERSION 1.14), `KURS_VERSION 1.21.0`, ovlast `KURS_CAP`; struktura natjecanja u `Kurs_Season::COMPETITIONS`; admin po natjecanjima (`kurs-kc` / `kurs-pan`, linkovi preko `Kurs_Admin::hub_url()`).
-- Tema `kurskc`: `KURSKC_VERSION 1.0.43`, prefiks `kurskc_`; registrira `vijest` + `vijest_kategorija` (+ `sponzor`).
+- Tema `kurskc`: `KURSKC_VERSION 1.0.44`, prefiks `kurskc_`; registrira `vijest` + `vijest_kategorija` (+ `sponzor`).
 - Demo podaci lokalno: `tools/demo-podaci.php [obrisi]` (s `PHPRC`, §1.4).
 - CSS varijable su `--c-*` (NE `--color-*`); KC crvena `#DA0F1E`, Pan narančasta `#F47B16`, gold `#FDE206`.
 - **Prije rada: pročitaj §7 (neusklađenosti) — CLAUDE.md nije pouzdan za CPT/taksonomije/boje.**
