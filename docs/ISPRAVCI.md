@@ -159,6 +159,7 @@ bila je 24. 2.) i istu ugradnju.
 | # | Datoteka | Greška | Ispravak |
 |---|----------|--------|----------|
 | 43 | `includes/class-rounds.php` (`scorers`), `class-database.php`, `class-season.php`, `admin/views/hub-teams.php`, `admin/class-admin.php` | Preneseni golovi igrača pribrajali su se listi strijelaca **nakon svakog kola** — kad su to golovi 2. i 3. kola (KC 2025/2026), lista nakon 1. kola imala je npr. Sabolića sa 6 golova umjesto 4. | Novi stupac `divisions.base_round` (DB 1.14): kolo do kojeg su preneseni golovi postignuti; lista nakon ranijeg kola ih ne pribraja. Polje u panelu „Preneseno stanje” (`save_base_standings`), `Kurs_Season::set_base_round()`. KURS 1.21.0. |
+| 44 | `themes/kurskc/inc/news.php`, `front-page.php`, `index.php`, `single.php`, `search.php`, `main.css` | Vijest bez istaknute slike imala je prazan svijetli okvir na kartici (Pan dani 1.–6., KC kola) — izgledalo je kao da slika nije učitana. | `kurskc_thumb_placeholder()`: podloga u boji lige (`--ph`) s prugama i grbom lige (`kurs_league_icon`), izvan liga KURS monogram (`.kc-ph`). Tema 1.0.43. |
 
 ## Još uvijek otvoreno (svjesno NIJE dirano)
 

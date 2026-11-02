@@ -43,7 +43,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `functions.php` | `KURSKC_VERSION='1.0.42'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
+| `functions.php` | `KURSKC_VERSION='1.0.43'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
 | `style.css` | Samo theme header (Version 1.0.0 — nedosljedno s functions.php) |
 | `inc/post-types.php` | Registrira SAMO CPT `vijest` + taksonomiju `vijest_kategorija` |
 | `inc/enqueue.php` | Google Fonts + `kurskc-main` CSS/JS |
@@ -156,4 +156,4 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 ---
 
-*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.21.0` vs DB `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.42` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*
+*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.21.0` vs DB `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.43` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*

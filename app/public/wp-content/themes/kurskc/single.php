@@ -109,6 +109,7 @@
 				<div class="related-card__thumb">
 					<?php if ( has_post_thumbnail() ) : ?>
 					<img src="<?php echo esc_url( get_the_post_thumbnail_url( get_the_ID(), 'kurskc_card' ) ); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy">
+					<?php else : echo kurskc_thumb_placeholder( get_the_ID(), 56 ); ?>
 					<?php endif; ?>
 					<span class="related-card__badge" style="border-left-color:<?php echo esc_attr( $rc ); ?>;"><?php echo esc_html( kurskc_badge_label( get_the_ID() ) ); ?></span>
 				</div>

@@ -44,6 +44,18 @@ function kurskc_badge_label( int $post_id ): string {
 	return $terms[0]->name;
 }
 
+/**
+ * Zamjena za istaknutu sliku (vijest bez fotografije): podloga u boji lige s grbom lige
+ * (kurs_league_icon), za objave izvan liga KURS monogram. Ide u okvir slike (position:relative).
+ */
+function kurskc_thumb_placeholder( int $post_id, int $size = 72 ): string {
+	$color = kurskc_badge_color( $post_id );
+	$icon  = $color !== '#111317' && function_exists( 'kurs_league_icon' )
+		? kurs_league_icon( kurskc_badge_label( $post_id ), $size )
+		: '<img src="' . esc_url( get_template_directory_uri() . '/assets/img/KURS-monogram.png' ) . '" alt="" style="height:' . $size . 'px;width:auto">';
+	return '<span class="kc-ph" style="--ph:' . esc_attr( $color ) . '" aria-hidden="true">' . $icon . '</span>';
+}
+
 /* ── Brojač pregleda + "najčitanije" (30 dana, fallback na ukupno) ─────────── */
 add_action( 'template_redirect', function () {
 	if ( ! is_singular( [ 'vijest', 'post' ] ) ) return;

@@ -15,6 +15,7 @@
 				<?php if ( has_post_thumbnail() ) : ?>
 				<img src="<?php echo esc_url( get_the_post_thumbnail_url( get_the_ID(), 'kurskc_card' ) ); ?>"
 				     alt="<?php the_title_attribute(); ?>" loading="lazy">
+				<?php else : echo kurskc_thumb_placeholder( get_the_ID() ); ?>
 				<?php endif; ?>
 				<div class="news-card__badge"><?php echo esc_html( get_post_type_object( get_post_type() )->labels->singular_name ?? 'Objava' ); ?></div>
 			</div>

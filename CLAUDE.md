@@ -141,4 +141,4 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
 - Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.21.0` vs
-  `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.42` vs `style.css` 1.0.0.
+  `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.43` vs `style.css` 1.0.0.

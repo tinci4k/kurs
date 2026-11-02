@@ -1645,6 +1645,15 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
 .news-card__thumb { position:relative; aspect-ratio:16/9; overflow:hidden; background:var(--c-bg); }
 .news-card__thumb img { width:100%; height:100%; object-fit:cover; transition:transform .2s; }
 .news-card:hover .news-card__thumb img { transform:scale(1.03); }
+/* Vijest bez fotografije (kurskc_thumb_placeholder): podloga u boji lige + grb */
+.kc-ph { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255,255,255,.18), rgba(255,255,255,0) 58%),
+    repeating-linear-gradient(135deg, rgba(0,0,0,.07) 0 14px, rgba(0,0,0,0) 14px 28px),
+    var(--ph, var(--c-dark)); }
+.kc-ph svg, .kc-ph img { filter:drop-shadow(0 6px 14px rgba(0,0,0,.3)); transition:transform .2s; }
+.news-card:hover .kc-ph svg, .news-card:hover .kc-ph img { transform:scale(1.06); }
+.kurs-hero__main .kc-ph, .kc-feature__img .kc-ph { align-items:flex-start; padding-top:40px; }
 .news-card__badge { position:absolute; top:10px; left:10px; background:var(--c-dark); color:#fff; font-family:var(--font-cond); font-weight:700; font-size:10px; text-transform:uppercase; padding:3px 8px; border-radius:3px; border-left:3px solid var(--c-kc); }
 .news-card__body { padding:14px; }
 .news-card__title { font-family:var(--font-cond); font-weight:700; font-size:18px; line-height:1.05; text-transform:uppercase; margin:0 0 8px; color:var(--c-dark); }

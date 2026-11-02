@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.42'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.43'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.42'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.43'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -295,6 +295,7 @@ Front-end kombinira **WordPress objekte** (ekipe/igrači kao `WP_Post`, njihovi 
 | `kurs_schedule_date_label($datetime)` | plugin `includes/helpers.php` | „Subota, 12. srpnja 2026." |
 | `kurs_time_ago($date_str)` | tema `functions.php` | hrvatski relativni datum |
 | `kurskc_badge_color/label($post_id)` | tema `inc/news.php` | boja/oznaka vijesti po `vijest_kategorija` |
+| `kurskc_thumb_placeholder($post_id, $size = 72)` | tema `inc/news.php` | vijest bez istaknute slike: `<span class="kc-ph">` (podloga u boji lige + `kurs_league_icon()`, izvan liga KURS monogram) — kartice naslovnice/arhive/pretrage, povezano, hero i izdvojena vijest (tema 1.0.43) |
 | `kurskc_active_league()` | tema `inc/news.php` | „aktivna" liga = najbliža utakmica (`league`, `season_id`, `division_id`, `round`, `label`, `url`); transient 30 min, ruši se na `kurs_data_changed`. **2026-10-16:** `label` = naziv lige („KC Liga · 5. kolo", ranije sirovi slug `kc_liga`), `url` → `?tab=kola&kolo=N#kola` (✅ ISPRAVCI #12). Koriste ga widget „Iz lige · uživo", naslovnica („Iz lige") i „Za medije" (zadano natjecanje). |
 | `Kurskc_Media_Kit::*` | tema `inc/media-kit.php` | **NOVO** — paket „Za medije" (vidi §16a) |
 
@@ -555,7 +556,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.42'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.43'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.

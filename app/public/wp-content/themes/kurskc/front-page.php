@@ -91,6 +91,7 @@ if ( $al && class_exists( 'Kurs_Rounds' ) ) {
 			<img class="hero-img"
 			     src="<?php echo esc_url( get_the_post_thumbnail_url( $hero_post, 'large' ) ); ?>"
 			     alt="<?php echo esc_attr( $hero_post->post_title ); ?>">
+			<?php elseif ( $hero_post ) : echo kurskc_thumb_placeholder( $hero_post->ID, 120 ); ?>
 			<?php endif; ?>
 			<div class="hero-gradient"></div>
 			<div class="kurs-hero__content">
@@ -205,6 +206,7 @@ if ( $al && class_exists( 'Kurs_Rounds' ) ) {
 				<?php if ( has_post_thumbnail( $p ) ) : ?>
 				<img src="<?php echo esc_url( get_the_post_thumbnail_url( $p, 'kurskc_card' ) ); ?>"
 				     alt="<?php echo esc_attr( $p->post_title ); ?>" loading="lazy">
+				<?php else : echo kurskc_thumb_placeholder( $p->ID ); ?>
 				<?php endif; ?>
 				<div class="news-card__badge" style="border-left-color:<?php echo esc_attr( $badge_color ); ?>">
 					<?php echo esc_html( $badge_label ); ?>

@@ -27,6 +27,7 @@ $render_card = function () {
 		<div class="news-card__thumb">
 			<?php if ( has_post_thumbnail() ) : ?>
 			<img src="<?php echo esc_url( get_the_post_thumbnail_url( $id, 'kurskc_card' ) ); ?>" alt="<?php the_title_attribute(); ?>" loading="lazy">
+			<?php else : echo kurskc_thumb_placeholder( $id ); ?>
 			<?php endif; ?>
 			<span class="news-card__badge" style="border-left-color:<?php echo esc_attr( $color ); ?>;"><?php echo esc_html( kurskc_badge_label( $id ) ); ?></span>
 		</div>
@@ -87,6 +88,7 @@ $render_card = function () {
 			<div class="kc-feature__img">
 				<?php if ( has_post_thumbnail() ) : ?>
 				<img src="<?php echo esc_url( get_the_post_thumbnail_url( $fid, 'kurskc_feat' ) ?: get_the_post_thumbnail_url( $fid, 'large' ) ); ?>" alt="<?php the_title_attribute(); ?>">
+				<?php else : echo kurskc_thumb_placeholder( $fid, 110 ); ?>
 				<?php endif; ?>
 				<span class="kc-feature__stripe"></span>
 				<span class="kc-feature__scrim"></span>
