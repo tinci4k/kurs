@@ -310,6 +310,10 @@ class Kurs_Admin {
 				Kurs_Season::set_team_base( absint( $gid ), absint( $tid ), $num( $b['w'] ?? 0 ), $num( $b['d'] ?? 0 ), $num( $b['l'] ?? 0 ), $num( $b['gf'] ?? 0 ), $num( $b['ga'] ?? 0 ), $hint ?: null );
 			}
 		}
+		foreach ( (array) ( $_POST['base_round'] ?? [] ) as $did => $round ) {
+			$div = Kurs_Season::get_division( absint( $did ) );
+			if ( $div && (int) $div->season_id === $sid ) Kurs_Season::set_base_round( (int) $div->id, absint( $round ) );
+		}
 		do_action( 'kurs_data_changed' );
 		wp_safe_redirect( add_query_arg( 'base_saved', 1, $back ) );
 		exit;

@@ -2767,6 +2767,8 @@ a.kurs-league-tag:hover { filter: brightness(.95); }
 .kurs-base__table { margin-bottom: 14px; }
 .kurs-base__table th:not(:first-child), .kurs-base__table td:not(:first-child) { text-align: center; width: 64px; }
 .kurs-base__table input[type=number] { width: 56px; text-align: center; }
+.kurs-base__round { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 14px; font-size: 12px; }
+.kurs-base__round input[type=number] { width: 56px; text-align: center; }
 .kurs-base-tag { margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: #eef4ff; color: #1a3a6b; font-size: 10px; font-family: var(--font-mono); }
 .squad-edit-base-wrap { font-size: 11px; color: var(--ka-muted); white-space: nowrap; }
 

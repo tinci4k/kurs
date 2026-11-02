@@ -23,8 +23,8 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.20.1'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
-| `includes/class-database.php` | Sve 10 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.13'`, migracije (`maybe_upgrade()`) |
+| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.21.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
+| `includes/class-database.php` | Sve 10 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.14'`, migracije (`maybe_upgrade()`) |
 | `includes/class-cpt.php` | CPT-ovi `kurs_ekipa` (slug `ekipe`) i `kurs_igrac` (slug `igraci`) |
 | `includes/class-players.php` | `Kurs_Players` (1.19.0) — registar igrača: duplikati istog imena, zbroj nastupa/golova, ekipe u aktivnim sezonama, **spajanje** i brisanje igrača |
 | `includes/class-season.php` | `Kurs_Season` — **`COMPETITIONS`** (fiksna natjecanja) + `scaffold()` / `set_group_count()`; CRUD nad sezone/divizije/faze/grupe/group_teams/squads (static) |
@@ -156,4 +156,4 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 ---
 
-*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.20.1` vs DB `DB_VERSION=1.13`; tema `KURSKC_VERSION=1.0.42` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*
+*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.21.0` vs DB `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.42` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*

@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.20.1'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.21.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -141,14 +141,14 @@ squads (roster)  ── igrač pripada ekipi unutar divizije
 
 > Od 2026-10-16 ovu strukturu kreira **isključivo** `Kurs_Season::scaffold()` pri kreiranju sezone (vidi §4.1). Faza tipa `'playoff'` se više ne kreira — playoff živi samo u `playoff_matches`.
 
-### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.13'`)
+### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.14'`)
 
 Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Niže se navode kratka imena.
 
 | Tablica | Ključni stupci |
 |---|---|
 | `seasons` | id, **league** (VARCHAR(100); nove sezone uvijek dobivaju ključ iz `COMPETITIONS`: `kc_liga` \| `pan_ljetna` — `is_pan_league()` ionako samo traži „pan"), name, year (SMALLINT), status (DEFAULT 'active'), **locked** (zaključana = konačni podaci), **max_fouls_per_half** (DEFAULT 5), **referees** (TEXT, JSON `[{ime, prezime}]` — baza sudaca sezone, od DB 1.10), created_at; KEY idx_status |
-| `divisions` | id, season_id, name, sort_order, **has_playoff** (DEFAULT 1), **advance_per_group** (DEFAULT 2); KEY idx_season |
+| `divisions` | id, season_id, name, sort_order, **has_playoff** (DEFAULT 1), **advance_per_group** (DEFAULT 2), **base_round** (TINYINT, DEFAULT 0 — kolo do kojeg su postignuti preneseni golovi igrača, od DB 1.14); KEY idx_season |
 | `phases` | id, division_id, name, **type** (DEFAULT 'group'), sort_order; KEY idx_division |
 | `groups` | id, phase_id, name, **playoff_spots** (TINYINT, DB DEFAULT 2 — ali `create_group()` uvijek upisuje vrijednost iz divizije, 0 bez playoffa); KEY idx_phase |
 | `group_teams` | id, group_id, team_id (BIGINT, = post `kurs_ekipa`), **base_p/w/d/l/gf/ga** (SMALLINT, DEFAULT 0 — preneseno stanje, od DB 1.13), **rank_hint** (TINYINT NULL — poredak kod jednakih bodova kad je odlučila utakmica koje nema u sustavu); **UNIQUE(group_id, team_id)** |
@@ -265,7 +265,7 @@ Sustav služi isključivo KURS-u, pa je struktura natjecanja **konstanta**, ne p
 | `remove_team($group_id,$team_id)` | Brisanje veze (bez provjera — guardovi su u `ajax_remove_team`). |
 | `get_team_contexts($team_id)` | Sve sezone/divizije u kojima ekipa igra. Veliki `DISTINCT` JOIN `group_teams→groups→phases→divisions→seasons`, `ORDER BY s.year DESC, s.id DESC, d.sort_order, d.id`. Koristi se na uređivanju ekipe (oznake liga pod imenom, odabir lige za igrače, „← Natrag na ligu"). |
 
-> **Preneseno stanje (1.20.0, DB 1.13).** Za kola odigrana prije nego što se liga vodi u sustavu (arhivska sezona s poznatom samo konačnom ljestvicom, prelazak usred sezone): `set_team_base($group_id, $team_id, $w, $d, $l, $gf, $ga, ?$hint)` (P = W + D + L) i `set_squad_base($player_id, $team_id, $division_id, $goals, $own)`. `Kurs_Match::get_standings()` kreće od prenesenog stanja (uvijek, i za „nakon N. kola”), a kod jednakih bodova `rank_hint` (ako ga imaju obje ekipe) ide prije međusobnih utakmica. Golove pribrajaju `Kurs_Match::get_top_scorers()` i `base_goal_rows()`, `Kurs_Rounds::scorers()` (`with_base()`; `short_names()` uključuje i igrače samo s prenesenim golovima i čuva već skraćena imena „Dan. Nemčić”), `player_career()`, `Kurs_Players::totals()` i profil ekipe. Admin: kartica Ekipe → `<details class="kurs-base">` „Preneseno stanje” (`save_base_standings`, guard zaključane sezone) i roster → Uredi → „Preneseni golovi” (`kurs_update_squad_player` + `base_goals`). `add_to_squad()` je `INSERT … ON DUPLICATE KEY UPDATE jersey_no` (prije `REPLACE`, koji bi obrisao prenesene golove).
+> **Preneseno stanje (1.20.0, DB 1.13).** Za kola odigrana prije nego što se liga vodi u sustavu (arhivska sezona s poznatom samo konačnom ljestvicom, prelazak usred sezone): `set_team_base($group_id, $team_id, $w, $d, $l, $gf, $ga, ?$hint)` (P = W + D + L) i `set_squad_base($player_id, $team_id, $division_id, $goals, $own)`. `Kurs_Match::get_standings()` kreće od prenesenog stanja (uvijek, i za „nakon N. kola”), a kod jednakih bodova `rank_hint` (ako ga imaju obje ekipe) ide prije međusobnih utakmica. Golove pribrajaju `Kurs_Match::get_top_scorers()` i `base_goal_rows()`, `Kurs_Rounds::scorers()` (`with_base()`; `short_names()` uključuje i igrače samo s prenesenim golovima i čuva već skraćena imena „Dan. Nemčić”), `player_career()`, `Kurs_Players::totals()` i profil ekipe. Admin: kartica Ekipe → `<details class="kurs-base">` „Preneseno stanje” (`save_base_standings`, guard zaključane sezone) i roster → Uredi → „Preneseni golovi” (`kurs_update_squad_player` + `base_goals`). `add_to_squad()` je `INSERT … ON DUPLICATE KEY UPDATE jersey_no` (prije `REPLACE`, koji bi obrisao prenesene golove). **`divisions.base_round`** (1.21.0, DB 1.14; `Kurs_Season::set_base_round()`, isto polje u panelu „Preneseno stanje”) = kolo do kojeg su preneseni golovi postignuti: `Kurs_Rounds::scorers($div, $max_round)` ih ne pribraja za `$max_round` < `base_round` (0 = uvijek). Treba kad su kola u sustavu, ali dio golova nije moguće pripisati utakmici (KC 2025/2026: golovi 2. i 3. kola → `base_round` 3). Ukupne liste, karijera i profili ih uvijek zbrajaju.
 
 **Roster / igrači** (`squads`; igrač pripada ekipi **unutar divizije**)
 

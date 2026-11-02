@@ -132,6 +132,34 @@ i preneseni golovi po igraču (`squads.base_goals`). Sezona je arhivirana i zakl
 Nesuglasja u izvještaju (podaci upisani doslovno): zbroj golova KC lige 202:204; strijelci Active Commercea zbrajaju 31 (ljestvica 27 —
 „Sminderovac 4" je vjerojatno ETM); dva „Šurić" u HEP-u (2 i 1). Vidi poruku korisniku / memoriju.
 
+## 2026-11-02 — KC liga 2025/2026: sva kola kao stvarne utakmice (samo podaci)
+
+S Facebook stranice KC lige (izvještaji 1., 4., 5., 6., 7. i 9. kola, najave 6. i 9. kola s ljestvicama i strijelcima) i
+KURS-ove slike rasporeda 1.–6. kola sezona #21 ponovno je upisana: **81 utakmica, kola 1.–9. sa stvarnim datumima i satnicom**.
+8. kolo (bez izvještaja) izvedeno je iz razlike ljestvica i lista strijelaca nakon 7. i 8. kola. Preneseno stanje ekipa je
+ukinuto (`base_*` = 0, bez `rank_hint`); ostali su samo **preneseni golovi** za 2. i 3. kolo (nema izvještaja, a ekipa je
+zabijala u obje utakmice, pa se gol ne može pripisati utakmici). Ljestvica nakon 1., 4., 5., 6., 7., 8. i 9. kola provjerena
+je prema službenim tablicama — slaže se, osim Inducte (vidi niže). Postave utakmica = samo strijelci (pune postave nepoznate).
+
+Ispravljeni podaci prvog uvoza: jedan Sminderovac (ETM, 5 golova; „Active Commerce" u listama je greška grupiranja), jedan
+Šurić (HEP, 5 golova prema izvještajima), Zagorščak je igrač Forme Legalis (autogol u Forma – KURS), puna imena iz izvještaja
+(Zoran Ogrizović, Goran Jagić, Igor Topalović, Karlo Galinec, Marko Matijašec, Slobodan Posavec, Matija Đeno, Krešo Škvorc).
+Isto je ispravljeno u rosterima KC 2026/2027.
+
+Preostala nesuglasja izvora: službena ljestvica Inducti daje 2 primljena gola više nego zbroj rezultata (13:30 vs 13:28) — to je
+i razlog zbroja 202:204; FB slika ima Beertija – Gudsport 0:9, izvještaj i ljestvica 0:8 (upisano 0:8); Kokša (AL Nemčić) ima
+3 gola prema listi nakon 4. kola i izvještaju 6. kola, završna lista kaže 2; nepoznata su 3 strijelca (KURS u 6. kolu, AL Nemčić
+u 8. kolu i jedan gol AL Nemčića u 2./3. kolu) — ti golovi postoje u rezultatu, ali bez igrača.
+
+Vijesti po kolima (#449–455, kategorija KC Liga, oznaka „KC liga 2025/2026”): 1., 4., 5. i 7. kolo prema izvještajima,
+2. i 3. kolo samo iz rezultata (uz napomenu da popis strijelaca nije potpun), 8. kolo prema najavi 9. kola. Obje lige
+ugrađene su s `[kurs_kolo]`, uz parove sljedećeg kola. Postojeća vijest 6. kola (#115) dobila je datum kola (25. 1. 2026.,
+bila je 24. 2.) i istu ugradnju.
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 43 | `includes/class-rounds.php` (`scorers`), `class-database.php`, `class-season.php`, `admin/views/hub-teams.php`, `admin/class-admin.php` | Preneseni golovi igrača pribrajali su se listi strijelaca **nakon svakog kola** — kad su to golovi 2. i 3. kola (KC 2025/2026), lista nakon 1. kola imala je npr. Sabolića sa 6 golova umjesto 4. | Novi stupac `divisions.base_round` (DB 1.14): kolo do kojeg su preneseni golovi postignuti; lista nakon ranijeg kola ih ne pribraja. Polje u panelu „Preneseno stanje” (`save_base_standings`), `Kurs_Season::set_base_round()`. KURS 1.21.0. |
+
 ## Još uvijek otvoreno (svjesno NIJE dirano)
 
 Ovo su rizičnije izmjene ili dizajnerske odluke, ostavljene namjerno:

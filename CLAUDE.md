@@ -108,6 +108,8 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   `squads.base_goals/base_own_goals` — pribrajaju ih `get_standings()`, `get_top_scorers()`, `Kurs_Rounds::scorers()`,
   `player_career()`, `Kurs_Players::totals()` i profil ekipe. Novi izračun golova/ljestvice mora ih uključiti.
   Admin: stranica natjecanja → Ekipe → „Preneseno stanje” i roster → Uredi → „Preneseni golovi”.
+  `divisions.base_round` = kolo do kojeg su preneseni golovi postignuti — lista strijelaca nakon ranijeg kola
+  (`Kurs_Rounds::scorers($div, $max_round)`) ih ne pribraja (KC 2025/2026: 3, golovi 2./3. kola bez poznate utakmice).
 - **Sastav ekipe na utakmici** samo preko `Kurs_Match::lineup($match_id, $team_id)` (postava spremljena pri
   završetku u `match_players`), **ne** `Kurs_Season::get_squad()` (to je trenutni roster). Karijera igrača =
   `Kurs_Match::player_career()`. Prijelaz igrača u drugu ekipu iste lige = `kurs_add_squad` s `transfer=1`.
@@ -122,7 +124,8 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   `PHPRC="C:/Users/Tinci/AppData/Roaming/Local/run/df7bZ9tGl/conf/php" "/c/Users/Tinci/AppData/Roaming/Local/lightning-services/php-8.2.30+1/bin/win64/php.exe" tools/demo-podaci.php [obrisi]`
   (bez `PHPRC` CLI ne nađe MySQL port 10011). Demo podaci su **obrisani** (2026-11-02); lokalno su
   **stvarni podaci Pan Ljetne lige 2026** (iz službenih izvještaja; kolo = natjecateljski dan), **KC liga 2025/2026**
-  (9. kolo + kola 1.–8. kao preneseno stanje, arhivirana i zaključana) i **početna KC 2026/2027** (iste ekipe i rosteri,
+  (svih 9 kola kao stvarne utakmice — izvještaji s FB stranice KC lige; dio golova 2./3. kola kao preneseni golovi igrača;
+  arhivirana i zaključana) i **početna KC 2026/2027** (iste ekipe i rosteri,
   bez rasporeda) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
 - **Local gotcha**: nginx round-robin na **dva php-cgi workera** (10008/10009,
   `fastcgi_read_timeout 1200s`) — ako jedan zapne, **svaki drugi zahtjev visi** → restartaj site u Localu.
@@ -137,5 +140,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.20.1` vs
-  `DB_VERSION=1.13`; tema `KURSKC_VERSION=1.0.42` vs `style.css` 1.0.0.
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.21.0` vs
+  `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.42` vs `style.css` 1.0.0.

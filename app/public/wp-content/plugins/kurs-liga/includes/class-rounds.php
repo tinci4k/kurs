@@ -240,6 +240,7 @@ class Kurs_Rounds {
 		global $wpdb;
 		$names = self::short_names( $division_id );
 		$round = $max_round ? $wpdb->prepare( ' AND m.round <= %d', $max_round ) : '';
+		$base  = ! $max_round || $max_round >= (int) ( Kurs_Season::get_division( $division_id )->base_round ?? 0 );
 		$sql   = fn( string $types ) =>
 			'SELECT e.player_id, MAX(e.team_id) AS team_id, COUNT(*) AS goals
 			 FROM ' . self::t( 'match_events' ) . ' e
@@ -248,7 +249,7 @@ class Kurs_Rounds {
 			$round . ' GROUP BY e.player_id ORDER BY goals DESC';
 
 		$groups = [];
-		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'goal','penalty'" ) ), 'base_goals' ) as $r ) {
+		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'goal','penalty'" ) ), 'base_goals', $base ) as $r ) {
 			$groups[ (int) $r->goals ][] = [
 				'name'    => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
 				'team_id' => (int) $r->team_id,
@@ -260,7 +261,7 @@ class Kurs_Rounds {
 		unset( $list );
 
 		$own = [];
-		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'own_goal'" ) ), 'base_own_goals' ) as $r ) {
+		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'own_goal'" ) ), 'base_own_goals', $base ) as $r ) {
 			$own[] = [
 				'name'  => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
 				'team'  => get_post_field( 'post_title', (int) $r->team_id ),
@@ -309,14 +310,14 @@ class Kurs_Rounds {
 
 	/**
 	 * Golovi po igraču iz utakmica ($rows: player_id, team_id, goals) + preneseni golovi iz rostera lige
-	 * ($col = base_goals | base_own_goals). Preneseno stanje vrijedi za svako kolo.
+	 * ($col = base_goals | base_own_goals). $base = false: lista nakon kola prije divisions.base_round — bez prenesenih.
 	 */
-	private static function with_base( int $division_id, array $rows, string $col ): array {
+	private static function with_base( int $division_id, array $rows, string $col, bool $base = true ): array {
 		$out = [];
 		foreach ( $rows as $r ) {
 			$out[ (int) $r->player_id ] = (object) [ 'player_id' => (int) $r->player_id, 'team_id' => (int) $r->team_id, 'goals' => (int) $r->goals ];
 		}
-		foreach ( Kurs_Match::base_goal_rows( $division_id ) as $b ) {
+		foreach ( $base ? Kurs_Match::base_goal_rows( $division_id ) : [] as $b ) {
 			if ( ! (int) $b->$col ) continue;
 			$out[ (int) $b->player_id ] ??= (object) [ 'player_id' => (int) $b->player_id, 'team_id' => (int) $b->team_id, 'goals' => 0 ];
 			$out[ (int) $b->player_id ]->goals += (int) $b->$col;

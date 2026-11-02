@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.13';
+	const DB_VERSION = '1.14';
 
 	public static function install(): void {
 		global $wpdb;
@@ -36,6 +36,7 @@ class Kurs_Database {
 			sort_order        TINYINT UNSIGNED NOT NULL DEFAULT 0,
 			has_playoff       TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '0 = samo skupina/liga, 1 = skupine + playoff',
 			advance_per_group TINYINT UNSIGNED NOT NULL DEFAULT 2 COMMENT 'koliko ekipa iz svake grupe prolazi u playoff',
+			base_round        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'preneseni golovi igrača postignuti su do tog kola (0 = prije prvog kola u sustavu)',
 			PRIMARY KEY (id),
 			KEY idx_season (season_id)
 		) $c;" );

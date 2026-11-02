@@ -327,7 +327,8 @@ window.KursTeams = <?php echo wp_json_encode( array_map( fn( $t ) => [ 'id' => $
 
 <?php
 /* ── Preneseno stanje: kola odigrana prije unosa u sustav (arhivska sezona, prelazak usred sezone) ── */
-$base_used = (bool) array_filter( $all_groups, fn( $g ) => array_filter( $g->teams, fn( $t ) => (int) $t->base_p || $t->rank_hint !== null ) );
+$base_used = (bool) array_filter( $all_groups, fn( $g ) => array_filter( $g->teams, fn( $t ) => (int) $t->base_p || $t->rank_hint !== null ) )
+	|| array_filter( $divisions, fn( $d ) => (int) ( $d->base_round ?? 0 ) );
 if ( $all_groups && array_filter( $all_groups, fn( $g ) => $g->teams ) ) : ?>
 <details class="kurs-panel kurs-base"<?php echo $base_used ? ' open' : ''; ?>>
 	<summary class="kurs-panel__head">
@@ -362,6 +363,13 @@ if ( $all_groups && array_filter( $all_groups, fn( $g ) => $g->teams ) ) : ?>
 			</tbody>
 		</table>
 		<?php endforeach; ?>
+		<p class="kurs-base__round">
+			<span>Preneseni golovi igrača postignuti su do kola:</span>
+			<?php foreach ( $divisions as $d ) : ?>
+			<label><?php echo esc_html( $d->name ); ?> <input type="number" min="0" max="99" name="base_round[<?php echo (int) $d->id; ?>]" value="<?php echo (int) ( $d->base_round ?? 0 ); ?>"></label>
+			<?php endforeach; ?>
+			<span class="kurs-muted">0 = prije prvog kola u sustavu. Liste strijelaca nakon ranijih kola (Po kolima, Za medije) ih ne pribrajaju — npr. 3 kad su golovi 2. i 3. kola poznati samo ukupno.</span>
+		</p>
 		<button type="submit" class="kurs-btn kurs-btn--outline kurs-btn--sm">Spremi preneseno stanje</button>
 	</form>
 </details>

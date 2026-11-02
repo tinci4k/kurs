@@ -557,6 +557,15 @@ class Kurs_Season {
 		], [ 'group_id' => $group_id, 'team_id' => $team_id ] );
 	}
 
+	/**
+	 * Kolo do kojeg su postignuti preneseni golovi igrača lige (0 = prije prvog kola u sustavu). Lista strijelaca
+	 * nakon ranijeg kola (Kurs_Rounds::scorers) ih ne pribraja — npr. golovi 2. i 3. kola bez poznate utakmice.
+	 */
+	public static function set_base_round( int $division_id, int $round ): void {
+		global $wpdb;
+		$wpdb->update( self::t( 'divisions' ), [ 'base_round' => max( 0, min( 255, $round ) ) ], [ 'id' => $division_id ] );
+	}
+
 	/** Preneseni golovi igrača u rosteru (golovi i autogolovi iz utakmica koje nisu u sustavu). */
 	public static function set_squad_base( int $player_id, int $team_id, int $division_id, int $goals, int $own = 0 ): void {
 		global $wpdb;
