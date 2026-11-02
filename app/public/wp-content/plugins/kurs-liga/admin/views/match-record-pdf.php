@@ -420,7 +420,7 @@ window.addEventListener('load', function () {
 				$tag     = $pdf_tags[ $ev->event_type ] ?? '';
 				?>
 				<div class="pdf-event <?php echo $is_home ? 'pdf-event--home' : 'pdf-event--away'; ?>">
-					<span class="pdf-event__min"><?php echo (int) $ev->minute; ?>'</span>
+					<span class="pdf-event__min"><?php echo $ev->minute !== null ? (int) $ev->minute . "'" : '–'; ?></span>
 					<span><?php echo $icon; ?></span>
 					<span class="pdf-event__name">
 						<?php echo esc_html( $ev->player_name ?: '—' ); ?>

@@ -854,7 +854,9 @@ jQuery( function ( $ ) {
 			`<select class="squad-edit-type">` +
 			`<option value="player"${type !== 'goalkeeper' ? ' selected' : ''}>Igrač</option>` +
 			`<option value="goalkeeper"${type === 'goalkeeper' ? ' selected' : ''}>Golman</option>` +
-			`</select>`
+			`</select> ` +
+			`<label class="squad-edit-base-wrap" title="Golovi iz kola koja nisu u sustavu (preneseno stanje)">Preneseni golovi ` +
+			`<input type="number" class="small-text squad-edit-base" value="${ parseInt( $row.data( 'base' ) ) || 0 }" min="0" max="99" style="width:48px;"></label>`
 		);
 		$row.find( '.squad-actions' ).html(
 			`<button class="button button-primary button-small btn-save-squad" data-player-id="${player_id}">Spremi</button> ` +
@@ -890,6 +892,7 @@ jQuery( function ( $ ) {
 		const name      = $row.find( '.squad-edit-name' ).val().trim();
 		const jersey    = parseInt( $row.find( '.squad-edit-jersey' ).val() ) || 0;
 		const type      = $row.find( '.squad-edit-type' ).val() === 'goalkeeper' ? 'goalkeeper' : 'player';
+		const base      = parseInt( $row.find( '.squad-edit-base' ).val() ) || 0;
 
 		if ( ! name ) { alert( 'Ime igrača ne može biti prazno.' ); $btn.prop( 'disabled', false ); return; }
 
@@ -897,9 +900,10 @@ jQuery( function ( $ ) {
 			action: 'kurs_update_squad_player',
 			nonce, player_id,
 			team_id: TEAM_ID, division_id: DIVISION_ID,
-			jersey, name, type,
+			jersey, name, type, base_goals: base,
 		} ).done( res => {
 			if ( res.success ) {
+				$row.data( 'base', res.data.base_goals );
 				restoreSquadRow( player_id, res.data.name, res.data.jersey, true, res.data.type );
 				// Ažuriraj ime u select listi (ako je igrač tamo)
 				$( '#squad-player-select option[value="' + player_id + '"]' ).text( res.data.name );
@@ -922,7 +926,7 @@ jQuery( function ( $ ) {
 		$row.find( '.squad-cell-jersey' ).html(
 			`<span class="kurs-jersey">${jersey_display}</span>`
 		);
-		$row.find( '.squad-cell-name' ).html( `<strong>${h( name )}</strong>${playerTypeTag( type )}${profileLink( player_id )}` );
+		$row.find( '.squad-cell-name' ).html( `<strong>${h( name )}</strong>${playerTypeTag( type )}${baseTag( $row.data( 'base' ) )}${profileLink( player_id )}` );
 		$row.find( '.squad-actions' ).html(
 			`<button class="button button-small kurs-btn-edit-squad" data-player-id="${player_id}">Uredi</button> ` +
 			`<button class="button button-small kurs-btn-rm-squad" data-player-id="${player_id}">&times;</button>`
@@ -932,6 +936,12 @@ jQuery( function ( $ ) {
 	// ══════════════════════════════════════════════════════════════════════════
 	// Helpers
 	// ══════════════════════════════════════════════════════════════════════════
+
+	/* Preneseni golovi igrača (kola koja nisu u sustavu) uz ime u rosteru */
+	function baseTag( n ) {
+		n = parseInt( n ) || 0;
+		return n ? ` <span class="kurs-base-tag" title="Golovi iz kola koja nisu u sustavu (preneseno stanje)">+${n} gol.</span>` : '';
+	}
 
 	/* Link na podatke igrača (stranica Igrači) uz ime u rosteru */
 	function profileLink( id ) {

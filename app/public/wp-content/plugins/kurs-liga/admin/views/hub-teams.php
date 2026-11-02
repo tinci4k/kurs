@@ -115,6 +115,8 @@ $short = fn( string $label ) => stripos( $label, 'briga' ) !== false ? 'Bez brig
 	<?php if ( absint( $_GET['carried_skipped'] ?? 0 ) ) : ?>Preskočeno igrača: <?php echo absint( $_GET['carried_skipped'] ); ?> (u toj ligi već igraju za drugu ekipu).<?php endif; ?>
 	Provjeri rostere („N igr."), pa generiraj raspored.
 </p></div>
+<?php elseif ( ! empty( $_GET['base_saved'] ) ) : ?>
+<div class="notice notice-success is-dismissible"><p>Preneseno stanje je spremljeno — ljestvica ga uključuje.</p></div>
 <?php elseif ( ! empty( $_GET['groups_saved'] ) ) : ?>
 <div class="notice notice-success is-dismissible"><p>Broj skupina je spremljen.</p></div>
 <?php elseif ( ! empty( $_GET['groups_error'] ) ) : ?>
@@ -322,6 +324,48 @@ window.KursTeams = <?php echo wp_json_encode( array_map( fn( $t ) => [ 'id' => $
 		<?php endforeach; ?>
 	</div>
 </div>
+
+<?php
+/* ── Preneseno stanje: kola odigrana prije unosa u sustav (arhivska sezona, prelazak usred sezone) ── */
+$base_used = (bool) array_filter( $all_groups, fn( $g ) => array_filter( $g->teams, fn( $t ) => (int) $t->base_p || $t->rank_hint !== null ) );
+if ( $all_groups && array_filter( $all_groups, fn( $g ) => $g->teams ) ) : ?>
+<details class="kurs-panel kurs-base"<?php echo $base_used ? ' open' : ''; ?>>
+	<summary class="kurs-panel__head">
+		<h3 class="kurs-panel__title">Preneseno stanje</h3>
+		<span class="kurs-muted"><?php echo $base_used ? 'uneseno — pribraja se ljestvici' : 'samo ako dio kola nije u sustavu'; ?></span>
+	</summary>
+	<form method="post" class="kurs-base__body">
+		<?php wp_nonce_field( 'kurs_save_base_standings' ); ?>
+		<input type="hidden" name="kurs_action" value="save_base_standings">
+		<input type="hidden" name="season_id"   value="<?php echo (int) $season_id; ?>">
+		<p class="kurs-muted kurs-base__intro">
+			Ako su neka kola odigrana prije nego što se liga vodi ovdje (npr. stara sezona za koju postoji samo konačna ljestvica),
+			upiši njihov zbroj po ekipi: pobjede, neriješene, porazi i golovi. Ljestvica = ovo + utakmice u sustavu.
+			<strong>Redoslijed</strong> popuni samo kod jednakih bodova kad je odlučila međusobna utakmica koje nema u sustavu (1 = viši).
+			Golove igrača iz tih kola upisuješ u rosteru ekipe (Uredi → „Preneseni golovi”).
+		</p>
+		<?php foreach ( $all_groups as $g ) : if ( ! $g->teams ) continue; ?>
+		<table class="widefat kurs-base__table">
+			<thead><tr><th><?php echo esc_html( $g->label ); ?></th><th title="Pobjede">P</th><th title="Neriješeno">N</th><th title="Porazi">I</th><th title="Dani golovi">G+</th><th title="Primljeni golovi">G−</th><th title="Utakmice / bodovi iz prenesenog stanja">Ut. / Bod</th><th title="Redoslijed kod jednakih bodova">Red.</th></tr></thead>
+			<tbody>
+			<?php foreach ( $g->teams as $t ) :
+				$k = 'base[' . (int) $g->id . '][' . (int) $t->team_id . ']'; ?>
+			<tr>
+				<td><?php echo kurs_team_badge_html( (int) $t->team_id, 18 ); ?> <?php echo esc_html( $t->team_name ); ?></td>
+				<?php foreach ( [ 'w' => $t->base_w, 'd' => $t->base_d, 'l' => $t->base_l, 'gf' => $t->base_gf, 'ga' => $t->base_ga ] as $f => $v ) : ?>
+				<td><input type="number" min="0" max="999" name="<?php echo esc_attr( $k . '[' . $f . ']' ); ?>" value="<?php echo (int) $v; ?>"></td>
+				<?php endforeach; ?>
+				<td class="kurs-muted"><?php echo (int) $t->base_p; ?> / <?php echo 3 * (int) $t->base_w + (int) $t->base_d; ?></td>
+				<td><input type="number" min="1" max="99" name="<?php echo esc_attr( $k . '[hint]' ); ?>" value="<?php echo $t->rank_hint !== null ? (int) $t->rank_hint : ''; ?>" placeholder="—"></td>
+			</tr>
+			<?php endforeach; ?>
+			</tbody>
+		</table>
+		<?php endforeach; ?>
+		<button type="submit" class="kurs-btn kurs-btn--outline kurs-btn--sm">Spremi preneseno stanje</button>
+	</form>
+</details>
+<?php endif; ?>
 
 <!-- ── Raspored ──────────────────────────────────────────────────────────── -->
 <div class="kurs-hub-next">

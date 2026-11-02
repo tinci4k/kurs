@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.19.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.20.1'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -141,7 +141,7 @@ squads (roster)  ── igrač pripada ekipi unutar divizije
 
 > Od 2026-10-16 ovu strukturu kreira **isključivo** `Kurs_Season::scaffold()` pri kreiranju sezone (vidi §4.1). Faza tipa `'playoff'` se više ne kreira — playoff živi samo u `playoff_matches`.
 
-### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.12'`)
+### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.13'`)
 
 Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Niže se navode kratka imena.
 
@@ -151,8 +151,8 @@ Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Ni
 | `divisions` | id, season_id, name, sort_order, **has_playoff** (DEFAULT 1), **advance_per_group** (DEFAULT 2); KEY idx_season |
 | `phases` | id, division_id, name, **type** (DEFAULT 'group'), sort_order; KEY idx_division |
 | `groups` | id, phase_id, name, **playoff_spots** (TINYINT, DB DEFAULT 2 — ali `create_group()` uvijek upisuje vrijednost iz divizije, 0 bez playoffa); KEY idx_phase |
-| `group_teams` | id, group_id, team_id (BIGINT, = post `kurs_ekipa`); **UNIQUE(group_id, team_id)** |
-| `squads` | id, player_id, team_id, division_id, jersey_no (TINYINT, nullable); **UNIQUE(player_id, team_id, division_id)** — *trenutni* roster |
+| `group_teams` | id, group_id, team_id (BIGINT, = post `kurs_ekipa`), **base_p/w/d/l/gf/ga** (SMALLINT, DEFAULT 0 — preneseno stanje, od DB 1.13), **rank_hint** (TINYINT NULL — poredak kod jednakih bodova kad je odlučila utakmica koje nema u sustavu); **UNIQUE(group_id, team_id)** |
+| `squads` | id, player_id, team_id, division_id, jersey_no (TINYINT, nullable), **base_goals / base_own_goals** (SMALLINT, DEFAULT 0 — preneseni golovi/autogolovi, od DB 1.13); **UNIQUE(player_id, team_id, division_id)** — *trenutni* roster |
 | `match_players` | id, match_id, team_id, player_id, jersey_no (nullable); **UNIQUE(match_id, player_id)**, KEY idx_player — **postava utakmice** spremljena pri završetku (od DB 1.12; vidi §4.2 „Postava utakmice”) |
 | `matches` | id, group_id (**0 = playoff zapisnik**), home_team_id, away_team_id, home_score, away_score (nullable TINYINT), match_date (DATETIME), round (TINYINT), status (DEFAULT 'scheduled'), **referee1/referee2**, created_at; KEY idx_group, idx_status |
 | `match_events` | id, match_id, team_id, player_id (nullable), **event_type** (VARCHAR(20): `goal\|penalty\|own_goal\|yellow_card\|second_yellow\|red_card\|foul` + inertni `captain`/`absent`), minute, **half** (1\|2), **scored_for** (nullable — mrtav stupac); KEY idx_match, idx_player |
@@ -264,6 +264,8 @@ Sustav služi isključivo KURS-u, pa je struktura natjecanja **konstanta**, ne p
 | `team_match_count($group_id,$team_id)` | **NOVO (1.16.0).** Broj utakmica ekipe u skupini (domaćin ili gost). Dok je > 0, ekipa se ne smije maknuti iz skupine. |
 | `remove_team($group_id,$team_id)` | Brisanje veze (bez provjera — guardovi su u `ajax_remove_team`). |
 | `get_team_contexts($team_id)` | Sve sezone/divizije u kojima ekipa igra. Veliki `DISTINCT` JOIN `group_teams→groups→phases→divisions→seasons`, `ORDER BY s.year DESC, s.id DESC, d.sort_order, d.id`. Koristi se na uređivanju ekipe (oznake liga pod imenom, odabir lige za igrače, „← Natrag na ligu"). |
+
+> **Preneseno stanje (1.20.0, DB 1.13).** Za kola odigrana prije nego što se liga vodi u sustavu (arhivska sezona s poznatom samo konačnom ljestvicom, prelazak usred sezone): `set_team_base($group_id, $team_id, $w, $d, $l, $gf, $ga, ?$hint)` (P = W + D + L) i `set_squad_base($player_id, $team_id, $division_id, $goals, $own)`. `Kurs_Match::get_standings()` kreće od prenesenog stanja (uvijek, i za „nakon N. kola”), a kod jednakih bodova `rank_hint` (ako ga imaju obje ekipe) ide prije međusobnih utakmica. Golove pribrajaju `Kurs_Match::get_top_scorers()` i `base_goal_rows()`, `Kurs_Rounds::scorers()` (`with_base()`; `short_names()` uključuje i igrače samo s prenesenim golovima i čuva već skraćena imena „Dan. Nemčić”), `player_career()`, `Kurs_Players::totals()` i profil ekipe. Admin: kartica Ekipe → `<details class="kurs-base">` „Preneseno stanje” (`save_base_standings`, guard zaključane sezone) i roster → Uredi → „Preneseni golovi” (`kurs_update_squad_player` + `base_goals`). `add_to_squad()` je `INSERT … ON DUPLICATE KEY UPDATE jersey_no` (prije `REPLACE`, koji bi obrisao prenesene golove).
 
 **Roster / igrači** (`squads`; igrač pripada ekipi **unutar divizije**)
 
@@ -433,6 +435,7 @@ Read-only klasa (static, `global $wpdb`) koja sprema podatke za „N. kolo" jedn
 | `kurs_render_playoff_bracket(int $division_id, array $args = []): string` | Bracket divizije (klase `.kurs-bracket*`, CSS portan u temu), bez admin akcija; meč linka na zapisnik ako je povezan. |
 | `kurs_render_round_results(int $division_id, int $round): string` | **NOVO.** Rezultati kola (`.round-results`, `.rr-match`) sa strijelcima ispod utakmice; kod više skupina grupirano po skupini s datumom; neodigrano → vrijeme / „Nije odigrano (…)" / „Termin nije određen"; red „Slobodna u ovom kolu: …". |
 | `kurs_render_round_scorers(int $division_id, ?int $round = null): string` | **NOVO.** Strijelci nakon kola grupirani po broju golova (`.round-scorers`, `.rs-row`) + red „AG" za autogolove. |
+| `kurs_render_schedule($division_id, $args)` | Raspored lige (skupine + playoff iz `Kurs_Rounds::schedule()`), po danu; `limit`, `status`, `round_labels` (oznaka kola / playoff runde). Koriste ga tab Raspored i ugradnja u vijesti (1.20.1). |
 | `kurs_schedule_date_label(?string $datetime): string` | Hrvatska oznaka datuma rasporeda („Subota, 12. srpnja 2026."; prazno → „Termin nije određen"). |
 
 Ostali helperi (iz ranijih izmjena, ovdje samo popis): `kurs_league_icon()` (inline SVG grbovi KC / Liga bez briga / Pan), `kurs_player_type()` / `kurs_player_type_label()`, `kurs_team_coach()` / `kurs_team_rep()` / `kurs_team_banners()` / `kurs_team_banner()` / `kurs_team_photo()`, `kurs_render_schedule()`. (Helperi `kurs_get_referees()` / `kurs_add_referees()` uklonjeni su u 1.17.0 — suci su sada `Kurs_Season::get_referees()` / `add_referees()` po sezoni.)

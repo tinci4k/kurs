@@ -54,6 +54,10 @@ class Kurs_Players {
 			 JOIN ' . self::t( 'matches' ) . " m ON m.id = e.match_id AND m.status = 'finished'
 			 WHERE e.player_id IN ($in) AND e.event_type IN ('goal','penalty') GROUP BY e.player_id"
 		) as $r ) $out[ (int) $r->player_id ]->goals = (int) $r->n;
+		// + preneseni golovi (utakmice koje nisu u sustavu)
+		foreach ( $wpdb->get_results( 'SELECT player_id, SUM( base_goals ) AS n FROM ' . self::t( 'squads' ) . " WHERE player_id IN ($in) GROUP BY player_id" ) as $r ) {
+			$out[ (int) $r->player_id ]->goals += (int) $r->n;
+		}
 		return $out;
 	}
 

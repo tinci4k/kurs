@@ -535,7 +535,8 @@ class Kurs_Season {
 		global $wpdb;
 		return $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT gt.group_id, gt.team_id, p.post_title AS team_name
+				'SELECT gt.group_id, gt.team_id, p.post_title AS team_name,
+				        gt.base_p, gt.base_w, gt.base_d, gt.base_l, gt.base_gf, gt.base_ga, gt.rank_hint
 				 FROM '  . self::t( 'group_teams' ) . ' gt
 				 JOIN '  . $wpdb->posts             . ' p ON p.ID = gt.team_id
 				 WHERE gt.group_id = %d
@@ -543,6 +544,24 @@ class Kurs_Season {
 				$group_id
 			)
 		) ?: [];
+	}
+
+	/**
+	 * Preneseno stanje ekipe u skupini: utakmice odigrane prije unosa u sustav (P = W + D + L) i ručni
+	 * poredak kod jednakih bodova (null = računa se). Pribraja se ljestvici (Kurs_Match::get_standings).
+	 */
+	public static function set_team_base( int $group_id, int $team_id, int $w, int $d, int $l, int $gf, int $ga, ?int $hint ): void {
+		global $wpdb;
+		$wpdb->update( self::t( 'group_teams' ), [
+			'base_p' => $w + $d + $l, 'base_w' => $w, 'base_d' => $d, 'base_l' => $l, 'base_gf' => $gf, 'base_ga' => $ga, 'rank_hint' => $hint,
+		], [ 'group_id' => $group_id, 'team_id' => $team_id ] );
+	}
+
+	/** Preneseni golovi igrača u rosteru (golovi i autogolovi iz utakmica koje nisu u sustavu). */
+	public static function set_squad_base( int $player_id, int $team_id, int $division_id, int $goals, int $own = 0 ): void {
+		global $wpdb;
+		$wpdb->update( self::t( 'squads' ), [ 'base_goals' => $goals, 'base_own_goals' => $own ],
+			[ 'player_id' => $player_id, 'team_id' => $team_id, 'division_id' => $division_id ] );
 	}
 
 	public static function assign_team( int $group_id, int $team_id ): void {
@@ -627,14 +646,14 @@ class Kurs_Season {
 		) ?: [];
 	}
 
+	/** Dodaj igrača u roster ili mu promijeni broj dresa (preneseni golovi postojećeg retka ostaju). */
 	public static function add_to_squad( int $player_id, int $team_id, int $division_id, int $jersey = 0 ): void {
 		global $wpdb;
-		$wpdb->replace( self::t( 'squads' ), [
-			'player_id'   => $player_id,
-			'team_id'     => $team_id,
-			'division_id' => $division_id,
-			'jersey_no'   => $jersey ?: null,
-		] );
+		$wpdb->query( $wpdb->prepare(
+			'INSERT INTO ' . self::t( 'squads' ) . ' (player_id, team_id, division_id, jersey_no) VALUES (%d, %d, %d, ' . ( $jersey ? (int) $jersey : 'NULL' ) . ')
+			 ON DUPLICATE KEY UPDATE jersey_no = VALUES(jersey_no)',
+			$player_id, $team_id, $division_id
+		) );
 	}
 
 	public static function remove_from_squad( int $player_id, int $team_id, int $division_id ): void {

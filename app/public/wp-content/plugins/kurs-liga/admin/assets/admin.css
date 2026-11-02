@@ -2758,6 +2758,18 @@ a.kurs-league-tag:hover { filter: brightness(.95); }
 .kurs-roster__profile { margin-left: 4px; color: var(--ka-muted); text-decoration: none; font-size: 12px; }
 .kurs-roster__profile:hover { color: var(--ka-red); }
 
+/* Preneseno stanje (kola koja nisu u sustavu): panel u kartici Ekipe + oznaka golova u rosteru */
+.kurs-base { margin-top: 18px; }
+.kurs-base > summary { cursor: pointer; list-style: none; }
+.kurs-base > summary::-webkit-details-marker { display: none; }
+.kurs-base__body { padding: 0 18px 18px; }
+.kurs-base__intro { margin: 0 0 12px; font-size: 12px; max-width: 900px; }
+.kurs-base__table { margin-bottom: 14px; }
+.kurs-base__table th:not(:first-child), .kurs-base__table td:not(:first-child) { text-align: center; width: 64px; }
+.kurs-base__table input[type=number] { width: 56px; text-align: center; }
+.kurs-base-tag { margin-left: 6px; padding: 1px 6px; border-radius: 8px; background: #eef4ff; color: #1a3a6b; font-size: 10px; font-family: var(--font-mono); }
+.squad-edit-base-wrap { font-size: 11px; color: var(--ka-muted); white-space: nowrap; }
+
 /* Ekipa → igrači po ligama */
 .kurs-ctx-roster {
 	display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px;

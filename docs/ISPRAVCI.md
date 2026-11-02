@@ -104,14 +104,42 @@ koja je sad „Ekipe"), **prijelaz igrača** u drugu ekipu iste lige uz potvrdu,
 | 36 | `themes/kurskc/page-utakmica.php` | Tijek utakmice skrivao je samo prekršaje — inertni događaji `captain` i `absent` prikazivali su se kao **gol** (ikona gola, oznaka „captain"/„absent"). Sastavi su prikazivali i igrače označene „nije igrao". | Tijek bez `foul`/`captain`/`absent`; sastavi iz postave bez odsutnih. |
 | 37 | `plugins/kurs-liga/includes/class-match.php`, teme (zapisnik, PDF, stranica utakmice, profil igrača) | Sastav utakmice računao se iz **trenutnog** rostera: micanje igrača iz ekipe (odlazak, prijelaz, pogrešan unos) brisalo ga je iz svih odigranih utakmica i iz karijere, a igrač dodan usred sezone dobivao je nastupe i za utakmice prije dolaska. Prijelaz nije bio moguć bez gubitka povijesti. | Tablica `match_players`, `save_lineup()` pri završetku utakmice (migracija za postojeće), `lineup()` / `player_career()` čitaju postavu; prijelaz preko `kurs_add_squad` + `transfer=1`. |
 
+## 2026-11-02 — stvarni podaci Pan Ljetne lige 2026 (`KURS_VERSION` 1.19.1, tema 1.0.41)
+
+Lokalno su obrisani demo/probni podaci (KC 2026/2027 demo, izmišljeni rosteri i rezultati Pan 2026) i unesena je
+Pan Ljetna liga 2026 iz službenih izvještaja (24 utakmice skupina, četvrtfinale, polufinale, utakmica za 3. mjesto,
+finale, 63 strijelca, 8 vijesti s ugrađenim kolima/bracketom, galerija završnice). Uz to:
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 38 | `themes/kurskc/page-utakmica.php`, `admin/views/match-record.php`, `match-record-pdf.php` | Događaj bez minute (unos iz izvještaja) prikazivao se kao „0'", a svi pod naslovom „1. poluvrijeme". | Bez minute: prazno (javno) / „–" (zapisnik, PDF); naslovi poluvremena samo kad ijedan događaj ima minutu ili poluvrijeme. |
+| 39 | `includes/class-ticker.php` (`compute_podium`) | Treće mjesto u tickeru „Prvaci" uzimalo se iz tablice skupina i kad je odigrana utakmica za 3. mjesto (Pan 2026: prikazalo bi Instal Term umjesto Marksa). | Pobjednik utakmice za 3. mjesto (`winner_side`) ima prednost; tablica je samo zamjena. |
+| 40 | `includes/helpers.php` (`kurs_render_playoff_bracket`) | Utakmica za 3. mjesto bila je četvrti stupac bracketa — na stranici lige (uz bočnu traku) izlazila je izvan vidljivog dijela. | Prikazuje se ispod finala (`.kurs-bracket__third`); meč se iscrtava jednom funkcijom za sve runde. |
+
+## 2026-11-02 — KC liga 2025/2026 i preneseno stanje (`KURS_VERSION` 1.20.0, DB 1.13)
+
+Iz službenog izvještaja završnog dana (28. 2. 2026.) postoje samo 9. kolo, konačne ljestvice i ukupne liste strijelaca.
+Da ljestvica i strijelci budu službeni bez izmišljanja kola 1.–8., uvedeno je **preneseno stanje** (vidi `PLUGIN-KURS-LIGA.md` §4.1):
+kola izvan sustava kao zbroj po ekipi (`group_teams.base_*`, `rank_hint` za Robin Marketi ispred Active Commercea kod 16 bodova)
+i preneseni golovi po igraču (`squads.base_goals`). Sezona je arhivirana i zaključana; KC 2026/2027 dobila je iste ekipe i rostere
+(prijenos iz prošle sezone), bez rasporeda. Vijest #113 zamijenjena je službenim izvještajem (datum 28. 2. 2026., oba 9. kola ugrađena).
+
+| # | Datoteka | Greška | Ispravak |
+|---|----------|--------|----------|
+| 41 | `includes/class-season.php` (`add_to_squad`) | `REPLACE` briše i ponovno upisuje redak rostera — s novim stupcima obrisao bi prenesene golove igrača pri ponovnom dodavanju / promjeni dresa. | `INSERT … ON DUPLICATE KEY UPDATE jersey_no`. |
+| 42 | `themes/kurskc/page-liga.php` (tab Raspored), `includes/helpers.php` (`kurs_render_schedule`) | Raspored lige i ugradnja „Raspored” u vijestima brali su utakmice samo preko skupina — **playoff se nije vidio** (Pan 2026: nedostajali četvrtfinale i završnica), a ni budući playoff parovi s terminom. Tab je imao svoj, dupli upit. | Zajednički `Kurs_Rounds::schedule()` (skupine + playoff zapisnici + parovi bez zapisnika) i jedan renderer (`round_labels` za stranicu lige); penali uz rezultat, oznaka playoff runde uz datum (1.20.1 / tema 1.0.42). |
+
+Nesuglasja u izvještaju (podaci upisani doslovno): zbroj golova KC lige 202:204; strijelci Active Commercea zbrajaju 31 (ljestvica 27 —
+„Sminderovac 4" je vjerojatno ETM); dva „Šurić" u HEP-u (2 i 1). Vidi poruku korisniku / memoriju.
+
 ## Još uvijek otvoreno (svjesno NIJE dirano)
 
 Ovo su rizičnije izmjene ili dizajnerske odluke, ostavljene namjerno:
 
 - **`match_events.scored_for`** — mrtav stupac (nikad se ne upisuje/čita). Uklanjanje
   zahtijeva migraciju; bezopasno je pa ostaje.
-- **Playoff runda `3rd`** (utakmica za 3. mjesto) — postoji u shemi i `ORDER BY`, ali se
-  nikad ne generira. Nedovršena značajka, ne greška.
+- **Playoff runda `3rd`** (utakmica za 3. mjesto) — `generate()` je ne stvara (poraženi u polufinalu ne
+  idu sami u nju); kad postoji, prikazuju je bracket, ticker i admin (vidi #39). Za Pan 2026 unesena ručno.
 - **`playoff_matches.match_id BIGINT` vs `matches.id INT`** — neusklađenost tipova FK;
   kozmetički, ALTER na postojećim podacima je rizičan.
 - **`Kurs_Match::reopen()` ne briše rezultat** (za razliku od `Kurs_Playoff::reopen_match()`)

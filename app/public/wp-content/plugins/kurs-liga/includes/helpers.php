@@ -301,49 +301,60 @@ function kurs_render_playoff_bracket( int $division_id, array $args = [] ): stri
 	if ( ! $bracket ) return '';
 
 	$labels = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale', '3rd' => 'Ut. za 3. mjesto' ];
-	$order  = [ 'qf', 'sf', 'final', '3rd' ];
+
+	/* Jedan meč bracketa (link na stranicu utakmice kad ima zapisnik) */
+	$render = function ( object $m, string $round, int $slot ) use ( $labels ): string {
+		ob_start();
+		$finished  = $m->status === 'finished';
+		$home_name = $m->home_name ?: kurs_playoff_label( $m->home_label );
+		$away_name = $m->away_name ?: kurs_playoff_label( $m->away_label );
+		$side      = Kurs_Playoff::winner_side( $m );
+		$home_wins = $side === 'home';
+		$away_wins = $side === 'away';
+		$pen       = Kurs_Playoff::pen_label( $m );
+		$mid  = (int) ( $m->match_id ?? 0 );
+		$url  = $mid ? add_query_arg( 'match_id', $mid, home_url( '/utakmica/' ) ) : '';
+		$tag  = $url ? 'a' : 'div';
+		$href = $url ? ' href="' . esc_url( $url ) . '"' : '';
+	?>
+	<<?php echo $tag . $href; ?> class="kurs-bracket__match <?php echo $finished ? 'is-finished' : ''; ?>" style="text-decoration:none;color:inherit;">
+		<div class="kurs-bracket__team <?php echo $home_wins ? 'is-winner' : ''; ?>">
+			<div class="kurs-bracket__team-badge"><?php echo $m->home_team_id ? kurs_team_badge_html( (int) $m->home_team_id, 22 ) : '<div class="kurs-bracket__tbd">?</div>'; ?></div>
+			<span class="kurs-bracket__team-name"><?php echo esc_html( $home_name ); ?></span>
+			<?php if ( $finished ) : ?><span class="kurs-bracket__score <?php echo $home_wins ? 'is-winner' : ''; ?>"><?php echo (int) $m->home_score; ?></span><?php endif; ?>
+		</div>
+		<div class="kurs-bracket__team <?php echo $away_wins ? 'is-winner' : ''; ?>">
+			<div class="kurs-bracket__team-badge"><?php echo $m->away_team_id ? kurs_team_badge_html( (int) $m->away_team_id, 22 ) : '<div class="kurs-bracket__tbd">?</div>'; ?></div>
+			<span class="kurs-bracket__team-name"><?php echo esc_html( $away_name ); ?></span>
+			<?php if ( $finished ) : ?><span class="kurs-bracket__score <?php echo $away_wins ? 'is-winner' : ''; ?>"><?php echo (int) $m->away_score; ?></span><?php endif; ?>
+		</div>
+		<div class="kurs-bracket__meta">
+			<?php if ( $m->match_date ) : ?><span><?php echo esc_html( date_i18n( 'j.n. H:i', strtotime( $m->match_date ) ) ); ?></span><?php else : ?><span class="kurs-muted">Termin naknadno</span><?php endif; ?>
+			<?php if ( $pen ) : ?><span class="kurs-bracket__pen"><?php echo esc_html( $pen ); ?></span><?php endif; ?>
+			<span class="kurs-bracket__meta-label"><?php echo esc_html( $labels[ $round ] ?? '' ); ?> #<?php echo (int) $slot; ?></span>
+		</div>
+	</<?php echo $tag; ?>>
+		<?php
+		return ob_get_clean();
+	};
 
 	ob_start(); ?>
 	<div class="kurs-bracket">
-		<?php foreach ( $order as $round ) :
+		<?php foreach ( [ 'qf', 'sf', 'final' ] as $round ) :
 			if ( empty( $bracket[ $round ] ) ) continue;
 			$matches = $bracket[ $round ]; ksort( $matches );
 		?>
 		<div class="kurs-bracket__round">
-			<div class="kurs-bracket__round-label"><?php echo esc_html( $labels[ $round ] ?? ucfirst( $round ) ); ?></div>
+			<div class="kurs-bracket__round-label"><?php echo esc_html( $labels[ $round ] ); ?></div>
 			<div class="kurs-bracket__matches">
-				<?php foreach ( $matches as $slot => $m ) :
-					$finished  = $m->status === 'finished';
-					$home_name = $m->home_name ?: kurs_playoff_label( $m->home_label );
-					$away_name = $m->away_name ?: kurs_playoff_label( $m->away_label );
-					$side      = Kurs_Playoff::winner_side( $m );
-					$home_wins = $side === 'home';
-					$away_wins = $side === 'away';
-					$pen       = Kurs_Playoff::pen_label( $m );
-					$mid  = (int) ( $m->match_id ?? 0 );
-					$url  = $mid ? add_query_arg( 'match_id', $mid, home_url( '/utakmica/' ) ) : '';
-					$tag  = $url ? 'a' : 'div';
-					$href = $url ? ' href="' . esc_url( $url ) . '"' : '';
-				?>
-				<<?php echo $tag . $href; ?> class="kurs-bracket__match <?php echo $finished ? 'is-finished' : ''; ?>" style="text-decoration:none;color:inherit;">
-					<div class="kurs-bracket__team <?php echo $home_wins ? 'is-winner' : ''; ?>">
-						<div class="kurs-bracket__team-badge"><?php echo $m->home_team_id ? kurs_team_badge_html( (int) $m->home_team_id, 22 ) : '<div class="kurs-bracket__tbd">?</div>'; ?></div>
-						<span class="kurs-bracket__team-name"><?php echo esc_html( $home_name ); ?></span>
-						<?php if ( $finished ) : ?><span class="kurs-bracket__score <?php echo $home_wins ? 'is-winner' : ''; ?>"><?php echo (int) $m->home_score; ?></span><?php endif; ?>
-					</div>
-					<div class="kurs-bracket__team <?php echo $away_wins ? 'is-winner' : ''; ?>">
-						<div class="kurs-bracket__team-badge"><?php echo $m->away_team_id ? kurs_team_badge_html( (int) $m->away_team_id, 22 ) : '<div class="kurs-bracket__tbd">?</div>'; ?></div>
-						<span class="kurs-bracket__team-name"><?php echo esc_html( $away_name ); ?></span>
-						<?php if ( $finished ) : ?><span class="kurs-bracket__score <?php echo $away_wins ? 'is-winner' : ''; ?>"><?php echo (int) $m->away_score; ?></span><?php endif; ?>
-					</div>
-					<div class="kurs-bracket__meta">
-						<?php if ( $m->match_date ) : ?><span><?php echo esc_html( date_i18n( 'j.n. H:i', strtotime( $m->match_date ) ) ); ?></span><?php else : ?><span class="kurs-muted">Termin naknadno</span><?php endif; ?>
-						<?php if ( $pen ) : ?><span class="kurs-bracket__pen"><?php echo esc_html( $pen ); ?></span><?php endif; ?>
-						<span class="kurs-bracket__meta-label"><?php echo esc_html( $labels[ $round ] ?? '' ); ?> #<?php echo (int) $slot; ?></span>
-					</div>
-				</<?php echo $tag; ?>>
-				<?php endforeach; ?>
+				<?php foreach ( $matches as $slot => $m ) echo $render( $m, $round, (int) $slot ); ?>
 			</div>
+			<?php if ( $round === 'final' && ! empty( $bracket['3rd'] ) ) : /* utakmica za 3. mjesto ispod finala, ne kao zaseban stupac */ ?>
+			<div class="kurs-bracket__third">
+				<div class="kurs-bracket__round-label"><?php echo esc_html( $labels['3rd'] ); ?></div>
+				<?php foreach ( $bracket['3rd'] as $slot => $m ) echo $render( $m, '3rd', (int) $slot ); ?>
+			</div>
+			<?php endif; ?>
 		</div>
 		<?php endforeach; ?>
 	</div>
@@ -445,56 +456,62 @@ function kurs_schedule_date_label( ?string $datetime ): string {
 }
 
 /**
- * Raspored (fixtures) jedne divizije. Markup/klase = page-liga.php (.schedule*).
- * Grupirano po datumu (ne po kolu).
+ * Raspored (fixtures) jedne divizije: skupine + playoff (Kurs_Rounds::schedule), grupirano po datumu.
+ * Markup/klase .schedule* — isti na stranici lige (tab Raspored) i u ugradnji u vijesti.
  *
- * @param array $args [ limit => int|null, status => 'finished'|'scheduled'|null ]
+ * @param array $args [ limit => int|null, status => 'finished'|'scheduled'|null,
+ *                      round_labels => bool (oznaka kola/playoff runde uz datum) ]
  */
 function kurs_render_schedule( int $division_id, array $args = [] ): string {
-	global $wpdb;
-	$p = $wpdb->prefix . KURS_PREFIX;
-	$a = array_merge( [ 'limit' => null, 'status' => null ], $args );
-
-	$where  = 'ph.division_id = %d';
-	$params = [ $division_id ];
+	if ( ! class_exists( 'Kurs_Rounds' ) ) return '';
+	$a       = array_merge( [ 'limit' => null, 'status' => null, 'round_labels' => false ], $args );
+	$matches = Kurs_Rounds::schedule( $division_id );
 	if ( in_array( $a['status'], [ 'finished', 'scheduled' ], true ) ) {
-		$where   .= ' AND m.status = %s';
-		$params[] = $a['status'];
+		$matches = array_values( array_filter( $matches, fn( $m ) => ( $m->status === 'finished' ) === ( $a['status'] === 'finished' ) ) );
 	}
-	$limit_sql = $a['limit'] ? ' LIMIT ' . (int) $a['limit'] : '';
-
-	$matches = $wpdb->get_results( $wpdb->prepare(
-		"SELECT m.id, m.round, m.match_date, m.status, m.home_score, m.away_score,
-		        h.post_title AS home_name, a.post_title AS away_name
-		 FROM {$p}matches m
-		 JOIN {$p}groups  g  ON g.id  = m.group_id
-		 JOIN {$p}phases  ph ON ph.id = g.phase_id
-		 JOIN {$wpdb->posts} h ON h.ID = m.home_team_id
-		 JOIN {$wpdb->posts} a ON a.ID = m.away_team_id
-		 WHERE {$where}
-		 ORDER BY (m.match_date IS NULL), m.match_date, m.round, m.id{$limit_sql}",
-		$params
-	) );
+	if ( $a['limit'] ) $matches = array_slice( $matches, 0, (int) $a['limit'] );
 	if ( ! $matches ) return '';
+
+	// Oznaka dana: kola skupina („1., 4. i 5. kolo" kad se odgođena igra kasnije) i playoff runde („Polufinale · Finale")
+	$day = fn( $m ) => $m->match_date ? substr( $m->match_date, 0, 10 ) : 'tbd';
+	$day_label = [];
+	if ( $a['round_labels'] ) {
+		$rounds = []; $po = [];
+		foreach ( $matches as $m ) {
+			if ( $m->po_round ) $po[ $day( $m ) ][ $m->po_round ] = kurs_round_label( 0, $m->po_round );
+			elseif ( $m->round ) $rounds[ $day( $m ) ][ (int) $m->round ] = true;
+		}
+		foreach ( array_unique( array_merge( array_keys( $rounds ), array_keys( $po ) ) ) as $d ) {
+			$rs    = array_keys( $rounds[ $d ] ?? [] );
+			sort( $rs );
+			$last  = array_pop( $rs );
+			$parts = $last ? [ ( $rs ? implode( '., ', $rs ) . '. i ' : '' ) . $last . '. kolo' ] : [];
+			$day_label[ $d ] = implode( ' · ', array_merge( $parts, array_values( $po[ $d ] ?? [] ) ) );
+		}
+	}
 
 	ob_start(); ?>
 	<div class="schedule">
 		<?php $cur = null; foreach ( $matches as $m ) :
-			$d = $m->match_date ? date( 'Y-m-d', strtotime( $m->match_date ) ) : 'tbd';
-			if ( $d !== $cur ) : $cur = $d; ?>
-		<div class="sched-round-label"><?php echo esc_html( kurs_schedule_date_label( $m->match_date ) ); ?></div>
-		<?php endif; ?>
-		<a href="<?php echo esc_url( add_query_arg( 'match_id', $m->id, home_url( '/utakmica/' ) ) ); ?>" class="sched-match">
+			if ( $day( $m ) !== $cur ) : $cur = $day( $m ); ?>
+		<div class="sched-round-label"><?php if ( ! empty( $day_label[ $cur ] ) ) : ?><span class="sched-round-label__no"><?php echo esc_html( $day_label[ $cur ] ); ?></span><?php endif; ?><?php echo esc_html( kurs_schedule_date_label( $m->match_date ) ); ?></div>
+		<?php endif;
+			$tag  = $m->id ? 'a' : 'div'; // playoff par bez zapisnika (ekipe još nisu poznate) nema stranicu utakmice
+			$href = $m->id ? ' href="' . esc_url( add_query_arg( 'match_id', $m->id, home_url( '/utakmica/' ) ) ) . '"' : '';
+			$pen  = isset( $m->home_pen, $m->away_pen ) ? sprintf( 'pen. %d:%d', $m->home_pen, $m->away_pen ) : '';
+		?>
+		<<?php echo $tag . $href; ?> class="sched-match<?php echo $m->po_round ? ' sched-match--po' : ''; ?>">
 			<div class="sched-match__home"><?php echo esc_html( $m->home_name ); ?></div>
 			<?php if ( $m->status === 'finished' ) : ?>
-			<div class="sched-match__score"><?php echo (int) $m->home_score; ?> : <?php echo (int) $m->away_score; ?></div>
+			<div class="sched-match__score"><?php echo (int) $m->home_score; ?> : <?php echo (int) $m->away_score; ?><?php if ( $pen ) : ?><span class="sched-match__pen"><?php echo esc_html( $pen ); ?></span><?php endif; ?></div>
 			<?php else : ?>
 			<div><div class="sched-match__score--vs"><?php echo $m->match_date ? esc_html( date_i18n( 'H:i', strtotime( $m->match_date ) ) ) : 'vs'; ?></div></div>
 			<?php endif; ?>
 			<div class="sched-match__away"><?php echo esc_html( $m->away_name ); ?></div>
-		</a>
+		</<?php echo $tag; ?>>
 		<?php endforeach; ?>
 	</div>
 	<?php
 	return ob_get_clean();
 }
+

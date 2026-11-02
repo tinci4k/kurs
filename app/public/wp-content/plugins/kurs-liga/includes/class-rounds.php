@@ -111,8 +111,11 @@ class Kurs_Rounds {
 			 JOIN ' . self::t( 'matches' ) . ' m ON m.id = e.match_id' . self::div_join() .
 			'JOIN ' . $wpdb->posts . " p ON p.ID = e.player_id
 			 WHERE ph.division_id = %d AND e.player_id IS NOT NULL
-			   AND e.event_type IN ('goal','penalty','own_goal')",
-			$division_id
+			   AND e.event_type IN ('goal','penalty','own_goal')
+			 UNION
+			 SELECT sq.player_id, p.post_title FROM " . self::t( 'squads' ) . ' sq JOIN ' . $wpdb->posts . ' p ON p.ID = sq.player_id
+			 WHERE sq.division_id = %d AND ( sq.base_goals > 0 OR sq.base_own_goals > 0 )',
+			$division_id, $division_id
 		) );
 
 		$by_surname = [];
@@ -128,6 +131,7 @@ class Kurs_Rounds {
 			// Najkraći početak imena koji razlikuje igrača od onih s DRUGIM imenom
 			// (dva „Martin Kolarić" se ionako ne mogu razlikovati — oba „M. Kolarić").
 			foreach ( $list as $x ) {
+				if ( str_ends_with( $x['first'], '.' ) ) { $out[ $x['id'] ] = $x['first'] . ' ' . $x['sur']; continue; } // već skraćeno („Dan. Nemčić")
 				$first = mb_strtolower( $x['first'] );
 				$len   = 1;
 				foreach ( $list as $y ) {
@@ -244,7 +248,7 @@ class Kurs_Rounds {
 			$round . ' GROUP BY e.player_id ORDER BY goals DESC';
 
 		$groups = [];
-		foreach ( $wpdb->get_results( $sql( "'goal','penalty'" ) ) as $r ) {
+		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'goal','penalty'" ) ), 'base_goals' ) as $r ) {
 			$groups[ (int) $r->goals ][] = [
 				'name'    => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
 				'team_id' => (int) $r->team_id,
@@ -256,7 +260,7 @@ class Kurs_Rounds {
 		unset( $list );
 
 		$own = [];
-		foreach ( $wpdb->get_results( $sql( "'own_goal'" ) ) as $r ) {
+		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'own_goal'" ) ), 'base_own_goals' ) as $r ) {
 			$own[] = [
 				'name'  => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
 				'team'  => get_post_field( 'post_title', (int) $r->team_id ),
@@ -264,6 +268,60 @@ class Kurs_Rounds {
 			];
 		}
 		return [ 'groups' => $groups, 'own' => $own ];
+	}
+
+	/**
+	 * Raspored lige po terminu: utakmice skupina, playoff zapisnici i playoff parovi koji još nemaju zapisnik
+	 * (npr. polufinale prije kraja četvrtfinala — ekipe kao oznake „Pobjednik ČF1"). Redak: id (0 = bez zapisnika),
+	 * round, po_round, match_date, status, home_score, away_score, home_name, away_name, home_pen, away_pen.
+	 */
+	public static function schedule( int $division_id ): array {
+		global $wpdb;
+		$rows = $wpdb->get_results(
+			'SELECT m.id, m.round, pm.round AS po_round, m.match_date, m.status, m.home_score, m.away_score,
+			        h.post_title AS home_name, a.post_title AS away_name, pm.home_pen, pm.away_pen
+			 FROM ' . self::t( 'matches' ) . ' m
+			 JOIN ' . $wpdb->posts . ' h ON h.ID = m.home_team_id
+			 JOIN ' . $wpdb->posts . ' a ON a.ID = m.away_team_id
+			 LEFT JOIN ' . self::t( 'playoff_matches' ) . ' pm ON m.group_id = 0 AND pm.match_id = m.id
+			 WHERE m.id IN ( ' . Kurs_Match::division_match_ids_sql( $division_id ) . ' )'
+		) ?: [];
+		foreach ( $wpdb->get_results( $wpdb->prepare(
+			'SELECT pm.*, h.post_title AS home_name, a.post_title AS away_name
+			 FROM ' . self::t( 'playoff_matches' ) . ' pm
+			 LEFT JOIN ' . $wpdb->posts . ' h ON h.ID = pm.home_team_id
+			 LEFT JOIN ' . $wpdb->posts . ' a ON a.ID = pm.away_team_id
+			 WHERE pm.division_id = %d AND pm.match_id IS NULL',
+			$division_id
+		) ) ?: [] as $pm ) {
+			$rows[] = (object) [
+				'id' => 0, 'round' => null, 'po_round' => $pm->round, 'match_date' => $pm->match_date, 'status' => $pm->status,
+				'home_score' => $pm->home_score, 'away_score' => $pm->away_score, 'home_pen' => $pm->home_pen, 'away_pen' => $pm->away_pen,
+				'home_name' => $pm->home_name ?: kurs_playoff_label( (string) $pm->home_label ),
+				'away_name' => $pm->away_name ?: kurs_playoff_label( (string) $pm->away_label ),
+			];
+		}
+		$po = [ 'qf' => 1, 'sf' => 2, '3rd' => 3, 'final' => 4 ];
+		usort( $rows, fn( $a, $b ) => [ $a->match_date === null, (string) $a->match_date, $po[ $a->po_round ] ?? 0, (int) $a->round, (int) $a->id ]
+			<=> [ $b->match_date === null, (string) $b->match_date, $po[ $b->po_round ] ?? 0, (int) $b->round, (int) $b->id ] );
+		return $rows;
+	}
+
+	/**
+	 * Golovi po igraču iz utakmica ($rows: player_id, team_id, goals) + preneseni golovi iz rostera lige
+	 * ($col = base_goals | base_own_goals). Preneseno stanje vrijedi za svako kolo.
+	 */
+	private static function with_base( int $division_id, array $rows, string $col ): array {
+		$out = [];
+		foreach ( $rows as $r ) {
+			$out[ (int) $r->player_id ] = (object) [ 'player_id' => (int) $r->player_id, 'team_id' => (int) $r->team_id, 'goals' => (int) $r->goals ];
+		}
+		foreach ( Kurs_Match::base_goal_rows( $division_id ) as $b ) {
+			if ( ! (int) $b->$col ) continue;
+			$out[ (int) $b->player_id ] ??= (object) [ 'player_id' => (int) $b->player_id, 'team_id' => (int) $b->team_id, 'goals' => 0 ];
+			$out[ (int) $b->player_id ]->goals += (int) $b->$col;
+		}
+		return $out;
 	}
 
 	/** Datum kola kao u medijima: „subota, 28. 2. 2026." ili raspon „21. – 24. 4. 2026.". */

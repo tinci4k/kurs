@@ -304,7 +304,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 						?>
 				<div class="kurs-event-row <?php echo $is_home ? 'kurs-event--home' : 'kurs-event--away'; ?>"
 				     id="event-<?php echo (int) $ev->id; ?>" data-event-id="<?php echo (int) $ev->id; ?>" data-half="<?php echo $hh; ?>">
-					<span class="kurs-event__min"><?php echo (int) $ev->minute; ?>'</span>
+					<span class="kurs-event__min"><?php echo $ev->minute !== null ? (int) $ev->minute . "'" : '–'; ?></span>
 					<span class="kurs-event__icon"><?php echo $icon; ?></span>
 					<span class="kurs-event__name">
 						<?php echo esc_html( $ev->player_name ?: '—' ); ?>

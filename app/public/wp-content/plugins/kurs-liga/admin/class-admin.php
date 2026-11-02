@@ -213,6 +213,7 @@ class Kurs_Admin {
 			'toggle_season_lock' => $this->do_toggle_season_lock(),
 			'set_group_count'    => $this->do_set_group_count(),
 			'carry_over_teams'   => $this->do_carry_over_teams(),
+			'save_base_standings' => $this->do_save_base_standings(),
 			'generate_season_fixtures' => $this->do_generate_season_fixtures(),
 			'add_match'     => $this->do_add_match(),
 			'finish_match'        => $this->do_finish_match(),
@@ -292,6 +293,25 @@ class Kurs_Admin {
 		if ( ! $prev || ! $carry ) { wp_safe_redirect( $back ); exit; }
 		$n = Kurs_Season::carry_over_teams( (int) $prev->id, $sid, $carry, ! empty( $_POST['with_roster'] ) );
 		wp_safe_redirect( add_query_arg( [ 'carried' => $n['teams'], 'carried_players' => $n['players'], 'carried_skipped' => $n['skipped'] ], $back ) );
+		exit;
+	}
+
+	/** Preneseno stanje (kola odigrana prije unosa u sustav) po ekipi — kartica Ekipe. */
+	private function do_save_base_standings(): void {
+		check_admin_referer( 'kurs_save_base_standings' );
+		$sid  = absint( $_POST['season_id'] ?? 0 );
+		$back = self::hub_url( $sid, 'ekipe' );
+		self::guard_unlocked( $sid, $back );
+		$num = fn( $v ) => min( 999, absint( $v ) );
+		foreach ( (array) ( $_POST['base'] ?? [] ) as $gid => $teams ) {
+			if ( self::season_of_group( absint( $gid ) ) !== $sid ) continue;
+			foreach ( (array) $teams as $tid => $b ) {
+				$hint = ( $b['hint'] ?? '' ) === '' ? null : min( 99, absint( $b['hint'] ) );
+				Kurs_Season::set_team_base( absint( $gid ), absint( $tid ), $num( $b['w'] ?? 0 ), $num( $b['d'] ?? 0 ), $num( $b['l'] ?? 0 ), $num( $b['gf'] ?? 0 ), $num( $b['ga'] ?? 0 ), $hint ?: null );
+			}
+		}
+		do_action( 'kurs_data_changed' );
+		wp_safe_redirect( add_query_arg( 'base_saved', 1, $back ) );
 		exit;
 	}
 
@@ -926,9 +946,14 @@ class Kurs_Admin {
 		self::guard_unlocked( self::season_of_division( $division_id ) );
 
 		global $wpdb;
+		$data = [ 'jersey_no' => $jersey ?: null ];
+		if ( isset( $_POST['base_goals'] ) ) {
+			$data['base_goals'] = min( 999, absint( $_POST['base_goals'] ) ); // preneseni golovi (kola koja nisu u sustavu)
+			do_action( 'kurs_data_changed' );
+		}
 		$wpdb->update(
 			$wpdb->prefix . KURS_PREFIX . 'squads',
-			[ 'jersey_no' => $jersey ?: null ],
+			$data,
 			[ 'player_id' => $player_id, 'team_id' => $team_id, 'division_id' => $division_id ]
 		);
 
@@ -941,10 +966,14 @@ class Kurs_Admin {
 		}
 
 		wp_send_json_success( [
-			'player_id' => $player_id,
-			'name'      => $name ?: get_the_title( $player_id ),
-			'jersey'    => $jersey,
-			'type'      => kurs_player_type( $player_id ),
+			'player_id'  => $player_id,
+			'name'       => $name ?: get_the_title( $player_id ),
+			'jersey'     => $jersey,
+			'type'       => kurs_player_type( $player_id ),
+			'base_goals' => (int) $wpdb->get_var( $wpdb->prepare(
+				'SELECT base_goals FROM ' . $wpdb->prefix . KURS_PREFIX . 'squads WHERE player_id = %d AND team_id = %d AND division_id = %d',
+				$player_id, $team_id, $division_id
+			) ),
 		] );
 	}
 

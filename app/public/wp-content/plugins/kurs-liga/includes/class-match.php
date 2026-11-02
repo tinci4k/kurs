@@ -299,7 +299,7 @@ class Kurs_Match {
 		}
 
 		foreach ( $wpdb->get_results( $wpdb->prepare(
-			'SELECT sq.team_id, sq.division_id, sq.jersey_no FROM ' . self::t( 'squads' ) . ' sq
+			'SELECT sq.team_id, sq.division_id, sq.jersey_no, sq.base_goals FROM ' . self::t( 'squads' ) . ' sq
 			 WHERE sq.player_id = %d AND EXISTS ( SELECT 1 FROM ' . self::t( 'group_teams' ) . ' gt
 			   JOIN ' . self::t( 'groups' ) . ' g ON g.id = gt.group_id JOIN ' . self::t( 'phases' ) . ' ph ON ph.id = g.phase_id
 			   WHERE gt.team_id = sq.team_id AND ph.division_id = sq.division_id )',
@@ -307,6 +307,7 @@ class Kurs_Match {
 		) ) ?: [] as $sq ) {
 			$r            = $row( (int) $sq->division_id, (int) $sq->team_id );
 			$r->in_roster = true;
+			$r->goals    += (int) $sq->base_goals; // preneseni golovi (utakmice koje nisu u sustavu)
 			if ( $sq->jersey_no ) $r->jersey_no = (int) $sq->jersey_no;
 		}
 		if ( ! $rows ) return [];
@@ -515,13 +516,14 @@ class Kurs_Match {
 	/**
 	 * @param int|null $max_round Ako je zadan, ljestvica „nakon N. kola" — broje se samo
 	 *                            odigrane utakmice kola ≤ N (i kartoni iz njih, za fair-play).
+	 *                            Preneseno stanje (group_teams.base_*) uvijek se pribraja.
 	 */
 	public static function get_standings( int $group_id, ?int $max_round = null ): array {
 		global $wpdb;
 
 		$teams = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT gt.team_id, p.post_title AS team_name
+				'SELECT gt.team_id, p.post_title AS team_name, gt.base_p, gt.base_w, gt.base_d, gt.base_l, gt.base_gf, gt.base_ga, gt.rank_hint
 				 FROM '  . self::t( 'group_teams' ) . ' gt
 				 JOIN '  . $wpdb->posts             . ' p ON p.ID = gt.team_id
 				 WHERE gt.group_id = %d',
@@ -558,16 +560,17 @@ class Kurs_Match {
 			$card_pts[ (int) $c->team_id ] = (int) $c->yellow * 3 + (int) $c->red * 10;
 		}
 
-		// Inicijalizacija redova
+		// Inicijalizacija redova (od prenesenog stanja — utakmice odigrane prije unosa u sustav)
 		$rows = [];
 		foreach ( $teams as $t ) {
 			$tid = (int) $t->team_id;
 			$rows[ $tid ] = [
 				'team_id'   => $tid,
 				'team_name' => $t->team_name,
-				'P' => 0, 'W' => 0, 'D' => 0, 'L' => 0,
-				'GF' => 0, 'GA' => 0, 'GD' => 0, 'Pts' => 0,
-				'FP' => $card_pts[ $tid ] ?? 0,
+				'P' => (int) $t->base_p, 'W' => (int) $t->base_w, 'D' => (int) $t->base_d, 'L' => (int) $t->base_l,
+				'GF' => (int) $t->base_gf, 'GA' => (int) $t->base_ga, 'GD' => 0, 'Pts' => 3 * (int) $t->base_w + (int) $t->base_d,
+				'FP'   => $card_pts[ $tid ] ?? 0,
+				'hint' => $t->rank_hint !== null ? (int) $t->rank_hint : null,
 			];
 		}
 
@@ -667,6 +670,9 @@ class Kurs_Match {
 			$cmp = $b['Pts'] <=> $a['Pts'];
 			if ( $cmp !== 0 ) return $cmp;
 
+			// Ručni poredak (rank_hint) — kad su međusobne utakmice u prenesenom stanju, ne u sustavu
+			if ( $a['hint'] !== null && $b['hint'] !== null && $a['hint'] !== $b['hint'] ) return $a['hint'] <=> $b['hint'];
+
 			// Samo ekipe s istim bodovima ulaze u h2h usporedbu
 			// 2-4. H2H rang (pokriva h2h Pts, h2h GD, h2h GF)
 			$cmp = ( $h2h_rank[ $aid ] ?? 999 ) <=> ( $h2h_rank[ $bid ] ?? 999 );
@@ -689,27 +695,47 @@ class Kurs_Match {
 
 	// ── Statistika strijelaca ─────────────────────────────────────────────────
 
+	/** Strijelci lige (grupna faza) — golovi iz utakmica + preneseni golovi iz rostera (squads.base_goals). */
 	public static function get_top_scorers( int $division_id, int $limit = 20 ): array {
 		global $wpdb;
-		return $wpdb->get_results(
+		$rows = [];
+		foreach ( $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT e.player_id, p.post_title AS player_name,
-				        MAX( e.team_id ) AS team_id, t.post_title AS team_name, COUNT(*) AS goals
+				'SELECT e.player_id, MAX( e.team_id ) AS team_id, COUNT(*) AS goals
 				 FROM '      . self::t( 'match_events' ) . ' e
 				 JOIN '      . self::t( 'matches' )      . ' m  ON m.id  = e.match_id
 				 JOIN '      . self::t( 'groups' )       . ' g  ON g.id  = m.group_id
 				 JOIN '      . self::t( 'phases' )       . ' ph ON ph.id = g.phase_id
-				 LEFT JOIN ' . $wpdb->posts               . ' p  ON p.ID  = e.player_id
-				 LEFT JOIN ' . $wpdb->posts               . ' t  ON t.ID  = e.team_id
 				 WHERE ph.division_id = %d
 				   AND e.event_type IN (\'goal\', \'penalty\')
 				   AND m.status = \'finished\'
 				   AND e.player_id IS NOT NULL
-				 GROUP BY e.player_id
-				 ORDER BY goals DESC
-				 LIMIT %d',
-				$division_id, $limit
+				 GROUP BY e.player_id',
+				$division_id
 			)
-		) ?: [];
+		) ?: [] as $r ) {
+			$rows[ (int) $r->player_id ] = (object) [ 'player_id' => (int) $r->player_id, 'team_id' => (int) $r->team_id, 'goals' => (int) $r->goals ];
+		}
+		foreach ( self::base_goal_rows( $division_id ) as $b ) {
+			if ( ! (int) $b->base_goals ) continue;
+			$rows[ (int) $b->player_id ] ??= (object) [ 'player_id' => (int) $b->player_id, 'team_id' => (int) $b->team_id, 'goals' => 0 ];
+			$rows[ (int) $b->player_id ]->goals += (int) $b->base_goals;
+		}
+		foreach ( $rows as $r ) {
+			$r->player_name = get_the_title( $r->player_id );
+			$r->team_name   = get_the_title( $r->team_id );
+		}
+		usort( $rows, fn( $a, $b ) => ( $b->goals <=> $a->goals ) ?: strcoll( $a->player_name, $b->player_name ) );
+		return array_slice( $rows, 0, $limit );
+	}
+
+	/** Preneseni golovi lige (golovi iz utakmica koje nisu u sustavu): redovi rostera s base_goals/base_own_goals > 0. */
+	public static function base_goal_rows( int $division_id ): array {
+		global $wpdb;
+		return $wpdb->get_results( $wpdb->prepare(
+			'SELECT player_id, team_id, base_goals, base_own_goals FROM ' . self::t( 'squads' ) . '
+			 WHERE division_id = %d AND ( base_goals > 0 OR base_own_goals > 0 )',
+			$division_id
+		) ) ?: [];
 	}
 }

@@ -48,7 +48,8 @@ Hijerarhija:
 seasons → divisions → phases → groups → group_teams (ekipe u grupi)
                                       → matches → match_events (golovi/kartoni)
 divisions → playoff_matches (bracket: qf/sf/final; zapisnik = matches s group_id=0)
-squads = roster (igrač × ekipa × divizija) — TRENUTNI
+squads = roster (igrač × ekipa × divizija) — TRENUTNI (+ base_goals: preneseni golovi)
+group_teams.base_* = preneseno stanje ekipe (kola odigrana prije unosa u sustav), rank_hint = poredak kod jednakih bodova
 match_players = postava utakmice (spremljena pri završetku; povijest ne ovisi o rosteru)
 ```
 Stupci `*_team_id` / `*_player_id` su `wp_posts.ID` CPT-ova `kurs_ekipa`/`kurs_igrac`
@@ -103,6 +104,10 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   i `kurskc_active_league`).
 - **Zaključana sezona** — svaki admin handler koji mijenja utakmice, zapisnik, playoff ili roster
   počinje s `self::guard_unlocked( $season_id, $back )` (`admin/class-admin.php`); novi handler isto.
+- **Preneseno stanje** (kola odigrana prije unosa u sustav): `group_teams.base_w/d/l/gf/ga` (+ `rank_hint`) i
+  `squads.base_goals/base_own_goals` — pribrajaju ih `get_standings()`, `get_top_scorers()`, `Kurs_Rounds::scorers()`,
+  `player_career()`, `Kurs_Players::totals()` i profil ekipe. Novi izračun golova/ljestvice mora ih uključiti.
+  Admin: stranica natjecanja → Ekipe → „Preneseno stanje” i roster → Uredi → „Preneseni golovi”.
 - **Sastav ekipe na utakmici** samo preko `Kurs_Match::lineup($match_id, $team_id)` (postava spremljena pri
   završetku u `match_players`), **ne** `Kurs_Season::get_squad()` (to je trenutni roster). Karijera igrača =
   `Kurs_Match::player_career()`. Prijelaz igrača u drugu ekipu iste lige = `kurs_add_squad` s `transfer=1`.
@@ -115,18 +120,22 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   kola 1–5 odigrana) i dodaje strijelce u Pan utakmice; `… tools/demo-podaci.php obrisi` briše
   (opcija `kurs_demo_seed`, meta `_kurs_demo`). **Destruktivno** za tu KC sezonu. Pokretanje (Git Bash):
   `PHPRC="C:/Users/Tinci/AppData/Roaming/Local/run/df7bZ9tGl/conf/php" "/c/Users/Tinci/AppData/Roaming/Local/lightning-services/php-8.2.30+1/bin/win64/php.exe" tools/demo-podaci.php [obrisi]`
-  (bez `PHPRC` CLI ne nađe MySQL port 10011). Demo podaci su trenutno učitani lokalno.
+  (bez `PHPRC` CLI ne nađe MySQL port 10011). Demo podaci su **obrisani** (2026-11-02); lokalno su
+  **stvarni podaci Pan Ljetne lige 2026** (iz službenih izvještaja; kolo = natjecateljski dan), **KC liga 2025/2026**
+  (9. kolo + kola 1.–8. kao preneseno stanje, arhivirana i zaključana) i **početna KC 2026/2027** (iste ekipe i rosteri,
+  bez rasporeda) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
 - **Local gotcha**: nginx round-robin na **dva php-cgi workera** (10008/10009,
   `fastcgi_read_timeout 1200s`) — ako jedan zapne, **svaki drugi zahtjev visi** → restartaj site u Localu.
 
 ## Poznata ograničenja (nisu bugovi, namjerno/dokumentirano)
-- `match_events.scored_for` i playoff runda `3rd` (utakmica za 3. mjesto) postoje u
-  shemi ali se ne koriste/generiraju (mrtav stupac / negenerirana grana).
+- `match_events.scored_for` je mrtav stupac. Playoff runda `3rd` (utakmica za 3. mjesto) se **ne generira**
+  (`Kurs_Playoff::generate()` ne stvara slot), ali se prikazuje ako postoji: bracket ispod finala, ticker
+  (3. mjesto), admin Utakmice; za Pan 2026 upisana je ručno.
 - Admin više nema ručno dodavanje divizija/faza/grupa ni `playoff_spots` (sve iz `COMPETITIONS`);
   Pan broj skupina (2↔4) mijenja se na stranici natjecanja → kartica **Ekipe** dok skupine nemaju
   ekipa i dok nema bracketa.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.19.0` vs
-  `DB_VERSION=1.12`; tema `KURSKC_VERSION=1.0.40` vs `style.css` 1.0.0.
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.20.1` vs
+  `DB_VERSION=1.13`; tema `KURSKC_VERSION=1.0.42` vs `style.css` 1.0.0.

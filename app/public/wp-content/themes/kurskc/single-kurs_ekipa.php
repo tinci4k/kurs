@@ -102,6 +102,10 @@ if ( $division_id ) {
 		$team_id
 	) );
 	foreach ( $sc_rows as $s ) $scorer_map[ (int) $s->player_id ] = (int) $s->goals;
+	// + preneseni golovi iz rostera (utakmice koje nisu u sustavu)
+	foreach ( $squad as $sq ) {
+		if ( (int) $sq->base_goals ) $scorer_map[ (int) $sq->player_id ] = ( $scorer_map[ (int) $sq->player_id ] ?? 0 ) + (int) $sq->base_goals;
+	}
 }
 
 /* ── Sve utakmice ekipe u toj diviziji ─────────────────── */

@@ -6,3 +6,6 @@ debug.log
 # All-in-One WP Migration (alat za migraciju) + backupi — ne idu u repo
 ai1wm-backups/
 all-in-one-wp-migration/
+
+# Lokalne sigurnosne kopije baze (mysqldump) — ne idu u repo
+backups/

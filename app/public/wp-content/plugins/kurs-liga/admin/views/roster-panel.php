@@ -52,12 +52,14 @@ $players_url = fn( int $pid ) => admin_url( 'admin.php?page=kurs-players&action=
 				    data-player-id="<?php echo (int) $sq->player_id; ?>"
 				    data-name="<?php echo esc_attr( $sq->player_name ); ?>"
 				    data-jersey="<?php echo (int) $sq->jersey_no; ?>"
+				    data-base="<?php echo (int) $sq->base_goals; ?>"
 				    data-type="<?php echo esc_attr( $type ); ?>">
 					<td class="squad-cell-jersey" style="text-align:center;">
 						<span class="kurs-jersey"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '&mdash;'; ?></span>
 					</td>
 					<td class="squad-cell-name">
 						<strong><?php echo esc_html( $sq->player_name ); ?></strong><?php if ( $type === 'goalkeeper' ) : ?> <span class="kurs-pos-tag kurs-pos-tag--gk">GLM</span><?php endif; ?>
+						<?php if ( (int) $sq->base_goals ) : ?><span class="kurs-base-tag" title="Golovi iz kola koja nisu u sustavu (preneseno stanje)">+<?php echo (int) $sq->base_goals; ?> gol.</span><?php endif; ?>
 						<a class="kurs-roster__profile" href="<?php echo esc_url( $players_url( (int) $sq->player_id ) ); ?>" title="Podaci igrača (godina rođenja, fotografija, karijera)">&#8599;</a>
 					</td>
 					<?php if ( ! $roster_locked ) : ?>

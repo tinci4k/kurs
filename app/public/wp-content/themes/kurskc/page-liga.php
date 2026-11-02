@@ -286,62 +286,8 @@ elseif ( $tab === 'kola' ) :
 	endif; // ima kola
 
 elseif ( $tab === 'raspored' ) :
-	/* ── Raspored ─────────────────────────────────────────── */
-	global $wpdb;
-	$p = $wpdb->prefix . 'kurs_';
-	$matches = $wpdb->get_results( $wpdb->prepare(
-		"SELECT m.id, m.round, m.match_date, m.status, m.home_score, m.away_score,
-		        h.post_title AS home_name, a.post_title AS away_name
-		 FROM   {$p}matches m
-		 JOIN   {$p}groups  g  ON g.id  = m.group_id
-		 JOIN   {$p}phases  ph ON ph.id = g.phase_id
-		 JOIN   {$wpdb->posts} h ON h.ID = m.home_team_id
-		 JOIN   {$wpdb->posts} a ON a.ID = m.away_team_id
-		 WHERE  ph.division_id = %d
-		 ORDER  BY (m.match_date IS NULL), m.match_date, m.round, m.id",
-		$division_id
-	) );
-	if ( ! $matches ) : ?>
-	<p class="kurs-empty">Nema utakmica za ovu diviziju.</p>
-	<?php else :
-		$cur_date = null;
-		// kola po danu — oznaka „5. kolo · Subota, …" (odgođene utakmice daju „4. i 5. kolo")
-		$day_rounds = [];
-		foreach ( $matches as $m ) {
-			if ( $m->round ) $day_rounds[ $m->match_date ? substr( $m->match_date, 0, 10 ) : 'tbd' ][ (int) $m->round ] = true;
-		}
-	?>
-	<div class="schedule">
-	<?php foreach ( $matches as $m ) :
-		$d = $m->match_date ? date( 'Y-m-d', strtotime( $m->match_date ) ) : 'tbd';
-		if ( $d !== $cur_date ) :
-			$cur_date = $d;
-			$rs       = array_keys( $day_rounds[ $d ] ?? [] );
-			sort( $rs );
-			$rlast    = array_pop( $rs );
-			$rlabel   = $rlast ? ( $rs ? implode( '., ', $rs ) . '. i ' : '' ) . $rlast . '. kolo' : ''; // „1., 4. i 5. kolo"
-	?>
-		<div class="sched-round-label"><?php if ( $rlabel ) : ?><span class="sched-round-label__no"><?php echo esc_html( $rlabel ); ?></span><?php endif; ?><?php echo esc_html( kurs_schedule_date_label( $m->match_date ) ); ?></div>
-	<?php endif; ?>
-		<a href="<?php echo esc_url( add_query_arg( 'match_id', $m->id, home_url( '/utakmica/' ) ) ); ?>"
-		   class="sched-match">
-			<div class="sched-match__home"><?php echo esc_html( $m->home_name ); ?></div>
-			<?php if ( $m->status === 'finished' ) : ?>
-			<div class="sched-match__score"><?php echo (int) $m->home_score; ?> : <?php echo (int) $m->away_score; ?></div>
-			<?php else : ?>
-			<div>
-				<?php if ( $m->match_date ) : ?>
-				<div class="sched-match__score--vs"><?php echo esc_html( date_i18n( 'H:i', strtotime( $m->match_date ) ) ); ?></div>
-				<?php else : ?>
-				<div class="sched-match__score--vs">vs</div>
-				<?php endif; ?>
-			</div>
-			<?php endif; ?>
-			<div class="sched-match__away"><?php echo esc_html( $m->away_name ); ?></div>
-		</a>
-	<?php endforeach; ?>
-	</div>
-	<?php endif;
+	/* ── Raspored: skupine + playoff, po danu (oznaka kola / playoff runde) ── */
+	echo kurs_render_schedule( $division_id, [ 'round_labels' => true ] ) ?: '<p class="kurs-empty">Nema utakmica za ovu diviziju.</p>';
 
 elseif ( $tab === 'statistika' ) :
 	/* ── Statistika strijelaca ─────────────────────────────── */

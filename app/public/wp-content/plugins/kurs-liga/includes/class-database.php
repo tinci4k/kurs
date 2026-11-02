@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.12';
+	const DB_VERSION = '1.13';
 
 	public static function install(): void {
 		global $wpdb;
@@ -61,22 +61,34 @@ class Kurs_Database {
 			KEY idx_phase (phase_id)
 		) $c;" );
 
-		// Ekipe dodijeljene grupama
+		// Ekipe dodijeljene grupama. base_* = preneseno stanje: utakmice odigrane prije unosa u sustav
+		// (npr. arhivska sezona s poznatom samo konačnom ljestvicom) — pribrajaju se ljestvici;
+		// rank_hint = poredak kod jednakih bodova kad odlučuju međusobne utakmice kojih nema u sustavu.
 		dbDelta( "CREATE TABLE {$p}group_teams (
-			id       INT UNSIGNED    NOT NULL AUTO_INCREMENT,
-			group_id INT UNSIGNED    NOT NULL,
-			team_id  BIGINT UNSIGNED NOT NULL,
+			id        INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+			group_id  INT UNSIGNED      NOT NULL,
+			team_id   BIGINT UNSIGNED   NOT NULL,
+			base_p    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			base_w    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			base_d    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			base_l    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			base_gf   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			base_ga   SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			rank_hint TINYINT UNSIGNED  DEFAULT NULL,
 			PRIMARY KEY (id),
 			UNIQUE KEY uq_team_group (group_id, team_id)
 		) $c;" );
 
 		// Roster: igrači po ekipi i diviziji (igrač može igrati u više divizija iste sezone)
+		// base_goals / base_own_goals = golovi (i autogolovi) iz utakmica koje nisu u sustavu (preneseno stanje).
 		dbDelta( "CREATE TABLE {$p}squads (
-			id          INT UNSIGNED    NOT NULL AUTO_INCREMENT,
-			player_id   BIGINT UNSIGNED NOT NULL,
-			team_id     BIGINT UNSIGNED NOT NULL,
-			division_id INT UNSIGNED    NOT NULL,
-			jersey_no   TINYINT UNSIGNED,
+			id             INT UNSIGNED      NOT NULL AUTO_INCREMENT,
+			player_id      BIGINT UNSIGNED   NOT NULL,
+			team_id        BIGINT UNSIGNED   NOT NULL,
+			division_id    INT UNSIGNED      NOT NULL,
+			jersey_no      TINYINT UNSIGNED,
+			base_goals     SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+			base_own_goals SMALLINT UNSIGNED NOT NULL DEFAULT 0,
 			PRIMARY KEY (id),
 			UNIQUE KEY uq_squad (player_id, team_id, division_id)
 		) $c;" );

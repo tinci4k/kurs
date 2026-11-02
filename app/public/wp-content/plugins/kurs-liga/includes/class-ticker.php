@@ -253,6 +253,10 @@ class Kurs_Ticker {
 				$champion  = $home_wins ? $final->home_name : $final->away_name;
 				$second    = $home_wins ? $final->away_name : $final->home_name;
 			}
+			// Utakmica za 3. mjesto (ako je odigrana) određuje treće mjesto, ne tablica
+			$bronze = $bracket['3rd'][1] ?? null;
+			$b_side = $bronze ? Kurs_Playoff::winner_side( $bronze ) : null;
+			if ( $champion && $b_side ) $third = $b_side === 'home' ? $bronze->home_name : $bronze->away_name;
 		}
 
 		// 2) Tablica (fallback za prvaka i uvijek za 3. mjesto)
@@ -261,7 +265,7 @@ class Kurs_Ticker {
 			$champion = $flat[0]['name'] ?? null;
 			$second   = $flat[1]['name'] ?? null;
 			$third    = $flat[2]['name'] ?? null;
-		} else {
+		} elseif ( ! $third ) {
 			foreach ( $flat as $r ) {
 				if ( $r['name'] !== $champion && $r['name'] !== $second ) { $third = $r['name']; break; }
 			}

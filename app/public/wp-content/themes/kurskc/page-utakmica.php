@@ -146,11 +146,13 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 				];
 				$tl_by_half = [ 1 => [], 2 => [] ];
 				foreach ( $tl_events as $ev ) { $tl_by_half[ ( (int) $ev->half === 2 ) ? 2 : 1 ][] = $ev; }
+				// Događaji bez minute i poluvremena (npr. utakmice unesene iz izvještaja) — bez naslova poluvremena
+				$tl_timed = (bool) array_filter( $tl_events, fn( $e ) => $e->minute !== null || $e->half !== null );
 			?>
 			<div class="kurs-event-timeline">
 				<?php foreach ( [ 1 => '1. poluvrijeme', 2 => '2. poluvrijeme' ] as $hh => $hlabel ) :
 					if ( empty( $tl_by_half[ $hh ] ) ) continue; ?>
-				<h3 class="tl-half-title"><?php echo esc_html( $hlabel ); ?></h3>
+				<?php if ( $tl_timed ) : ?><h3 class="tl-half-title"><?php echo esc_html( $hlabel ); ?></h3><?php endif; ?>
 				<?php foreach ( $tl_by_half[ $hh ] as $ev ) :
 					$icon_cls = 'tl-icon--' . ( $icon_map[ $ev->event_type ] ?? 'goal' );
 					$is_home  = (int) $ev->team_id === (int) $match->home_team_id;
@@ -158,7 +160,7 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 					$type_lbl = $type_map[ $ev->event_type ] ?? $ev->event_type;
 				?>
 				<div class="tl-row">
-					<span class="tl-min"><?php echo (int) $ev->minute; ?>'</span>
+					<span class="tl-min"><?php echo $ev->minute !== null ? (int) $ev->minute . "'" : ''; ?></span>
 					<span class="tl-icon"><span class="<?php echo esc_attr( $icon_cls ); ?>"></span></span>
 					<span class="tl-player"><?php echo esc_html( $ev->player_name ?: '—' ); ?></span>
 					<span class="tl-team"><?php echo esc_html( $team_lbl . ' · ' . $type_lbl ); ?></span>

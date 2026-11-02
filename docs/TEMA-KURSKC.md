@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.40'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.42'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.40'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.42'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -376,7 +376,7 @@ Pregled jednog kola lige: rezultati sa strijelcima, ljestvica i strijelci **nako
 > **GOTCHA:** pregled po kolima vjeruje `matches.round`. Ekipa upisana dvaput u isto kolo kvari ljestvicu „nakon N. kola" i oznaku slobodne ekipe — admin (stranica natjecanja → kartica Utakmice, `hub-matches.php`) zato prikazuje upozorenje `.kurs-round-warn`.
 
 ### 14.3 Tab "raspored"
-**Direktan `$wpdb` upit** (ne metoda plugina): `{p}matches m JOIN {p}groups g JOIN {p}phases ph` + 2× JOIN na `{$wpdb->posts}` (home/away naziv), `WHERE ph.division_id = %d`, `ORDER BY (m.match_date IS NULL), m.match_date, m.round, m.id`. Grupira po **danu** (`.sched-round-label` = `kurs_schedule_date_label()`); od 2026-10-16 ispred datuma stoji oznaka kola `.sched-round-label__no` („5. kolo", a kad se istog dana igraju odgođene utakmice „4. i 5. kolo" / „1., 4. i 5. kolo"). Završene → rezultat (`home_score : away_score`); ostale → vrijeme (`date_i18n('H:i')`) ili "vs". Svaka utakmica → `add_query_arg('match_id', $m->id, home_url('/utakmica/'))`.
+**Od 1.0.42:** `kurs_render_schedule($division_id, ['round_labels' => true])` (plugin `helpers.php`) — isti renderer kao ugradnja „Raspored” u vijestima. Podaci: `Kurs_Rounds::schedule()` = utakmice skupina **+ playoff** (zapisnici, s penalima „pen. 2:0” ispod rezultata, i parovi bez zapisnika — npr. „Pobjednik ČF 1 – Pobjednik ČF 2”, bez linka), po terminu. Grupira po **danu** (`.sched-round-label` = `kurs_schedule_date_label()`); ispred datuma `.sched-round-label__no`: kola skupina („5. kolo”, „4. i 5. kolo” kad se odgođena utakmica igra kasnije) i playoff runde („Polufinale · Ut. za 3. mjesto · Finale”). Završene → rezultat; ostale → vrijeme (`H:i`) ili „vs”; utakmica sa zapisnikom → `/utakmica/?match_id=`. Prije je tab imao vlastiti upit samo nad skupinama, pa se playoff nije vidio (ISPRAVCI #42).
 
 ### 14.4 Tab "statistika"
 `Kurs_Match::get_top_scorers($division_id, 20)` → `.widget` "Strijelci", redovi `.scorer-row` s dvoslovnim sufiksom ekipe (`mb_substr(team_name, 0, 2)`).
@@ -399,7 +399,7 @@ URL `/utakmica/?match_id=X`. **Guardovi (svaki s `get_footer()` + `return`):** n
 - **Kontekst:** **direktan `$wpdb` upit** `{p}groups g JOIN phases ph JOIN divisions d JOIN seasons s WHERE g.id = %d` → `group_name, division_id, div_name, season_name, phase_name`.
 - **Playoff meč (`group_id = 0`, NOVO 2026-10-16):** kontekst iz grupe je prazan, pa se `division_id` uzima iz `Kurs_Playoff::find_by_match_id($match_id)->division_id` (+ `$po_div = Kurs_Season::get_division()`).
 - **Događaji:** `Kurs_Match::get_events($match_id)` → `match_events` + `player_name`, sort po minuti.
-- **Sastavi (1.0.39):** `Kurs_Match::lineup($match_id, $team_id, $division_id)` — postava spremljena uz utakmicu (prije završetka trenutni roster lige), **bez igrača označenih „nije igrao”** (`get_absent`); ime igrača vodi na njegov profil. Tijek utakmice ne prikazuje inertne događaje `captain` / `absent` (prije su se prikazivali kao gol — ISPRAVCI #36).
+- **Sastavi (1.0.39):** `Kurs_Match::lineup($match_id, $team_id, $division_id)` — postava spremljena uz utakmicu (prije završetka trenutni roster lige), **bez igrača označenih „nije igrao”** (`get_absent`); ime igrača vodi na njegov profil. Tijek utakmice ne prikazuje inertne događaje `captain` / `absent` (prije su se prikazivali kao gol — ISPRAVCI #36). Događaj bez minute (unos iz izvještaja) nema „0'\", a naslovi poluvremena se ne prikazuju kad nijedan događaj nema minutu/poluvrijeme (ISPRAVCI #38).
 - **Prikaz:**
   - Breadcrumb (grupna faza): Naslovnica / `div_name` (link `kurs_league_url($division_id, ['tab'=>'raspored'])`) / **„N. kolo"** (link na `kurs_league_url(..., ['tab'=>'kola','kolo'=>N]) . '#kola'`).
   - Breadcrumb (playoff): Naslovnica / naziv lige / „Četvrtfinale | Polufinale | Finale" (link na `kolo=playoff`; mapa `$po_names`, uklj. `3rd` → „Utakmica za 3. mjesto").
@@ -555,7 +555,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.40'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.42'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.
