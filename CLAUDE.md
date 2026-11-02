@@ -123,9 +123,9 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   (opcija `kurs_demo_seed`, meta `_kurs_demo`). **Destruktivno** za tu KC sezonu. Pokretanje (Git Bash):
   `PHPRC="C:/Users/Tinci/AppData/Roaming/Local/run/df7bZ9tGl/conf/php" "/c/Users/Tinci/AppData/Roaming/Local/lightning-services/php-8.2.30+1/bin/win64/php.exe" tools/demo-podaci.php [obrisi]`
   (bez `PHPRC` CLI ne nađe MySQL port 10011). Demo podaci su **obrisani** (2026-11-02); lokalno su
-  **stvarni podaci Pan Ljetne lige 2026** (iz službenih izvještaja; kolo = natjecateljski dan), **KC liga 2025/2026**
+  **stvarni podaci Pan Ljetne lige 2026** (iz službenih izvještaja; kolo = natjecateljski dan; zaključana), **KC liga 2025/2026**
   (svih 9 kola kao stvarne utakmice — izvještaji s FB stranice KC lige; dio golova 2./3. kola kao preneseni golovi igrača;
-  arhivirana i zaključana) i **početna KC 2026/2027** (iste ekipe i rosteri,
+  arhivirana i zaključana) i **početna KC 2026/2027** (ekipe i rosteri prošle sezone — po FB najavi jedna KC ekipa odustaje, LBB 8 ili 9 ekipa; start 14. 11. 2026.,
   bez rasporeda) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
 - **Local gotcha**: nginx round-robin na **dva php-cgi workera** (10008/10009,
   `fastcgi_read_timeout 1200s`) — ako jedan zapne, **svaki drugi zahtjev visi** → restartaj site u Localu.
