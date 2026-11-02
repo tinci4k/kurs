@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.39'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.40'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.39'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.40'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -349,7 +349,7 @@ Kontekst se bira ISKLJUČIVO preko **GET parametara** (nema ACF/meta):
 
 Iz divizije se računa `$has_playoff = !empty($division->has_playoff)` i `$has_bracket = Kurs_Playoff::exists($division_id)`.
 
-URL-ovi za prebacivanje grade se helperom **`kurs_hub_url($base, $sid, $did, $tab, array $extra = [])`** (`add_query_arg`; `$extra` npr. `['kolo' => 5]`). Sezona se mijenja custom dropdownom `.hub-dd--season` (`#season-dd`, linkovi, JS u `main.js`); liga (`.div-toggle`) i view tabovi (`.view-tabs`, kontejner `#liga`) su `<a>` linkovi s klasom `is-active`. U tabu „Po kolima" prebacivanje lige **zadržava isto kolo** (`$extra = ['kolo' => $kolo]`).
+URL-ovi za prebacivanje grade se helperom **`kurs_hub_url($base, $sid, $did, $tab, array $extra = [])`** (`add_query_arg`; `$extra` npr. `['kolo' => 5]`). Sezona se mijenja custom dropdownom `.hub-dd--season` (`#season-dd`, linkovi, JS u `main.js`); liga (`.div-toggle`) i view tabovi (`.view-tabs`, kontejner `#liga`) su `<a>` linkovi s klasom `is-active`. U tabu „Po kolima" prebacivanje lige **zadržava isto kolo** (`$extra = ['kolo' => $kolo]`). Desno od view tabova, u `.hub-tabs__end`, je gumb **„Za medije”** (`.hub-media`, od 1.0.40) na **svakom tabu**: vodi na `/za-medije/?liga=kc|pan&season_id=` (+ `&kolo=` u tabu „Po kolima”, za prikazano kolo/playoff; inače stranica sama uzme zadnje odigrano kolo). Na ≤600 px tabovi se pomiču vodoravno, a gumb ostaje vidljiv.
 
 Branding po ligi (po `$is_pan`): `$league_label`, `$league_sub`, `$accent` (`var(--c-pan)`/`var(--c-kc)`), CSS klase `league-hub--pan` / `league-banner--pan`, ikona `kurs_league_icon()`. Zaključana sezona → oznaka „🔒 Završeno · konačni rezultati".
 
@@ -543,7 +543,7 @@ Stilizirano CSS varijablama u `:root`. Ključne boje: `--c-kc` (KC akcent), `--c
 
 Glavne komponentne klase po sekcijama:
 - **Naslovnica:** `kurs-hero`, `kurs-hero__main`/`__side`, `hero-stripe`/`hero-img`/`hero-gradient`/`hero-cat`/`hero-title`/`hero-meta`, `league-card`(`--pan`), `news-grid`/`news-card`, `sec-head`; **„Iz lige"** (sekcija „NASLOVNICA — Iz lige", 2026-10-16): `home-rounds`(`--single`), `home-round`(`--kc`/`--lbb`/`--pan`, `__head`/`__icon`/`__title`/`__league`/`__meta`/`__badge`/`__list`/`__foot`/`__next`), `hr-match`(`__team`/`is-win`/`__score`/`--tbd`).
-- **Liga hub:** `league-banner`(`--pan`), `hub-dd`(`--season`), `hub-tabs`/`div-toggle`/`view-tabs` (+`is-active`), `hub-body`/`hub-main`/`hub-side`, `standings` (+`__head`, `__row`, `playoff`, `standings__row--cutoff`, `st-pos`/`is-playoff`/`st-club`/`st-gd`/`st-pts`, `st-move--up/--down/--same`), `schedule`/`sched-round-label`(+`__no`)/`sched-match` (+`__home`/`__score`/`__away`/`__score--vs`), `widget`/`widget__title`/`scorer-row`/`scorer-badge`/`scorer-goals`, `disc-boxes`/`disc-box`(`--y`/`--r`), `kurs-bracket*` (playoff). **„Po kolima"** (sekcija „LIGA HUB — Po kolima"): `round-nav`(+`__arrow`/`__pills`), `round-pill`(`--done`/`--partial`/`--upcoming`/`--playoff`), `round-head`(+`__kicker`/`__title`/`__date`/`__media`), `round-sec`/`__title`, `round-results`/`__group`, `rr-match`(+`__team`/`__name`/`__score`/`--tbd`/`__scorers`/`__sc`/`__note`), `rr-bye`, `round-scorers`/`rs-row`/`rs-goals`/`rs-names`/`rs-name`, `round-note`.
+- **Liga hub:** `league-banner`(`--pan`), `hub-dd`(`--season`), `hub-tabs`/`div-toggle`/`view-tabs` (+`is-active`), `hub-tabs__end` + `hub-media` (gumb „Za medije”), `hub-body`/`hub-main`/`hub-side`, `standings` (+`__head`, `__row`, `playoff`, `standings__row--cutoff`, `st-pos`/`is-playoff`/`st-club`/`st-gd`/`st-pts`, `st-move--up/--down/--same`), `schedule`/`sched-round-label`(+`__no`)/`sched-match` (+`__home`/`__score`/`__away`/`__score--vs`), `widget`/`widget__title`/`scorer-row`/`scorer-badge`/`scorer-goals`, `disc-boxes`/`disc-box`(`--y`/`--r`), `kurs-bracket*` (playoff). **„Po kolima"** (sekcija „LIGA HUB — Po kolima"): `round-nav`(+`__arrow`/`__pills`), `round-pill`(`--done`/`--partial`/`--upcoming`/`--playoff`), `round-head`(+`__kicker`/`__title`/`__date`/`__media`), `round-sec`/`__title`, `round-results`/`__group`, `rr-match`(+`__team`/`__name`/`__score`/`--tbd`/`__scorers`/`__sc`/`__note`), `rr-bye`, `round-scorers`/`rs-row`/`rs-goals`/`rs-names`/`rs-name`, `round-note`.
 - **Za medije** (sekcija „ZA MEDIJE"): `media-kit`, `media-hero*`, `media-body`, `media-picker*`, `media-layout`/`media-main`, `media-tabs`, `media-panel`, `media-flag`, `media-paper`, `media-pre`/`media-code`, `media-actions`, `media-card*`, `media-btn`(`--primary`/`--small`, `__label`/`__done`), `media-hint`, `media-howto`, `media-png-src`/`media-png-card`.
 - **Responzivni ispravci (2026-10-16):** header ≤1080px (tražilica → ikona) i ≤880px (hamburger); hub ≤900px `.hub-body{align-items:stretch}`, ≤600px ljestvica `minmax(0,1fr)` (✅ ISPRAVCI #15, #16).
 - **Utakmica:** `match-wrap`/`match-breadcrumb`, `semafor` (+`__stripe`/`__hatch`/`__inner`/`__team`/`__badge`/`__name`/`__center`/`__score`/`__status`/`__date`), `match-body`/`match-events`/`match-sec-title`, `kurs-event-timeline`/`tl-row`/`tl-min`/`tl-icon`/`tl-player`/`tl-team`, `match-lineups`/`lineup-cols`/`lineup-team`/`lineup-head`/`lineup-badge`/`lineup-player`/`lineup-no`.
@@ -555,7 +555,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.39'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.40'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.

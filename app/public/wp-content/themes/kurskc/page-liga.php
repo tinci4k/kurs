@@ -143,13 +143,22 @@ function kurs_hub_url( string $base, int $sid, int $did, string $tab, array $ext
 	<div></div>
 	<?php endif; ?>
 
-	<div class="view-tabs">
-		<?php foreach ( $tabs as $slug => $label ) : ?>
-		<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, $division_id, $slug ) ); ?>"
-		   class="<?php echo $tab === $slug ? 'is-active' : ''; ?>">
-			<?php echo esc_html( $label ); ?>
+	<div class="hub-tabs__end">
+		<div class="view-tabs">
+			<?php foreach ( $tabs as $slug => $label ) : ?>
+			<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, $division_id, $slug ) ); ?>"
+			   class="<?php echo $tab === $slug ? 'is-active' : ''; ?>">
+				<?php echo esc_html( $label ); ?>
+			</a>
+			<?php endforeach; ?>
+		</div>
+		<?php if ( $season_id ) : /* paket za druge portale — na svakom tabu; u „Po kolima" za prikazano kolo */ ?>
+		<a class="hub-media" href="<?php echo esc_url( add_query_arg( array_filter( [ 'liga' => $is_pan ? 'pan' : 'kc', 'season_id' => $season_id, 'kolo' => $tab === 'kola' ? $kolo : 0 ] ), home_url( '/za-medije/' ) ) ); ?>"
+		   title="Rezultati, ljestvica i strijelci kola za druge portale (HTML, tekst, slika)">
+			<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 17v3h16v-3"/></svg>
+			Za medije
 		</a>
-		<?php endforeach; ?>
+		<?php endif; ?>
 	</div>
 </div>
 

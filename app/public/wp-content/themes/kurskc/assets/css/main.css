@@ -802,6 +802,18 @@ html { scroll-behavior: smooth; }
 }
 .view-tabs a.is-active { color: var(--c-text); font-weight: 800; border-bottom-color: var(--c-kc); }
 .league-hub--pan .view-tabs a.is-active { border-bottom-color: var(--c-pan); }
+.hub-tabs__end { display: flex; align-items: center; gap: 22px; min-width: 0; }
+/* „Za medije" — paket rezultata kola za druge portale, na svakom tabu lige */
+.hub-media {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; flex-shrink: 0;
+  border: 2px solid var(--c-dark); border-radius: 4px; color: var(--c-dark); text-decoration: none;
+  font-family: var(--font-cond); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .3px;
+  transition: background .12s, color .12s;
+}
+.hub-media svg { color: var(--c-kc); transition: color .12s; }
+.league-hub--pan .hub-media svg { color: var(--c-pan); }
+.hub-media:hover { background: var(--c-dark); color: #fff; }
+.hub-media:hover svg { color: var(--c-gold); }
 
 .hub-body { padding: 22px 0; display: flex; gap: 20px; align-items: flex-start; }
 .hub-main { flex: 1; min-width: 0; }
@@ -2062,6 +2074,9 @@ a.round-nav__arrow:hover { background: var(--c-dark); color: #fff; }
   .hub-tabs { padding: 12px 16px; }
   .view-tabs { gap: 16px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .view-tabs a { white-space: nowrap; }
+  .hub-tabs__end { width: 100%; gap: 12px; }
+  .hub-tabs__end .view-tabs { flex: 1; min-width: 0; }
+  .hub-media { padding: 5px 9px; font-size: 12px; }
   .round-head__title { font-size: 32px; }
   .round-head__media { width: 100%; justify-content: center; }
   .rr-match { padding: 10px; gap: 6px 8px; }
