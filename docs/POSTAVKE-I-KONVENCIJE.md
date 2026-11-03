@@ -104,7 +104,7 @@ Projekt ima **dva** glavna dijela:
 
 | Element | Konvencija / vrijednost |
 |---|---|
-| Verzija | `KURS_VERSION = '1.22.0'` (header plugina `Version: 1.2.0` se ne podiže; podigni `KURS_VERSION` pri izmjeni `admin.css`/`admin.js` — cache-busting) |
+| Verzija | `KURS_VERSION = '1.23.0'` (header plugina `Version: 1.2.0` se ne podiže; podigni `KURS_VERSION` pri izmjeni `admin.css`/`admin.js` — cache-busting) |
 | Putanje | `KURS_DIR` = `plugin_dir_path(__FILE__)`, `KURS_URL` = `plugin_dir_url(__FILE__)` |
 | Prefiks | `KURS_PREFIX = 'kurs_'` |
 | Ovlast | `KURS_CAP = 'manage_kurs_liga'` (cijeli KURS admin; ranije `manage_options`) |
@@ -256,7 +256,7 @@ Sljedeće se ponavljalo u logu. Stavke 1–3 su **ISPRAVLJENE 2026-06-22** (vidi
 - DB: `DB_NAME=local`, `DB_USER=root`, `DB_PASSWORD=root`, `DB_HOST=localhost` (MySQL stvarno na `127.0.0.1:10011`), prefix `wp_`, charset `utf8`.
 - `WP_DEBUG=true`, `WP_DEBUG_LOG=true` (log u `app/public/wp-content/debug.log`), `WP_DEBUG_DISPLAY=false`, `WP_ENVIRONMENT_TYPE=local`.
 - Local: dva php-cgi workera (10008/10009, round-robin) — ako svaki drugi zahtjev visi, restartaj site.
-- Plugin `kurs-liga`: prefiks `kurs_`, klase `Kurs_*`, CPT `kurs_ekipa` + `kurs_igrac`, meta `_kurs_`, DB tablice `wp_kurs_*` (DB_VERSION 1.14), `KURS_VERSION 1.22.0`, ovlast `KURS_CAP`; struktura natjecanja u `Kurs_Season::COMPETITIONS`; admin po natjecanjima (`kurs-kc` / `kurs-pan`, linkovi preko `Kurs_Admin::hub_url()`).
+- Plugin `kurs-liga`: prefiks `kurs_`, klase `Kurs_*`, CPT `kurs_ekipa` + `kurs_igrac`, meta `_kurs_`, DB tablice `wp_kurs_*` (DB_VERSION 1.14), `KURS_VERSION 1.23.0`, ovlast `KURS_CAP`; struktura natjecanja u `Kurs_Season::COMPETITIONS`; admin po natjecanjima (`kurs-kc` / `kurs-pan`, linkovi preko `Kurs_Admin::hub_url()`).
 - Tema `kurskc`: `KURSKC_VERSION 1.0.44`, prefiks `kurskc_`; registrira `vijest` + `vijest_kategorija` (+ `sponzor`).
 - Demo podaci lokalno: `tools/demo-podaci.php [obrisi]` (s `PHPRC`, §1.4).
 - CSS varijable su `--c-*` (NE `--color-*`); KC crvena `#DA0F1E`, Pan narančasta `#F47B16`, gold `#FDE206`.

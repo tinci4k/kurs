@@ -85,7 +85,7 @@ graph TB
 ## 2. Ključne ulazne točke
 
 ### `kurs-liga.php` (bootstrap plugina)
-Definira konstante: `KURS_VERSION='1.22.0'` (header plugina i dalje `1.2.0`), `KURS_DIR`, `KURS_URL`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`. Učitava (`require_once`) sve domenske klase (`class-database`, `helpers`, `class-playoff`, `class-cpt`, `class-season`, `class-match`, `class-ticker`, **`class-rounds`**, `class-roles`), te u adminu `admin/class-admin.php`. Instancira `new Kurs_CPT()` (registrira CPT-ove na `init`), `Kurs_Ticker::init()`, `Kurs_Roles::init()`. Veže:
+Definira konstante: `KURS_VERSION='1.23.0'` (header plugina i dalje `1.2.0`), `KURS_DIR`, `KURS_URL`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`. Učitava (`require_once`) sve domenske klase (`class-database`, `helpers`, `class-playoff`, `class-cpt`, `class-season`, `class-match`, `class-ticker`, **`class-rounds`**, `class-roles`), te u adminu `admin/class-admin.php`. Instancira `new Kurs_CPT()` (registrira CPT-ove na `init`), `Kurs_Ticker::init()`, `Kurs_Roles::init()`. Veže:
 - `add_action('plugins_loaded', ['Kurs_Database','maybe_upgrade'])` — migracija sheme na svakom učitavanju.
 - `register_activation_hook` — `Kurs_Database::install()` (kreira tablice) + registracija CPT-ova + `flush_rewrite_rules()`.
 - `init` 99 — jednokratni flush rewrite pravila (opcija `kurs_flush_needed`); `init` 100 — samoizlječenje: regenerira pravila ako u `rewrite_rules` nema `ekipe/…`.
@@ -125,7 +125,7 @@ playoff_matches ──► visi o division_id (round qf|sf|final|3rd, slot, label
 
 **Veza s WP-om:** `team_id → kurs_ekipa` post, `player_id → kurs_igrac` post. WP post nosi **naziv** (`post_title`), **logo** (featured image) i **boju** (postmeta `_kurs_team_color`); custom tablice nose natjecateljske podatke. Relacije **nisu** DB FOREIGN KEY — integritet se održava u aplikacijskom kodu.
 
-**Verzioniranje:** `Kurs_Database::DB_VERSION='1.14'` (opcija `kurs_db_version`); migracije u `maybe_upgrade()` na `plugins_loaded`. Napomena: plugin header Version je `1.2.0`, a `KURS_VERSION` `1.22.0` (različite sheme verzija koda i baze).
+**Verzioniranje:** `Kurs_Database::DB_VERSION='1.14'` (opcija `kurs_db_version`); migracije u `maybe_upgrade()` na `plugins_loaded`. Napomena: plugin header Version je `1.2.0`, a `KURS_VERSION` `1.23.0` (različite sheme verzija koda i baze).
 
 ### Fiksna struktura natjecanja (`Kurs_Season::COMPETITIONS`, od 2026-10-16)
 Sustav služi samo KURS-u, pa je format **u kodu**: `kc_liga` → lige *KC Liga* i *Liga bez briga*, svaka jedna skupina, jednokružno, bez playoffa; `pan_ljetna` → jedna liga *Pan Ljetna liga* s **2 ili 4** skupine (`PAN_GROUP_OPTIONS`), po 2 najbolje u playoff (4 skupine → četvrtfinale, 2 → polufinale). Admin kreira sezonu odabirom natjecanja + godine; `Kurs_Season::scaffold()` (idempotentno) kreira divizije, fazu „Grupna faza" i skupine; naziv daje `default_name()` („KC Liga 2026/2027", „Pan Ljetna liga 2026"). Pan broj skupina mijenja se samo kroz `set_group_count()` (2↔4; odbija kad postoji bracket ili kad uklonjene skupine imaju ekipe/utakmice; forma je na stranici natjecanja → kartica Ekipe). Ručno dodavanje divizija/faza/grupa i uređivanje `playoff_spots` je **uklonjeno**; skupine nasljeđuju `playoff_spots` iz divizije (0 bez playoffa).
@@ -209,7 +209,7 @@ Linkovi i redirecti na stranicu natjecanja grade se **isključivo** preko `Kurs_
 
 **Tok rada:**
 1. **Sezona** — „+ Nova sezona" na stranici natjecanja ili „Sve sezone" (`create_season`; za natjecanje bez sezone i inline „Kreiraj prvu sezonu"): samo **natjecanje + godina** (za Pan i broj skupina 2/4, uz live pregled). Validacija natjecanja/godine, odbijanje duplikata (`find_for` → `&exists=`), `default_name()` + `scaffold()` → redirect na karticu **Ekipe** (`hub_url($id, 'ekipe', ['created'=>1])`).
-2. **Ekipe u ligama** — kartica Ekipe: za Pan forma broja skupina (`set_group_count`); popis „Sve ekipe" (neuvrštene prve) s gumbima „uvrsti u ligu/skupinu" i pretraga po stupcu (`kurs_assign_team`); nova ekipa AJAX-om (`kurs_create_team` = `wp_insert_post(kurs_ekipa)`). Guardovi: ekipa u najviše jednoj skupini po ligi, ne miče se dok ima utakmica, ništa u zaključanoj sezoni.
+2. **Ekipe u ligama** — kartica Ekipe: za Pan forma broja skupina (`set_group_count`); stupci liga/skupina jedan do drugog + popis „Ekipe koje nisu u ligi" s gumbima „+ liga/skupina" (`kurs_assign_team`); uvrštavanje i micanje uvijek preko dijaloga potvrde, s „Poništi" (1.23.0); nova ekipa AJAX-om (`kurs_create_team` = `wp_insert_post(kurs_ekipa)`). Guardovi: ekipa u najviše jednoj skupini po ligi, ne miče se dok ima utakmica, ništa u zaključanoj sezoni.
 3. **Raspored** — dno kartice Ekipe „Generiraj raspored →" / „↻ Dopuni raspored" (POST `generate_season_fixtures` → `Kurs_Match::generate_round_robin()` za sve skupine sezone), ili po skupini u kartici Utakmice (AJAX `kurs_generate_fixtures`) / ručno (`add_match`). Datum/kolo preko ✎ (`kurs_update_match`).
 4. **Roster** — „N igr." uz ekipu (kartica Ekipe) → `kurs-teams&action=edit&id=&division_id=`: igrači (`kurs_igrac` postovi) u squad te lige; „← Natrag na ligu".
 5. **Zapisnik** — iz „Čeka rezultat" (Pregled) ili rasporeda → `kurs-match-record`: eventi + `finish_match` (vidi tok gore). PDF preko `?format=pdf` (browser print-to-PDF). Povratak na karticu Utakmice.

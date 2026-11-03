@@ -796,8 +796,10 @@ class Kurs_Admin {
 		wp_send_json_success( [
 			'team_id'   => $tid,
 			'team_name' => get_post_field( 'post_title', $tid ),
-			'badge'     => kurs_team_badge_html( $tid, 22 ),
+			'badge'     => kurs_team_badge_html( $tid, 30 ),
 			'roster'    => self::roster_url( $tid, $div_id ),
+			'players'   => (int) $wpdb->get_var( $wpdb->prepare(
+				'SELECT COUNT(*) FROM ' . $wpdb->prefix . KURS_PREFIX . 'squads WHERE team_id = %d AND division_id = %d', $tid, $div_id ) ),
 		] );
 	}
 
@@ -968,7 +970,7 @@ class Kurs_Admin {
 
 		if ( is_wp_error( $team_id ) ) wp_send_json_error( $team_id->get_error_message() );
 
-		wp_send_json_success( [ 'team_id' => $team_id, 'name' => $name ] );
+		wp_send_json_success( [ 'team_id' => $team_id, 'name' => $name, 'badge' => kurs_team_badge_html( $team_id, 30 ) ] );
 	}
 
 	// ── AJAX: Pretraga igrača (autocomplete + duplikat check) ────────────────

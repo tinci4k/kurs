@@ -41,243 +41,189 @@ jQuery( function ( $ ) {
 	const DIVISION_ID = $ctx.length ? parseInt( $ctx.data( 'division-id' ) ) : 0;
 
 	// ══════════════════════════════════════════════════════════════════════════
-	// Liga setup: Dodjela ekipa grupama
+	// Stranica natjecanja → Ekipe: uvrštavanje ekipa u lige/skupine (#kurs-assign)
+	// Svaka promjena ide preko dijaloga potvrde, a nakon nje traka nudi „Poništi".
 	// ══════════════════════════════════════════════════════════════════════════
 
-	/* Uvrsti ekipu u ligu/skupinu (iz pretrage u stupcu ili gumbom u popisu ekipa) */
-	function assignTeam( group_id, team_id, $btn ) {
-		const $col = $( `.kurs-group-col[data-group-id="${group_id}"]` );
-		if ( $btn ) $btn.prop( 'disabled', true );
-		return $.post( url, { action: 'kurs_assign_team', nonce, group_id, team_id } ).done( res => {
-			if ( res.success ) {
-				const d = res.data;
-				$col.find( '.kurs-group-col__teams' ).append(
-					`<div class="kurs-group-team" data-team-id="${d.team_id}">` +
-					( d.badge || '' ) +
-					`<span>${h( d.team_name )}</span>` +
-					( d.roster ? `<a class="kurs-group-team__roster" href="${d.roster}" title="Igrači ekipe u ovoj ligi">0 igr.</a>` : '' ) +
-					`<button class="kurs-btn-rm" data-group-id="${group_id}" data-team-id="${d.team_id}" title="Makni iz lige">&times;</button>` +
-					`</div>`
-				);
-				updateGroupCount( $col );
-				markPool( d.team_id, true );
-			} else {
-				alert( ( res.data && res.data.message ) || 'Ekipu nije moguće dodati.' );
-			}
-		} ).always( () => { if ( $btn ) $btn.prop( 'disabled', false ); } );
-	}
+	const $assign = $( '#kurs-assign' );
+	if ( $assign.length ) {
+		const plural  = ( n, one, few, many ) => {
+			const a = n % 10, b = n % 100;
+			return a === 1 && b !== 11 ? one : ( a >= 2 && a <= 4 && ( b < 12 || b > 14 ) ? few : many );
+		};
+		const players = n => n + ' ' + plural( n, 'igrač', 'igrača', 'igrača' );
+		const norm    = s => String( s ).toLowerCase().normalize( 'NFD' ).replace( /\p{M}/gu, '' ).replace( /đ/g, 'd' );
+		const errMsg  = ( res, def ) => ( res && res.data && ( res.data.message || ( typeof res.data === 'string' && res.data ) ) ) || def;
+		const $col    = gid => $assign.find( `.kurs-lcol[data-group-id="${gid}"]` );
 
-	/* Popis ekipa (lijevo): označi koje su već u nekoj ligi ove sezone */
-	function markPool( team_id, assigned ) {
-		const $pill = $( `.kurs-team-pill[data-team-id="${team_id}"]` );
-		if ( ! $pill.length ) return;
-		const inAny = assigned || $( `.kurs-group-col .kurs-group-team[data-team-id="${team_id}"]` ).length > 0;
-		$pill.toggleClass( 'is-assigned', inAny );
-		const $free = $( '#kurs-pool-free-count' );
-		if ( $free.length ) $free.text( $( '.kurs-team-pill:not(.is-assigned)' ).length );
-	}
-
-	$( document ).on( 'click', '.kurs-btn-add-team', function () {
-		const $col     = $( this ).closest( '.kurs-group-col' );
-		const $hidden  = $col.find( '.kurs-team-selected-id' );
-		const team_id  = $hidden.val();
-
-		if ( ! team_id ) {
-			$col.find( '.kurs-team-search' ).focus();
-			return;
+		/* Dijalog potvrde */
+		const $box = $( '#kurs-assign-confirm' );
+		let onOk   = null;
+		function ask( o ) {
+			$box.find( '.kurs-modal-title' ).text( o.title );
+			$box.find( '.kurs-confirm__team' ).empty().append( o.team );
+			$box.find( '.kurs-modal-msg' ).html( o.msg || '' ).toggle( !! o.msg );
+			$box.find( '[data-ok]' ).text( o.ok ).toggleClass( 'kurs-btn--red', !! o.danger ).toggleClass( 'kurs-btn--dark', ! o.danger );
+			onOk = o.run;
+			$box.removeAttr( 'hidden' ).find( '[data-ok]' ).trigger( 'focus' );
 		}
-		assignTeam( $col.data( 'group-id' ), team_id, $( this ) ).done( res => {
-			if ( res.success ) {
-				$col.find( '.kurs-team-search' ).val( '' );
-				$hidden.val( '' );
-				closeTeamAC();
-			}
+		function closeBox() { $box.attr( 'hidden', 'hidden' ); onOk = null; }
+		$box.on( 'click', '[data-close]', closeBox );
+		$box.on( 'click', '[data-ok]', function () { const run = onOk; closeBox(); if ( run ) run(); } );
+		$( document ).on( 'keydown', e => { if ( e.key === 'Escape' && ! $box.is( '[hidden]' ) ) closeBox(); } );
+
+		/* Redak u dijalogu: grb + ekipa → liga */
+		const teamLine = ( $badge, name, sign, $c ) => $( '<div class="kurs-confirm__row"></div>' ).append(
+			$badge.clone(),
+			$( '<b class="kurs-confirm__name"></b>' ).text( name ),
+			$( '<span class="kurs-confirm__sign"></span>' ).text( sign ),
+			$( '<span class="kurs-confirm__lg"></span>' ).text( $c.find( 'h3' ).text() ).attr( 'style', $c.attr( 'style' ) )
+		);
+
+		/* Traka nakon promjene (s „Poništi" za zadnju promjenu) */
+		const $undo = $( '#kurs-undo' );
+		let undoTimer;
+		function hideNote() { clearTimeout( undoTimer ); $undo.attr( 'hidden', 'hidden' ); }
+		function note( html, undo, isError ) {
+			$undo.find( '.kurs-undo__msg' ).html( html );
+			$undo.find( '.kurs-undo__btn' ).toggle( !! undo ).off( 'click' ).on( 'click', function () { hideNote(); undo(); } );
+			$undo.toggleClass( 'is-error', !! isError ).removeAttr( 'hidden' );
+			clearTimeout( undoTimer );
+			undoTimer = setTimeout( hideNote, undo ? 15000 : 6000 );
+		}
+		$undo.on( 'click', '.kurs-undo__x', hideNote );
+
+		/* Brojači, prazna stanja, pretraga ekipa bez lige */
+		function refreshCol( $c ) {
+			const n = $c.find( '.kurs-lteam' ).length;
+			$c.find( '.kurs-lcol__count' ).text( n );
+			$c.find( '.kurs-lcol__word' ).text( plural( n, 'ekipa', 'ekipe', 'ekipa' ) );
+			$c.find( '.kurs-lcol__empty' ).prop( 'hidden', n > 0 );
+		}
+		function refreshFree() {
+			const q      = norm( $( '#kurs-free-search' ).val() || '' );
+			const $cards = $( '#kurs-free-grid .kurs-fteam' );
+			$cards.each( function () {
+				$( this ).toggleClass( 'is-filtered', q !== '' && ! norm( $( this ).attr( 'data-name' ) ).includes( q ) );
+			} );
+			const $free = $cards.not( '[hidden]' );
+			$( '#kurs-free-count' ).text( $free.length );
+			$( '#kurs-free-none' ).prop( 'hidden', $free.length > 0 );
+			$( '#kurs-free-nomatch' ).prop( 'hidden', ! $free.length || $free.not( '.is-filtered' ).length > 0 );
+		}
+		/* Ekipa je „bez lige" dok nije ni u jednom stupcu */
+		function setFree( tid ) {
+			$( `#kurs-free-grid .kurs-fteam[data-team-id="${tid}"]` ).prop( 'hidden', $assign.find( `.kurs-lteam[data-team-id="${tid}"]` ).length > 0 );
+			refreshFree();
+		}
+		$( '#kurs-free-search' ).on( 'input', refreshFree );
+
+		function addRow( gid, d ) {
+			const $c  = $col( gid ), $ul = $c.find( '.kurs-lcol__teams' );
+			const $li = $( '<li class="kurs-lteam is-new"></li>' ).attr( { 'data-team-id': d.team_id, 'data-name': d.team_name } ).append(
+				d.badge,
+				$( '<span class="kurs-lteam__name"></span>' ).text( d.team_name ),
+				$( '<a class="kurs-lteam__roster" title="Igrači ekipe u ovoj ligi (s brojevima dresova)"></a>' )
+					.attr( 'href', d.roster ).text( players( d.players ) ).toggleClass( 'is-empty', ! d.players ),
+				'<button type="button" class="kurs-lteam__rm" title="Makni ekipu iz ove lige">Makni</button>'
+			);
+			const $next = $ul.children().filter( ( i, el ) => $( el ).attr( 'data-name' ).localeCompare( d.team_name, 'hr' ) > 0 ).first();
+			if ( $next.length ) $li.insertBefore( $next ); else $ul.append( $li );
+			refreshCol( $c );
+			setTimeout( () => $li.removeClass( 'is-new' ), 2500 );
+		}
+
+		const post = ( action, gid, tid ) => $.post( url, { action, nonce, group_id: gid, team_id: tid } )
+			.then( res => res, () => ( { success: false, data: { message: 'Veza sa serverom nije uspjela — pokušaj ponovno.' } } ) );
+
+		function assign( gid, tid ) {
+			return post( 'kurs_assign_team', gid, tid ).then( res => {
+				if ( ! res.success ) { note( '⚠ ' + h( errMsg( res, 'Ekipu nije moguće uvrstiti.' ) ), null, true ); return false; }
+				addRow( gid, res.data );
+				setFree( tid );
+				return true;
+			} );
+		}
+		function remove( gid, tid ) {
+			return post( 'kurs_remove_team', gid, tid ).then( res => {
+				if ( ! res.success ) { note( '⚠ ' + h( errMsg( res, 'Ekipu nije moguće maknuti.' ) ), null, true ); return false; }
+				$col( gid ).find( `.kurs-lteam[data-team-id="${tid}"]` ).remove();
+				refreshCol( $col( gid ) );
+				setFree( tid );
+				return true;
+			} );
+		}
+
+		$assign.on( 'click', '.kurs-fteam__add', function () {
+			const $f   = $( this ).closest( '.kurs-fteam' ), $c = $col( $( this ).data( 'group-id' ) );
+			const gid  = $c.data( 'group-id' ), tid = $f.data( 'team-id' ), name = $f.attr( 'data-name' );
+			ask( {
+				title: 'Uvrstiti ekipu u ' + $c.data( 'acc' ) + '?',
+				team:  teamLine( $f.children().first(), name, '→', $c ),
+				msg:   'Nakon toga joj možeš upisati igrače. Dok ekipa nema utakmica, možeš je i maknuti.',
+				ok:    'Da, uvrsti',
+				run:   () => assign( gid, tid ).then( ok => ok && note(
+					`✓ <b>${ h( name ) }</b> je uvrštena u ${ h( $c.data( 'acc' ) ) }.`,
+					() => remove( gid, tid ).then( ok2 => ok2 && note( `Poništeno — <b>${ h( name ) }</b> je opet među ekipama bez lige.` ) )
+				) ),
+			} );
 		} );
-	} );
 
-	$( document ).on( 'click', '.kurs-pool-assign', function () {
-		assignTeam( $( this ).data( 'group-id' ), $( this ).closest( '.kurs-team-pill' ).data( 'team-id' ), $( this ) );
-	} );
-
-	// ══════════════════════════════════════════════════════════════════════════
-	// Liga setup: Team autocomplete (search + select u grupu)
-	// ══════════════════════════════════════════════════════════════════════════
-
-	const teamData = () => ( typeof window.KursTeams !== 'undefined' ? window.KursTeams : [] );
-
-	$( document ).on( 'input', '.kurs-team-search', function () {
-		const $inp  = $( this );
-		const term  = $inp.val().trim().toLowerCase();
-		const $wrap = $inp.closest( '.kurs-team-ac-wrap' );
-
-		// Resetiraj odabir svaki put kad korisnik tipka
-		$inp.closest( '.kurs-group-col__add' ).find( '.kurs-team-selected-id' ).val( '' );
-
-		if ( term.length < 1 ) { closeTeamAC( $wrap ); return; }
-
-		const matches = teamData()
-			.filter( t => t.name.toLowerCase().includes( term ) )
-			.slice( 0, 10 );
-
-		if ( matches.length ) {
-			renderTeamAC( matches, $wrap );
-		} else {
-			closeTeamAC( $wrap );
-		}
-	} );
-
-	$( document ).on( 'keydown', '.kurs-team-search', function ( e ) {
-		const $list  = $( '#kurs-team-ac-floating:visible' );
-		if ( ! $list.length ) return;
-
-		if ( e.key === 'Escape' ) { closeTeamAC( $wrap ); return; }
-
-		if ( e.key === 'ArrowDown' ) {
-			e.preventDefault();
-			const $items = $list.find( '.kurs-team-ac-item' );
-			const idx    = $items.index( $items.filter( '.is-focused' ) );
-			$items.removeClass( 'is-focused' ).eq( Math.min( idx + 1, $items.length - 1 ) ).addClass( 'is-focused' );
-		}
-		if ( e.key === 'ArrowUp' ) {
-			e.preventDefault();
-			const $items = $list.find( '.kurs-team-ac-item' );
-			const idx    = $items.index( $items.filter( '.is-focused' ) );
-			$items.removeClass( 'is-focused' ).eq( Math.max( idx - 1, 0 ) ).addClass( 'is-focused' );
-		}
-		if ( e.key === 'Enter' ) {
-			const $focused = $list.find( '.kurs-team-ac-item.is-focused' );
-			if ( $focused.length ) { e.preventDefault(); $focused.trigger( 'click' ); }
-		}
-	} );
-
-	// Klik na stavku u team autocomplete (lista je u <body>)
-	$( document ).on( 'click', '.kurs-team-ac-item', function () {
-		const $item = $( this );
-		const $wrap = $( '#kurs-team-ac-floating' ).data( 'wrap' );
-		if ( ! $wrap ) return;
-		$wrap.find( '.kurs-team-search' ).val( $item.data( 'name' ) );
-		$wrap.find( '.kurs-team-selected-id' ).val( $item.data( 'team-id' ) );
-		closeTeamAC();
-	} );
-
-	// Klik van autocomplete liste → zatvori
-	$( document ).on( 'click', function ( e ) {
-		if ( ! $( e.target ).closest( '.kurs-team-ac-wrap, .kurs-team-ac-list' ).length ) {
-			closeTeamAC();
-		}
-	} );
-
-	// Lista se renderira u <body> (portal) i pozicionira fiksno ispod inputa —
-	// inače je reže overflow:hidden roditelja (.kurs-group-col), pa je skrivena.
-	function renderTeamAC( teams, $wrap ) {
-		const $inp = $wrap.find( '.kurs-team-search' );
-		let $list  = $( '#kurs-team-ac-floating' );
-		if ( ! $list.length ) {
-			$list = $( '<div class="kurs-team-ac-list" id="kurs-team-ac-floating"></div>' ).appendTo( 'body' );
-		}
-		$list.data( 'wrap', $wrap ).empty();
-		teams.forEach( t => {
-			$( `<div class="kurs-team-ac-item" data-team-id="${t.id}" data-name="${h( t.name )}">` +
-			   `<span>${h( t.name )}</span>` +
-			   `</div>` ).appendTo( $list );
+		$assign.on( 'click', '.kurs-lteam__rm', function () {
+			const $li = $( this ).closest( '.kurs-lteam' ), $c = $li.closest( '.kurs-lcol' );
+			const gid = $c.data( 'group-id' ), tid = $li.data( 'team-id' ), name = $li.attr( 'data-name' );
+			const n   = parseInt( $li.find( '.kurs-lteam__roster' ).text(), 10 ) || 0;
+			ask( {
+				title:  'Maknuti ekipu iz ' + $c.data( 'gen' ) + '?',
+				team:   teamLine( $li.children().first(), name, '✕', $c ),
+				msg:    ( n ? `Igrači ekipe (${ players( n ) }) ostaju upisani — ako je vratiš u ligu, vraćaju se i oni.`
+				            : 'Ekipa ostaje u registru ekipa i možeš je ponovno uvrstiti.' )
+				        + ( $li.data( 'base' ) ? ' <b>Preneseno stanje ekipe (bodovi i golovi prije sustava) se briše.</b>' : '' ),
+				ok:     'Da, makni',
+				danger: true,
+				run:    () => remove( gid, tid ).then( ok => ok && note(
+					`<b>${ h( name ) }</b> je maknuta iz ${ h( $c.data( 'gen' ) ) }.`,
+					() => assign( gid, tid ).then( ok2 => ok2 && note( `Poništeno — <b>${ h( name ) }</b> je vraćena u ${ h( $c.data( 'acc' ) ) }.` ) )
+				) ),
+			} );
 		} );
-		positionTeamAC( $inp, $list );
-		$list.show();
-	}
 
-	function positionTeamAC( $inp, $list ) {
-		if ( ! $inp || ! $inp.length ) return;
-		const r = $inp[0].getBoundingClientRect();
-		$list.css( { position: 'fixed', top: ( r.bottom + 2 ) + 'px', left: r.left + 'px', right: 'auto', width: r.width + 'px' } );
-	}
-
-	function closeTeamAC() {
-		$( '#kurs-team-ac-floating' ).hide().empty().removeData( 'wrap' );
-	}
-
-	// Repozicioniraj otvorenu listu pri skrolu/resizeu (fixed pozicija).
-	$( window ).on( 'scroll resize', function () {
-		const $list = $( '#kurs-team-ac-floating:visible' );
-		if ( ! $list.length ) return;
-		const $wrap = $list.data( 'wrap' );
-		if ( $wrap ) positionTeamAC( $wrap.find( '.kurs-team-search' ), $list );
-	} );
-
-	$( document ).on( 'click', '.kurs-btn-rm', function () {
-		const $row     = $( this ).closest( '.kurs-group-team' );
-		const $col     = $( this ).closest( '.kurs-group-col' );
-		const group_id = $( this ).data( 'group-id' );
-		const team_id  = $( this ).data( 'team-id' );
-		$.post( url, { action: 'kurs_remove_team', nonce, group_id, team_id } ).done( res => {
-			if ( res.success ) { $row.remove(); updateGroupCount( $col ); markPool( team_id, false ); }
-			else alert( ( res.data && res.data.message ) || 'Ekipu nije moguće maknuti.' );
-		} );
-	} );
-
-	function updateGroupCount( $col ) {
-		const n = $col.find( '.kurs-group-team' ).length;
-		$col.find( '.kurs-cnt' ).text( n + ' ekipa' );
-	}
-
-	// ══════════════════════════════════════════════════════════════════════════
-	// Liga setup: Brzo kreiranje ekipe na koraku "Dodjela ekipa"
-	// ══════════════════════════════════════════════════════════════════════════
-
-	$( document ).on( 'click', '#btn-create-team-setup', function () {
-		const $btn  = $( this ).prop( 'disabled', true );
-		const name  = $( '#new-team-name-setup' ).val().trim();
-		const $msg  = $( '#new-team-setup-msg' );
-
-		if ( ! name ) {
-			$msg.text( 'Unesi naziv ekipe.' ).css( 'color', '' ).show();
-			$btn.prop( 'disabled', false );
-			return;
-		}
-
-		$msg.text( 'Kreiram...' ).css( 'color', '#888' ).show();
-
-		$.post( url, { action: 'kurs_create_team', nonce, team_name: name } ).done( res => {
-			if ( res.success ) {
-				const { team_id, name: team_name } = res.data;
-
-				// Dodaj u popis ekipa (na vrh, s gumbima za uvrštavanje u ligu/skupinu)
-				const initials = team_name.substring( 0, 2 ).toUpperCase();
-				const tpl      = document.getElementById( 'kurs-pool-assign-tpl' );
-				$( '#kurs-team-pool-list' ).prepend(
-					`<div class="kurs-team-pill" data-team-id="${team_id}">` +
-					`<span class="kurs-avatar">${h( initials )}</span>` +
-					`<span class="kurs-team-pill__name">${h( team_name )}</span>` +
-					`<span class="kurs-team-pill__go">${tpl ? tpl.innerHTML : ''}</span>` +
-					`</div>`
-				);
-				markPool( team_id, false );
-
-				// Dodaj u window.KursTeams da autocomplete odmah vidi novu ekipu
-				if ( typeof window.KursTeams !== 'undefined' ) {
-					window.KursTeams.push( { id: team_id, name: team_name } );
-					window.KursTeams.sort( ( a, b ) => a.name.localeCompare( b.name, 'hr' ) );
+		/* Nova ekipa (prvi put u KURS-u) → u popis ekipa bez lige */
+		$( '#btn-create-team-setup' ).on( 'click', function () {
+			const $btn = $( this ), $inp = $( '#new-team-name-setup' ), $msg = $( '#new-team-setup-msg' );
+			const name = $inp.val().trim();
+			const say  = ( t, cls ) => $msg.text( t ).attr( 'class', 'kurs-free__msg ' + ( cls || '' ) ).prop( 'hidden', false );
+			if ( ! name ) { say( 'Upiši naziv ekipe.', 'is-error' ); $inp.trigger( 'focus' ); return; }
+			$btn.prop( 'disabled', true );
+			say( 'Kreiram…' );
+			$.post( url, { action: 'kurs_create_team', nonce, team_name: name } ).done( res => {
+				if ( res.success ) {
+					const d  = res.data;
+					const $f = $( '<div class="kurs-fteam is-new"></div>' ).attr( { 'data-team-id': d.team_id, 'data-name': d.name } ).append(
+						d.badge,
+						$( '<span class="kurs-fteam__name"></span>' ).text( d.name ),
+						$( '<span class="kurs-fteam__go"></span>' ).html( $( '#kurs-fteam-go-tpl' ).html() )
+					);
+					$( '#kurs-free-grid' ).prepend( $f );
+					$( '#kurs-free-search' ).val( '' );
+					refreshFree();
+					$inp.val( '' );
+					say( `✓ ${ d.name } je kreirana — sad je uvrsti u ligu gumbom u popisu.`, 'is-ok' );
+					setTimeout( () => $f.removeClass( 'is-new' ), 2500 );
+				} else if ( res.data && res.data.code === 'duplicate' ) {
+					say( res.data.message + ' Potraži je u popisu (ili je već u ligi).', 'is-warn' );
+					$( '#kurs-free-search' ).val( name );
+					refreshFree();
+				} else {
+					say( errMsg( res, 'Ekipu nije moguće kreirati.' ), 'is-error' );
 				}
-
-				// Nova ekipa je u poolu bez lige → brojač „Bez lige u ovoj sezoni"
-				$( '#kurs-pool-free-count' ).text( ( parseInt( $( '#kurs-pool-free-count' ).text() ) || 0 ) + 1 );
-
-				$( '#new-team-name-setup' ).val( '' );
-				$msg.text( '✓ ' + team_name + ' kreirana.' ).css( 'color', '#1e6f26' );
-				setTimeout( () => $msg.fadeOut(), 3000 );
-
-			} else if ( res.data && res.data.code === 'duplicate' ) {
-				$msg.text( res.data.message + ' (već postoji u sustavu)' ).css( 'color', '#856404' );
-			} else {
-				const errMsg = typeof res.data === 'string' ? res.data : ( res.data && res.data.message ) || 'Greška.';
-				$msg.text( errMsg ).css( 'color', '#c00' );
-			}
-		} ).always( () => $btn.prop( 'disabled', false ) );
-	} );
-
-	// Enter u polju naziva ekipe == klikni gumb
-	$( document ).on( 'keydown', '#new-team-name-setup', function ( e ) {
-		if ( e.key === 'Enter' ) { e.preventDefault(); $( '#btn-create-team-setup' ).trigger( 'click' ); }
-	} );
+			} ).fail( () => say( 'Veza sa serverom nije uspjela — pokušaj ponovno.', 'is-error' ) )
+			  .always( () => $btn.prop( 'disabled', false ) );
+		} );
+		$( '#new-team-name-setup' ).on( 'keydown', e => {
+			if ( e.key === 'Enter' ) { e.preventDefault(); $( '#btn-create-team-setup' ).trigger( 'click' ); }
+		} );
+	}
 
 	// ══════════════════════════════════════════════════════════════════════════
 	// Boja dresova — novi dropdown color picker

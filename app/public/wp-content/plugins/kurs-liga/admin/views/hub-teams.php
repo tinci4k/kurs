@@ -94,9 +94,34 @@ $has_teams   = $ready_groups > 0;
 $has_matches = $match_total > 0;
 $all_groups  = array_merge( ...array_values( $div_groups ?: [ [] ] ) );
 $free_count  = count( array_filter( $all_teams, fn( $t ) => empty( $assigned[ $t->ID ] ) ) );
-/* Kratka oznaka na gumbu „uvrsti u…": skupina → slovo (A, B…), Liga bez briga → „Bez briga" */
-$short = fn( string $label ) => stripos( $label, 'briga' ) !== false ? 'Bez briga'
-	: ( preg_match( '/^Grupa\s+(\S+)$/u', $label, $m ) ? $m[1] : $label );
+
+/* Stupci liga/skupina: naziv, boja lige, padeži za poruke potvrde („u KC Ligu" / „iz KC Lige") */
+$case   = fn( string $s, array $to ) => preg_replace( [ '/\b([Ll])iga\b/u', '/\bGrupa\b/u', '/\bLjetna\b/u' ], $to, $s );
+$acc    = fn( string $s ) => $case( $s, [ '${1}igu', 'Grupu', 'Ljetnu' ] );
+$gen    = fn( string $s ) => $case( $s, [ '${1}ige', 'Grupe', 'Ljetne' ] );
+$plural = fn( int $n, string $one, string $few, string $many ) => $n % 10 === 1 && $n % 100 !== 11 ? $one
+	: ( $n % 10 >= 2 && $n % 10 <= 4 && ( $n % 100 < 12 || $n % 100 > 14 ) ? $few : $many );
+$g_label = $g_color = [];
+foreach ( $divisions as $d ) foreach ( $div_groups[ (int) $d->id ] as $g ) {
+	$g_label[ (int) $g->id ] = count( $divisions ) > 1 && count( $div_groups[ (int) $d->id ] ) > 1 ? $d->name . ' · ' . $g->name : $g->label;
+	$g_color[ (int) $g->id ] = stripos( $d->name, 'briga' ) !== false ? '#B07A1B' : $accent;
+}
+/* Gumbi „+ liga/skupina" uz ekipu bez lige (i u <template> za novo kreiranu ekipu) */
+$add_buttons = '';
+foreach ( $all_groups as $g ) {
+	$add_buttons .= sprintf( '<button type="button" class="kurs-fteam__add" data-group-id="%d" style="--lg:%s;">+ %s</button>',
+		(int) $g->id, esc_attr( $g_color[ (int) $g->id ] ), esc_html( $g_label[ (int) $g->id ] ) );
+}
+/* Ekipa s utakmicama u skupini ne može se maknuti (ajax_remove_team) — umjesto „Makni" lokot */
+$team_matches = [];
+if ( $all_groups ) {
+	$gids = implode( ',', array_map( fn( $g ) => (int) $g->id, $all_groups ) );
+	foreach ( $wpdb->get_results( "SELECT group_id, team_id, COUNT(*) AS n FROM (
+		SELECT group_id, home_team_id AS team_id FROM {$p}matches WHERE group_id IN ($gids)
+		UNION ALL SELECT group_id, away_team_id FROM {$p}matches WHERE group_id IN ($gids) ) x GROUP BY group_id, team_id" ) as $r ) {
+		$team_matches[ (int) $r->group_id ][ (int) $r->team_id ] = (int) $r->n;
+	}
+}
 ?>
 
 <?php if ( ! empty( $_GET['created'] ) ) : ?>
@@ -123,28 +148,9 @@ $short = fn( string $label ) => stripos( $label, 'briga' ) !== false ? 'Bez brig
 <div class="notice notice-error is-dismissible"><p><?php echo esc_html( wp_unslash( $_GET['groups_error'] ) ); ?></p></div>
 <?php endif; ?>
 
-<?php if ( $is_locked ) : ?>
-<!-- Zaključana sezona: samo pregled -->
-<div class="kurs-structure">
-	<?php foreach ( $divisions as $div ) : foreach ( $div_groups[ (int) $div->id ] as $g ) : ?>
-	<div class="kurs-panel">
-		<div class="kurs-panel__head"><h3 class="kurs-panel__title"><?php echo esc_html( $g->label ); ?></h3><span class="kurs-muted"><?php echo count( $g->teams ); ?> ekipa</span></div>
-		<div class="kurs-panel__body" style="padding:6px 0;">
-			<?php foreach ( $g->teams as $gt ) : ?>
-			<a class="kurs-hub-team-row" href="<?php echo esc_url( $roster_url( (int) $gt->team_id, (int) $div->id ) ); ?>">
-				<?php echo kurs_team_badge_html( (int) $gt->team_id, 22 ); ?><span><?php echo esc_html( $gt->team_name ); ?></span>
-				<em><?php echo (int) ( $squad_counts[ (int) $div->id ][ (int) $gt->team_id ] ?? 0 ); ?> igr.</em>
-			</a>
-			<?php endforeach; ?>
-		</div>
-	</div>
-	<?php endforeach; endforeach; ?>
-</div>
-<?php return; endif; ?>
-
 <?php
 /* ── Prijenos iz prethodne sezone: njezine ekipe koje još nisu u ovoj sezoni ── */
-$prev_season = Kurs_Season::previous_season( $season_id );
+$prev_season = $is_locked ? null : Kurs_Season::previous_season( $season_id );
 $carry_rows  = $prev_season ? array_filter( Kurs_Season::season_teams( (int) $prev_season->id ), fn( $t ) => empty( $assigned[ (int) $t->team_id ] ) ) : [];
 if ( $carry_rows ) :
 	$carry_def = Kurs_Season::carry_over_defaults( (int) $prev_season->id, $season_id );
@@ -193,137 +199,147 @@ if ( $carry_rows ) :
 </details>
 <?php endif; ?>
 
+<?php if ( empty( $divisions ) ) : ?>
+<div class="kurs-empty-state"><p>Ova sezona nema postavljenih liga. Obriši je u Postavkama i kreiraj ponovno.</p></div>
+<?php return; endif; ?>
+
+<?php if ( ! $is_locked ) : ?>
 <p class="kurs-hub-intro">
-	Ovdje biraš <strong>koje ekipe igraju u kojoj ligi</strong> ove sezone. Ekipa (klub) se u sustav upisuje jednom
-	— u <a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>">Ekipe</a> — i može igrati više sezona.
-	Igrače ekipe za ovu ligu (roster s brojevima dresova) uređuješ klikom na <em>„N igr."</em> uz ekipu.
+	Ovdje biraš <strong>koje ekipe igraju u kojoj ligi</strong> ove sezone. Ekipu uvrštavaš iz popisa <em>„Ekipe koje nisu u ligi”</em>
+	ispod, a mičeš gumbom <em>„Makni”</em> — sustav uvijek prvo pita, a zadnju promjenu možeš poništiti.
+	Igrače ekipe za ligu uređuješ klikom na <em>„N igrača”</em>; logo, boju i trenera kluba u <a href="<?php echo esc_url( admin_url( 'admin.php?page=kurs-teams' ) ); ?>">Ekipe</a>.
 </p>
 
-<!-- ── Lige sezone (struktura je automatska) ───────────────────────────── -->
+<?php if ( ! empty( $comp['groups'] ) ) : ?>
+<!-- ── Format lige sa skupinama (broj skupina) ─────────────────────────── -->
 <div class="kurs-structure">
 	<?php foreach ( $divisions as $div ) :
 		$groups  = $div_groups[ (int) $div->id ];
 		$n       = count( $groups );
 		$bracket = class_exists( 'Kurs_Playoff' ) && Kurs_Playoff::exists( (int) $div->id );
-		$color   = stripos( $div->name, 'briga' ) !== false ? '#B07A1B' : $accent;
 		$teams_n = array_sum( array_map( fn( $g ) => count( $g->teams ), $groups ) );
 	?>
 	<div class="kurs-div-card">
-		<div class="kurs-div-card__bar" style="background:<?php echo esc_attr( $color ); ?>;"></div>
+		<div class="kurs-div-card__bar" style="background:<?php echo esc_attr( $accent ); ?>;"></div>
 		<div class="kurs-div-card__body">
 			<div class="kurs-div-card__name"><?php echo kurs_league_icon( $season->league . ' ' . $div->name, 20 ); ?> <?php echo esc_html( $div->name ); ?></div>
 			<div class="kurs-div-card__meta">
-				<?php echo (int) $teams_n; ?> ekipa ·
-				<?php if ( ! empty( $div->has_playoff ) ) : ?>
-				<?php echo (int) $n; ?> skupine · po <?php echo (int) $div->advance_per_group; ?> najbolje u <?php echo $n >= 4 ? 'četvrtfinale' : 'polufinale'; ?>
-				<?php else : ?>
-				svatko sa svakim jednom · bez playoffa
-				<?php endif; ?>
+				<?php echo (int) $teams_n; ?> ekipa · <?php echo (int) $n; ?> skupine · po <?php echo (int) $div->advance_per_group; ?> najbolje u <?php echo $n >= 4 ? 'četvrtfinale' : 'polufinale'; ?>
 			</div>
-			<?php if ( ! empty( $comp['groups'] ) ) : ?>
-				<?php if ( $bracket ) : ?>
-				<p class="kurs-muted" style="margin:8px 0 0;font-size:11px;">Playoff je generiran — broj skupina je zaključan.</p>
-				<?php else : ?>
-				<form method="post" class="kurs-div-format" style="margin-top:8px;">
-					<?php wp_nonce_field( 'kurs_set_group_count' ); ?>
-					<input type="hidden" name="kurs_action" value="set_group_count">
-					<input type="hidden" name="season_id"   value="<?php echo (int) $season_id; ?>">
-					<input type="hidden" name="division_id" value="<?php echo (int) $div->id; ?>">
-					<span class="kurs-div-format__lbl">Broj skupina</span>
-					<select name="count">
-						<?php foreach ( Kurs_Season::PAN_GROUP_OPTIONS as $opt ) : ?>
-						<option value="<?php echo (int) $opt; ?>" <?php selected( $n, $opt ); ?>><?php echo (int) $opt; ?></option>
-						<?php endforeach; ?>
-					</select>
-					<button type="submit" class="kurs-btn kurs-btn--outline kurs-btn--sm">Spremi</button>
-				</form>
-				<?php endif; ?>
+			<?php if ( $bracket ) : ?>
+			<p class="kurs-muted" style="margin:8px 0 0;font-size:11px;">Playoff je generiran — broj skupina je zaključan.</p>
+			<?php else : ?>
+			<form method="post" class="kurs-div-format" style="margin-top:8px;">
+				<?php wp_nonce_field( 'kurs_set_group_count' ); ?>
+				<input type="hidden" name="kurs_action" value="set_group_count">
+				<input type="hidden" name="season_id"   value="<?php echo (int) $season_id; ?>">
+				<input type="hidden" name="division_id" value="<?php echo (int) $div->id; ?>">
+				<span class="kurs-div-format__lbl">Broj skupina</span>
+				<select name="count">
+					<?php foreach ( Kurs_Season::PAN_GROUP_OPTIONS as $opt ) : ?>
+					<option value="<?php echo (int) $opt; ?>" <?php selected( $n, $opt ); ?>><?php echo (int) $opt; ?></option>
+					<?php endforeach; ?>
+				</select>
+				<button type="submit" class="kurs-btn kurs-btn--outline kurs-btn--sm">Spremi</button>
+			</form>
 			<?php endif; ?>
 		</div>
 	</div>
 	<?php endforeach; ?>
 </div>
+<?php endif; ?>
+<?php endif; ?>
 
-<?php if ( empty( $divisions ) ) : ?>
-<div class="kurs-empty-state"><p>Ova sezona nema postavljenih liga. Obriši je u Postavkama i kreiraj ponovno.</p></div>
-<?php return; endif; ?>
-
-<script>
-window.KursTeams = <?php echo wp_json_encode( array_map( fn( $t ) => [ 'id' => $t->ID, 'name' => $t->post_title ], $all_teams ) ); ?>;
-</script>
-<!-- Gumbi „u ligu/skupinu" za novo kreiranu ekipu (JS kopira u popis) -->
-<template id="kurs-pool-assign-tpl"><?php foreach ( $all_groups as $g ) : ?><button type="button" class="kurs-pool-assign" data-group-id="<?php echo (int) $g->id; ?>" title="Uvrsti u: <?php echo esc_attr( $g->label ); ?>"><?php echo esc_html( $short( $g->label ) ); ?></button><?php endforeach; ?></template>
-
-<div class="kurs-assign-layout">
-
-	<!-- ── Sve ekipe (registar) ────────────────────────────────────────── -->
-	<div class="kurs-team-pool">
-		<h3>Sve ekipe</h3>
-		<p class="kurs-muted">Bez lige u ovoj sezoni: <strong id="kurs-pool-free-count"><?php echo (int) $free_count; ?></strong>. Klikni ligu<?php echo count( $all_groups ) > 2 ? ' / skupinu' : ''; ?> uz ekipu da je uvrstiš.</p>
-
-		<div class="kurs-team-list" id="kurs-team-pool-list">
-			<?php
-			$pool = $all_teams; // ekipe bez lige na vrh
-			usort( $pool, fn( $a, $b ) => ( empty( $assigned[ $b->ID ] ) <=> empty( $assigned[ $a->ID ] ) ) ?: strcoll( $a->post_title, $b->post_title ) );
-			foreach ( $pool as $t ) :
-				$in = $assigned[ $t->ID ] ?? [];
-			?>
-			<div class="kurs-team-pill<?php echo $in ? ' is-assigned' : ''; ?>" data-team-id="<?php echo (int) $t->ID; ?>" title="<?php echo esc_attr( $in ? 'Igra u: ' . implode( ', ', $in ) : 'Nije u ligi ove sezone' ); ?>">
-				<?php echo kurs_team_badge_html( $t->ID, 24 ); ?>
-				<span class="kurs-team-pill__name"><?php echo esc_html( $t->post_title ); ?></span>
-				<span class="kurs-team-pill__go"><?php foreach ( $all_groups as $g ) : ?><button type="button" class="kurs-pool-assign" data-group-id="<?php echo (int) $g->id; ?>" title="Uvrsti u: <?php echo esc_attr( $g->label ); ?>"><?php echo esc_html( $short( $g->label ) ); ?></button><?php endforeach; ?></span>
-			</div>
-			<?php endforeach; ?>
-		</div>
-
-		<div class="kurs-new-team-form">
-			<h4>+ Nova ekipa</h4>
-			<input type="text" id="new-team-name-setup" class="regular-text" placeholder="Naziv ekipe">
-			<button type="button" class="kurs-btn kurs-btn--dark kurs-btn--sm" id="btn-create-team-setup" style="width:100%;justify-content:center;">+ Kreiraj ekipu</button>
-			<p id="new-team-setup-msg" class="kurs-muted" style="margin-top:4px;display:none;"></p>
-		</div>
+<!-- ── Lige / skupine (stupci jedan do drugog) + ekipe bez lige ───────────────
+     Uvrštavanje i micanje: potvrda u dijalogu + „Poništi" (admin.js → #kurs-assign). -->
+<div class="kurs-assign" id="kurs-assign">
+	<div class="kurs-lcols">
+		<?php foreach ( $divisions as $div ) : foreach ( $div_groups[ (int) $div->id ] as $g ) :
+			$gid = (int) $g->id;
+			$nt  = count( $g->teams );
+		?>
+		<section class="kurs-lcol" data-group-id="<?php echo $gid; ?>" data-acc="<?php echo esc_attr( $acc( $g_label[ $gid ] ) ); ?>" data-gen="<?php echo esc_attr( $gen( $g_label[ $gid ] ) ); ?>" style="--lg:<?php echo esc_attr( $g_color[ $gid ] ); ?>;">
+			<header class="kurs-lcol__hd">
+				<?php echo kurs_league_icon( $season->league . ' ' . $div->name, 30 ); ?>
+				<div>
+					<h3><?php echo esc_html( $g_label[ $gid ] ); ?></h3>
+					<span class="kurs-lcol__meta"><b class="kurs-lcol__count"><?php echo $nt; ?></b> <span class="kurs-lcol__word"><?php echo $plural( $nt, 'ekipa', 'ekipe', 'ekipa' ); ?></span><?php echo empty( $div->has_playoff ) ? ' · svatko sa svakim jednom' : ''; ?></span>
+				</div>
+			</header>
+			<ul class="kurs-lcol__teams">
+				<?php foreach ( $g->teams as $gt ) :
+					$tid = (int) $gt->team_id;
+					$sq  = (int) ( $squad_counts[ (int) $div->id ][ $tid ] ?? 0 );
+					$nm  = (int) ( $team_matches[ $gid ][ $tid ] ?? 0 );
+				?>
+				<li class="kurs-lteam" data-team-id="<?php echo $tid; ?>" data-name="<?php echo esc_attr( $gt->team_name ); ?>"<?php echo ( (int) $gt->base_p || $gt->rank_hint !== null ) ? ' data-base="1"' : ''; ?>>
+					<?php echo kurs_team_badge_html( $tid, 30 ); ?>
+					<span class="kurs-lteam__name"><?php echo esc_html( $gt->team_name ); ?></span>
+					<a class="kurs-lteam__roster<?php echo $sq ? '' : ' is-empty'; ?>" href="<?php echo esc_url( $roster_url( $tid, (int) $div->id ) ); ?>" title="Igrači ekipe u ovoj ligi (s brojevima dresova)"><?php echo $sq . ' ' . $plural( $sq, 'igrač', 'igrača', 'igrača' ); ?></a>
+					<?php if ( $is_locked ) : ?>
+					<?php elseif ( $nm ) : ?>
+					<span class="kurs-lteam__lock" title="Ekipa ima <?php echo $nm; ?> utakmica u ovoj ligi — ne može se maknuti dok se one ne obrišu (kartica Utakmice).">&#128274;</span>
+					<?php else : ?>
+					<button type="button" class="kurs-lteam__rm" title="Makni ekipu iz ove lige">Makni</button>
+					<?php endif; ?>
+				</li>
+				<?php endforeach; ?>
+			</ul>
+			<p class="kurs-lcol__empty"<?php echo $nt ? ' hidden' : ''; ?>>Još nema ekipa<?php echo $is_locked ? '' : ' — dodaj ih iz popisa ispod'; ?>.</p>
+		</section>
+		<?php endforeach; endforeach; ?>
 	</div>
 
-	<!-- ── Lige i skupine ──────────────────────────────────────────────── -->
-	<div class="kurs-groups-canvas">
-		<?php foreach ( $divisions as $div ) :
-			$groups = $div_groups[ (int) $div->id ];
-		?>
-		<?php if ( count( $divisions ) > 1 || count( $groups ) > 1 ) : ?><h2><?php echo esc_html( $div->name ); ?></h2><?php endif; ?>
-
-		<div class="kurs-group-cols">
-			<?php foreach ( $groups as $g ) : ?>
-			<div class="kurs-group-col" data-group-id="<?php echo (int) $g->id; ?>">
-				<div class="kurs-group-col__head">
-					<span><?php echo esc_html( count( $groups ) === 1 ? 'Ekipe u ligi' : $g->name ); ?></span>
-					<span class="kurs-muted kurs-cnt"><?php echo count( $g->teams ); ?> ekipa</span>
-				</div>
-				<div class="kurs-group-col__teams">
-					<?php foreach ( $g->teams as $gt ) :
-						$sq = (int) ( $squad_counts[ (int) $div->id ][ (int) $gt->team_id ] ?? 0 );
-					?>
-					<div class="kurs-group-team" data-team-id="<?php echo (int) $gt->team_id; ?>">
-						<?php echo kurs_team_badge_html( (int) $gt->team_id, 22 ); ?>
-						<span><?php echo esc_html( $gt->team_name ); ?></span>
-						<a class="kurs-group-team__roster<?php echo $sq ? '' : ' is-empty'; ?>" href="<?php echo esc_url( $roster_url( (int) $gt->team_id, (int) $div->id ) ); ?>"
-						   title="Igrači ekipe u ovoj ligi"><?php echo $sq; ?> igr.</a>
-						<button class="kurs-btn-rm" data-group-id="<?php echo (int) $g->id; ?>" data-team-id="<?php echo (int) $gt->team_id; ?>" title="Makni iz lige">&times;</button>
-					</div>
-					<?php endforeach; ?>
-				</div>
-				<div class="kurs-group-col__add">
-					<div class="kurs-team-ac-wrap">
-						<input type="text" class="kurs-team-search small-text" placeholder="Traži ekipu..." autocomplete="off">
-						<input type="hidden" class="kurs-team-selected-id" value="">
-					</div>
-					<button class="button button-small kurs-btn-add-team" data-group-id="<?php echo (int) $g->id; ?>">Dodaj</button>
-				</div>
+	<?php if ( ! $is_locked ) : ?>
+	<section class="kurs-free">
+		<header class="kurs-free__hd">
+			<div>
+				<h3>Ekipe koje nisu u ligi</h3>
+				<p>Ekipe iz registra koje ove sezone još ne igraju: <b id="kurs-free-count"><?php echo (int) $free_count; ?></b>. Klikni ligu<?php echo count( $all_groups ) > 2 ? ' ili skupinu' : ''; ?> uz ekipu da je uvrstiš.</p>
+			</div>
+			<input type="search" id="kurs-free-search" class="kurs-free__search" placeholder="Traži ekipu…" aria-label="Traži ekipu" autocomplete="off">
+		</header>
+		<div class="kurs-free__grid" id="kurs-free-grid">
+			<?php foreach ( $all_teams as $t ) : ?>
+			<div class="kurs-fteam" data-team-id="<?php echo (int) $t->ID; ?>" data-name="<?php echo esc_attr( $t->post_title ); ?>"<?php echo empty( $assigned[ $t->ID ] ) ? '' : ' hidden'; ?>>
+				<?php echo kurs_team_badge_html( $t->ID, 30 ); ?>
+				<span class="kurs-fteam__name"><?php echo esc_html( $t->post_title ); ?></span>
+				<span class="kurs-fteam__go"><?php echo $add_buttons; ?></span>
 			</div>
 			<?php endforeach; ?>
 		</div>
-		<?php endforeach; ?>
+		<p class="kurs-free__none" id="kurs-free-none"<?php echo $free_count ? ' hidden' : ''; ?>>Sve ekipe iz registra već igraju ove sezone. Nova ekipa? Upiši je ispod.</p>
+		<p class="kurs-free__none" id="kurs-free-nomatch" hidden>Nijedna ekipa bez lige ne odgovara pretrazi.</p>
+		<div class="kurs-free__new">
+			<label for="new-team-name-setup">Nova ekipa (prvi put igra u KURS-u):</label>
+			<input type="text" id="new-team-name-setup" placeholder="Naziv ekipe" autocomplete="off">
+			<button type="button" class="kurs-btn kurs-btn--dark kurs-btn--sm" id="btn-create-team-setup">+ Kreiraj ekipu</button>
+			<span id="new-team-setup-msg" class="kurs-free__msg" hidden></span>
+		</div>
+	</section>
+	<?php endif; ?>
+</div>
+<?php if ( $is_locked ) return; ?>
+
+<!-- Potvrda uvrštavanja / micanja i traka „Poništi" (admin.js) -->
+<div class="kurs-rec-modal kurs-confirm" id="kurs-assign-confirm" role="dialog" aria-modal="true" aria-labelledby="kurs-confirm-title" hidden>
+	<div class="kurs-modal-backdrop" data-close></div>
+	<div class="kurs-modal-box">
+		<h3 class="kurs-modal-title" id="kurs-confirm-title"></h3>
+		<div class="kurs-confirm__team"></div>
+		<p class="kurs-modal-msg"></p>
+		<div class="kurs-modal-actions">
+			<button type="button" class="kurs-btn" data-ok></button>
+			<button type="button" class="kurs-btn kurs-btn--outline" data-close>Odustani</button>
+		</div>
 	</div>
 </div>
+<div class="kurs-undo" id="kurs-undo" role="status" aria-live="polite" hidden>
+	<span class="kurs-undo__msg"></span>
+	<button type="button" class="kurs-undo__btn">Poništi</button>
+	<button type="button" class="kurs-undo__x" aria-label="Zatvori">&times;</button>
+</div>
+<template id="kurs-fteam-go-tpl"><?php echo $add_buttons; ?></template>
 
 <?php
 /* ── Preneseno stanje: kola odigrana prije unosa u sustav (arhivska sezona, prelazak usred sezone) ── */
