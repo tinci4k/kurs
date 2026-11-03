@@ -6,6 +6,7 @@ class Kurs_Admin {
 	public function __construct() {
 		add_action( 'admin_menu',            [ $this, 'menus' ] );
 		add_action( 'admin_enqueue_scripts', [ $this, 'assets' ] );
+		add_action( 'wp_dashboard_setup',    [ $this, 'dashboard_widget' ] );
 		add_action( 'admin_init',            [ $this, 'maybe_render_pdf' ] );
 		add_action( 'admin_init',            [ $this, 'handle_forms' ] );
 		add_action( 'admin_init',            [ $this, 'redirect_legacy_pages' ], 5 );
@@ -92,6 +93,53 @@ class Kurs_Admin {
 			: admin_url( 'admin.php?page=kurs-teams' . ( $team_id ? '&action=edit&id=' . $team_id : '' ) );
 	}
 
+	/** URL zapisnika utakmice (radi i za playoff zapisnike). */
+	public static function record_url( int $match_id ): string {
+		return admin_url( 'admin.php?page=kurs-match-record&match_id=' . $match_id );
+	}
+
+	/**
+	 * Utakmice aktivnih, nezaključanih sezona — i playoff zapisnici (group_id = 0). $cond = dodatni SQL uvjet
+	 * (placeholderi za $args). Redak: id, round, match_date, status, rezultat, home_name, away_name, div_name,
+	 * league, season_id, po_round. Koriste ga KURS Liga → Pregled i widget na Nadzornoj ploči.
+	 */
+	public static function active_matches( string $cond, array $args = [], string $order = 'm.match_date', int $limit = 20 ): array {
+		global $wpdb;
+		$p   = $wpdb->prefix . KURS_PREFIX;
+		$sql = "SELECT m.id, m.round, m.match_date, m.status, m.home_score, m.away_score, h.post_title AS home_name, a.post_title AS away_name,
+		               d.name AS div_name, s.league, s.id AS season_id, pm.round AS po_round
+		        FROM {$p}matches m
+		        LEFT JOIN {$p}groups g ON g.id = m.group_id
+		        LEFT JOIN {$p}phases ph ON ph.id = g.phase_id
+		        LEFT JOIN {$p}playoff_matches pm ON pm.match_id = m.id
+		        JOIN {$p}divisions d ON d.id = COALESCE( ph.division_id, pm.division_id )
+		        JOIN {$p}seasons s ON s.id = d.season_id
+		        JOIN {$wpdb->posts} h ON h.ID = m.home_team_id
+		        JOIN {$wpdb->posts} a ON a.ID = m.away_team_id
+		        WHERE s.status = 'active' AND s.locked = 0 AND ( $cond )
+		        ORDER BY $order LIMIT " . (int) $limit;
+		return $wpdb->get_results( $args ? $wpdb->prepare( $sql, ...$args ) : $sql ) ?: [];
+	}
+
+	/** „sub 14.11. · 18:30" (bez termina: „—"). */
+	public static function match_when( object $m ): string {
+		if ( ! $m->match_date ) return '—';
+		$days = [ 'ned', 'pon', 'uto', 'sri', 'čet', 'pet', 'sub' ];
+		return $days[ (int) date( 'w', strtotime( $m->match_date ) ) ] . ' ' . date( 'j.n. · H:i', strtotime( $m->match_date ) );
+	}
+
+	/** „3. kolo" ili playoff runda („Polufinale"). */
+	public static function match_stage( object $m ): string {
+		$po = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale', '3rd' => 'Za 3. mjesto' ];
+		return $m->po_round ? ( $po[ $m->po_round ] ?? 'Playoff' ) : (int) $m->round . '. kolo';
+	}
+
+	/** Oznaka lige utakmice (KC / Liga bez briga / Pan) — klase .kurs-league-tag. */
+	public static function league_tag( object $m ): string {
+		$cls = Kurs_Season::is_pan_league( (string) $m->league ) ? 'pan' : ( stripos( $m->div_name, 'briga' ) !== false ? 'lbb' : 'kc' );
+		return '<span class="kurs-league-tag kurs-league-tag--' . $cls . '">' . esc_html( $m->div_name ) . '</span>';
+	}
+
 	/** Sezona kojoj pripada skupina (0 ako ne postoji). */
 	public static function season_of_group( int $group_id ): int {
 		global $wpdb;
@@ -153,9 +201,31 @@ class Kurs_Admin {
 		return $season ? self::hub_slug( (string) $season->league ) : $submenu_file;
 	}
 
+	// ── Nadzorna ploča WordPressa ─────────────────────────────────────────────
+
+	/**
+	 * Widget „KURS — utakmice i zapisnici" na vrhu Nadzorne ploče (prvo što se vidi nakon prijave):
+	 * utakmice bez rezultata i sljedeći dani igranja, svaka s gumbom za zapisnik. Korisnicima bez
+	 * manage_options (urednici) to je jedini widget — WordPressove (vijesti, brzi nacrt…) se skrivaju.
+	 */
+	public function dashboard_widget(): void {
+		if ( ! current_user_can( KURS_CAP ) ) return;
+		wp_add_dashboard_widget( 'kurs_matches', 'KURS — utakmice i zapisnici',
+			function () { require KURS_DIR . 'admin/views/dashboard-widget.php'; }, null, null, 'normal', 'high' );
+		if ( current_user_can( 'manage_options' ) ) return;
+		foreach ( [ 'dashboard_site_health' => 'normal', 'dashboard_right_now' => 'normal', 'dashboard_activity' => 'normal',
+			'dashboard_quick_press' => 'side', 'dashboard_primary' => 'side' ] as $id => $context ) {
+			remove_meta_box( $id, 'dashboard', $context );
+		}
+	}
+
 	// ── Assets ────────────────────────────────────────────────────────────────
 
 	public function assets( string $hook ): void {
+		if ( $hook === 'index.php' && current_user_can( KURS_CAP ) ) {
+			wp_enqueue_style( 'kurs-dashboard-widget', KURS_URL . 'admin/assets/dashboard-widget.css', [], KURS_VERSION );
+			return;
+		}
 		if ( strpos( $hook, 'kurs-' ) === false ) return;
 		wp_enqueue_media(); // Potrebno za Media Library modal
 		wp_enqueue_style( 'flatpickr',

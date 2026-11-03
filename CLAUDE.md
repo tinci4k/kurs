@@ -69,6 +69,7 @@ Organiziran **po natjecanjima** (od `KURS_VERSION` 1.16.0), sve iza `KURS_CAP`:
 | Slug | Stranica |
 |------|----------|
 | `kurs-dashboard` | **Pregled** — oba natjecanja (aktualna sezona) + „Čeka rezultat" / „Ovaj tjedan" / „Zadnji rezultati" |
+| *(Nadzorna ploča WP)* | **Widget „KURS — utakmice i zapisnici"** (`dashboard-widget.php`, 1.22.0) — prvo što se vidi nakon prijave: čeka rezultat + sljedeća dva dana igranja s gumbom za zapisnik; urednicima jedini widget |
 | `kurs-kc`, `kurs-pan` | **Stranica natjecanja** (`season-hub.php`) — sezona (`?season_id=`, zadano aktualna) u karticama `?tab=` pregled / ekipe / utakmice / postavke (`hub-overview/teams/matches/settings.php`; ekipe = uvrštavanje + **prijenos ekipa i rostera iz prošle sezone** + **roster ekipe** `&roster=&division_id=` (`roster-panel.php`, link `Kurs_Admin::roster_url()`); postavke = sezona, **suci sezone**, zaključavanje) |
 | `kurs-teams` | **Ekipe** — zajednički registar klubova (logo, boja, trener, kapetan, sponzori) + popis liga s linkom na roster |
 | `kurs-players` | **Igrači** — registar igrača (`players.php`, `Kurs_Players`): tražilica, pozicija/godina rođenja/fotografija, karijera, spajanje dvostrukih upisa |
@@ -140,5 +141,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.21.0` vs
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.22.0` vs
   `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.44` vs `style.css` 1.0.0.

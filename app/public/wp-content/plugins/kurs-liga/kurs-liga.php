@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURS_VERSION', '1.21.0' );
+define( 'KURS_VERSION', '1.22.0' );
 define( 'KURS_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'KURS_URL',     plugin_dir_url( __FILE__ ) );
 define( 'KURS_PREFIX',  'kurs_' );

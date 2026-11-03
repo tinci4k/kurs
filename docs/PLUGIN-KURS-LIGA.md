@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.21.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.22.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -510,6 +510,8 @@ Top-level: `add_menu_page('KURS Liga', 'KURS Liga', KURS_CAP, 'kurs-dashboard', 
 
 ### 5.3 Asseti — `assets($hook)` (hook `admin_enqueue_scripts`)
 
+Na Nadzornoj ploči WordPressa (`$hook === "index.php"`) učitava samo `admin/assets/dashboard-widget.css` (za widget ispod) i izlazi.
+
 Učitava samo kad `strpos($hook,'kurs-')` (hookovi su oblika `toplevel_page_kurs-dashboard`, `kurs-liga_page_kurs-kc`, a za skrivene stranice `admin_page_kurs-match-record` — zato nova admin stranica, osobito skrivena, treba slug s prefiksom `kurs-`). Učitava:
 - `wp_enqueue_media()` (logo modal)
 - **flatpickr** (CDN CSS+JS) + hrvatska lokalizacija `l10n/hr.js`
@@ -639,10 +641,13 @@ Svaka: `check_ajax_referer('kurs_ajax','nonce')` + `KURS_CAP`. Greške dodjele e
 
 #### Ostale stranice
 
+**`dashboard-widget.php`** — widget **„KURS — utakmice i zapisnici"** na **Nadzornoj ploči WordPressa** (`Kurs_Admin::dashboard_widget()` na `wp_dashboard_setup`, id `kurs_matches`, `normal`/`high` = prvi u prvom stupcu; samo uz `KURS_CAP`). Za ljude koji unose rezultate (1.22.0): *Čeka rezultat* (prošle, nezavršene — gumb „Unesi zapisnik") i *Nadolazeće utakmice* (sljedeća **dva dana igranja**, „Danas"/„Sutra", gumb „Zapisnik"), uputa za zapisnik i gumbi „Utakmice — natjecanje" (aktualna sezona) + „KURS Liga — pregled". Korisnicima **bez `manage_options`** (urednici) uklanja WordPressove widgete (Site Health, At a Glance, Activity, Quick Draft, Events and News). CSS je samostalan (`dashboard-widget.css`, WP gumbi `.button`), admin.css se ondje ne učitava.
+
 **`dashboard.php`** („Pregled", `kurs-dashboard`) — **prepisano 2026-10-16.**
 - Zaglavlje: gumbi „Ekipe", „Igrači" i „Za medije ↗" (`/za-medije/`).
 - **Dvije kartice natjecanja** `.kurs-comp-card--kc|pan` (petlja po `HUBS`, sezona = `current_for_league`): naziv sezone (+ „🔒 zaključana" / „arhiva"); po ligi red **„N ekipa · X. kolo od Y · vodi …"** (ili „Y kola, još se nije igralo" / „bez rasporeda"; vodeći samo za ligu s jednom skupinom); gumbi **Otvori** (stranica natjecanja) / **Utakmice** / **Ekipe** (`hub_url`).
 - **Što traži pažnju** — preko svih **aktivnih nezaključanih** sezona (`s.status='active' AND s.locked=0`; i playoff zapisnici preko `playoff_matches`): *Čeka rezultat* (neodigrane s prošlim datumom, LIMIT 10, „Unesi zapisnik"), *Ovaj tjedan* (od sada do ponoći za 8 dana, LIMIT 20), *Zadnji rezultati* (LIMIT 8, link na zapisnik). Oznaka lige `.kurs-league-tag--kc|lbb|pan` + „N. kolo" ili playoff runda.
+- Upiti idu preko **`Kurs_Admin::active_matches($cond, $args, $order, $limit)`** (1.22.0), a format redaka preko `match_when()`, `match_stage()`, `league_tag()` i `record_url()` — isto koristi widget na Nadzornoj ploči.
 - **Uklonjeno:** stare stat kartice (aktivne sezone, broj ekipa/igrača), CTA „Dodaj igrača" / kreiranje sezone, forme tickera i baze sudaca (→ `settings.php`).
 
 **`settings.php`** („Postavke", `kurs-settings`) — Opće postavke za sva natjecanja: **Ticker na vrhu weba — izvan sezone** (`champions` = podij prvaka / `hidden` → `save_ticker_settings`, notice `ticker_saved`). Panel **Suci** je od 1.17.0 samo uputa s linkovima na karticu Postavke aktualne KC i Pan sezone.

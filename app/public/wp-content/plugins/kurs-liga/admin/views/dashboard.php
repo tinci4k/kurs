@@ -5,36 +5,18 @@ defined( 'ABSPATH' ) || exit;
  * KURS Liga → Pregled: ulaz u oba natjecanja (aktualna sezona svakog) + ono što
  * traži pažnju u svim aktivnim sezonama (utakmice bez rezultata, ovaj tjedan).
  */
-global $wpdb;
-$p   = $wpdb->prefix . KURS_PREFIX;
 $now = current_time( 'mysql' );
 
-/* Utakmice aktivnih (nezaključanih) sezona — i playoff (group_id = 0) */
-$from = "FROM {$p}matches m
-	LEFT JOIN {$p}groups g ON g.id = m.group_id
-	LEFT JOIN {$p}phases ph ON ph.id = g.phase_id
-	LEFT JOIN {$p}playoff_matches pm ON pm.match_id = m.id
-	JOIN {$p}divisions d ON d.id = COALESCE( ph.division_id, pm.division_id )
-	JOIN {$p}seasons s ON s.id = d.season_id
-	JOIN {$wpdb->posts} h ON h.ID = m.home_team_id
-	JOIN {$wpdb->posts} a ON a.ID = m.away_team_id
-	WHERE s.status = 'active' AND s.locked = 0";
-$cols = 'm.id, m.round, m.match_date, m.status, m.home_score, m.away_score, h.post_title AS home_name, a.post_title AS away_name,
-	d.name AS div_name, s.league, s.id AS season_id, pm.round AS po_round';
-$overdue  = $wpdb->get_results( $wpdb->prepare( "SELECT $cols $from AND m.status <> 'finished' AND m.match_date < %s ORDER BY m.match_date LIMIT 10", $now ) );
-$week     = $wpdb->get_results( $wpdb->prepare( "SELECT $cols $from AND m.status <> 'finished' AND m.match_date >= %s AND m.match_date < %s ORDER BY m.match_date LIMIT 20",
-	$now, date( 'Y-m-d 00:00:00', strtotime( '+8 days', strtotime( $now ) ) ) ) );
-$recent   = $wpdb->get_results( "SELECT $cols $from AND m.status = 'finished' ORDER BY m.match_date DESC, m.id DESC LIMIT 8" );
+/* Utakmice aktivnih (nezaključanih) sezona — i playoff (group_id = 0); isti upit koristi widget na Nadzornoj ploči */
+$overdue = Kurs_Admin::active_matches( "m.status <> 'finished' AND m.match_date < %s", [ $now ], 'm.match_date', 10 );
+$week    = Kurs_Admin::active_matches( "m.status <> 'finished' AND m.match_date >= %s AND m.match_date < %s",
+	[ $now, date( 'Y-m-d 00:00:00', strtotime( '+8 days', strtotime( $now ) ) ) ] );
+$recent  = Kurs_Admin::active_matches( "m.status = 'finished'", [], 'm.match_date DESC, m.id DESC', 8 );
 
-$po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale', '3rd' => 'Za 3. mjesto' ];
-$tag      = function ( $m ): string {
-	$cls = Kurs_Season::is_pan_league( (string) $m->league ) ? 'pan' : ( stripos( $m->div_name, 'briga' ) !== false ? 'lbb' : 'kc' );
-	return '<span class="kurs-league-tag kurs-league-tag--' . $cls . '">' . esc_html( $m->div_name ) . '</span>';
-};
-$where    = fn( $m ) => $m->po_round ? ( $po_names[ $m->po_round ] ?? 'Playoff' ) : (int) $m->round . '. kolo';
-$days     = [ 'ned', 'pon', 'uto', 'sri', 'čet', 'pet', 'sub' ];
-$when     = fn( $m ) => $m->match_date ? $days[ (int) date( 'w', strtotime( $m->match_date ) ) ] . ' ' . date( 'j.n. · H:i', strtotime( $m->match_date ) ) : '—';
-$rec_url  = fn( $m ) => admin_url( 'admin.php?page=kurs-match-record&match_id=' . (int) $m->id );
+$tag     = [ 'Kurs_Admin', 'league_tag' ];
+$where   = [ 'Kurs_Admin', 'match_stage' ];
+$when    = [ 'Kurs_Admin', 'match_when' ];
+$rec_url = fn( $m ) => Kurs_Admin::record_url( (int) $m->id );
 ?>
 <div class="wrap kurs-wrap">
 

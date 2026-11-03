@@ -1,0 +1,29 @@
+/* Nadzorna ploča WordPressa → widget „KURS — utakmice i zapisnici" (admin/views/dashboard-widget.php).
+   Samostalan: admin.css se na Nadzornoj ploči ne učitava. */
+#kurs_matches .inside { margin: 0; padding: 0; }
+.kurs-dw__sec { padding: 12px 14px; border-bottom: 1px solid #f0f0f1; }
+.kurs-dw__sec--warn { background: #fff5f5; border-left: 4px solid #DA0F1E; }
+.kurs-dw__h { margin: 0 0 6px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.kurs-dw__sec--warn .kurs-dw__h { color: #a50c17; }
+.kurs-dw__count { background: #DA0F1E; color: #fff; border-radius: 10px; padding: 0 8px; font-size: 12px; line-height: 20px; }
+.kurs-dw__hint { margin: 0 0 8px; color: #646970; font-size: 12px; }
+.kurs-dw__how { padding: 10px 14px 0; margin: 0; }
+.kurs-dw__empty { margin: 4px 0 2px; color: #50575e; }
+.kurs-dw__day { margin: 10px 0 2px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: #50575e; }
+.kurs-dw__day:first-of-type { margin-top: 2px; }
+.kurs-dw__day.is-today { color: #DA0F1E; }
+.kurs-dw__match { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid #f0f0f1; }
+.kurs-dw__day + .kurs-dw__match, .kurs-dw__hint + .kurs-dw__match { border-top: 0; }
+.kurs-dw__time { flex: 0 0 auto; min-width: 46px; font-weight: 600; color: #1d2327; font-variant-numeric: tabular-nums; }
+.kurs-dw__sec--warn .kurs-dw__time { min-width: 96px; font-size: 12px; }
+.kurs-dw__teams { flex: 1; min-width: 0; font-size: 14px; line-height: 1.35; }
+.kurs-dw__teams small { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; font-size: 11px; color: #646970; }
+.kurs-dw__btn.button { flex: 0 0 auto; min-height: 34px; line-height: 32px; padding: 0 14px; font-size: 13px; }
+.kurs-dw__foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 14px 14px; }
+.kurs-league-tag { display: inline-flex; padding: 0 7px; border-radius: 9px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; background: #fde7e8; color: #a50c17; }
+.kurs-league-tag--lbb { background: #f6ecd8; color: #7c5512; }
+.kurs-league-tag--pan { background: #fdebdc; color: #b3570c; }
+@media (max-width: 600px) {
+	.kurs-dw__match { flex-wrap: wrap; }
+	.kurs-dw__btn.button { width: 100%; text-align: center; }
+}
