@@ -551,6 +551,203 @@
    "note": "Četvorica iz prošle sezone dobila su puna imena, 11 igrača je novo."
   },
   {
+   "id": 312,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Bimbo",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Damir Bebek",
+    "Igor Beši",
+    "Marko Blažeković",
+    "Josip Britvić",
+    "Damir Gašparić",
+    "Darko Ištvan",
+    "Vedran Kelek",
+    "Damir Kopričanec",
+    "Matija Kuhar",
+    "Danijel Leban",
+    "Goran Ogrizović",
+    "Marko Rajn",
+    "Tomo Čik",
+    "Krešimir Škvorc"
+   ],
+   "renamed": [
+    [
+     "Bebek",
+     "Damir Bebek"
+    ],
+    [
+     "Ištvan",
+     "Darko Ištvan"
+    ],
+    [
+     "G. Ogrizović",
+     "Goran Ogrizović"
+    ],
+    [
+     "Krešo Škvorc",
+     "Krešimir Škvorc"
+    ],
+    [
+     "Kuhar",
+     "Matija Kuhar"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Igor Beši",
+    "Marko Blažeković",
+    "Josip Britvić",
+    "Damir Gašparić",
+    "Vedran Kelek",
+    "Damir Kopričanec",
+    "Danijel Leban",
+    "Marko Rajn",
+    "Tomo Čik"
+   ],
+   "gone": [],
+   "moved": [],
+   "note": "Svih pet igrača iz prošle sezone ostaje i dobili su puna imena, devet je novih."
+  },
+  {
+   "id": 311,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "coARt",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "Krunoslav Subotičanec",
+   "coach": "",
+   "roster": [
+    "Marko Blažic",
+    "Nikola Eršeg",
+    "Stanko Kokša",
+    "Leo Kolman",
+    "Darko Lovreković",
+    "Ivan Martan",
+    "Božidar Pakasin",
+    "Mirko Patrčević",
+    "Josip Požgaj",
+    "Ivica Suvalj"
+   ],
+   "renamed": [
+    [
+     "Pakasin",
+     "Božidar Pakasin"
+    ],
+    [
+     "Lovreković",
+     "Darko Lovreković"
+    ],
+    [
+     "Martan",
+     "Ivan Martan"
+    ],
+    [
+     "Suvalj",
+     "Ivica Suvalj"
+    ],
+    [
+     "Kolman",
+     "Leo Kolman"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Marko Blažic",
+    "Nikola Eršeg",
+    "Stanko Kokša",
+    "Mirko Patrčević",
+    "Josip Požgaj"
+   ],
+   "gone": [
+    "Puhač",
+    "Vegh"
+   ],
+   "moved": [],
+   "note": "Popis poslan mailom: voditelj Krunoslav Subotičanec (nije igrač). Puhač i Vegh nisu na novom popisu."
+  },
+  {
+   "id": 317,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Forma Legalis",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Dragiša Binić",
+    "Bojan Brkić",
+    "Klaus Cvetković",
+    "Božidar Horvat",
+    "Mario Kucel",
+    "Krunoslav Kunštić",
+    "Zoran Kurcinak",
+    "Božo Prka",
+    "Domagoj Sinjeri",
+    "Gojko Vulić",
+    "Danijel Zagorščak",
+    "Tomislav Zalar",
+    "Matija Šimek",
+    "Zlatko Šimek",
+    "Ivan Štefanec"
+   ],
+   "renamed": [
+    [
+     "Horvat",
+     "Božidar Horvat"
+    ],
+    [
+     "Zagorščak",
+     "Danijel Zagorščak"
+    ],
+    [
+     "Sinjeri",
+     "Domagoj Sinjeri"
+    ],
+    [
+     "Kunštić",
+     "Krunoslav Kunštić"
+    ],
+    [
+     "Kucel",
+     "Mario Kucel"
+    ],
+    [
+     "Šimek",
+     "Zlatko Šimek"
+    ],
+    [
+     "Kurcinak",
+     "Zoran Kurcinak"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Dragiša Binić",
+    "Bojan Brkić",
+    "Klaus Cvetković",
+    "Božo Prka",
+    "Gojko Vulić",
+    "Tomislav Zalar",
+    "Matija Šimek",
+    "Ivan Štefanec"
+   ],
+   "gone": [
+    "Evačić"
+   ],
+   "moved": [],
+   "note": "Sedmorica iz prošle sezone dobila su puna imena, osam igrača je novo. Evačić nije na novom popisu."
+  },
+  {
    "id": 314,
    "league": "Liga bez briga",
    "lg": "lbb",
@@ -615,6 +812,72 @@
    "note": "Bolteković-Tkalec i Sedlanić nisu na novom popisu."
   },
   {
+   "id": 313,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Romantičari",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "Mladen Vidačak",
+   "coach": "",
+   "roster": [
+    "Ivan Balog",
+    "Filip Baruškin",
+    "Marino Gaži",
+    "Igor Horvat",
+    "Siniša Hruško",
+    "Zlatko Hržin",
+    "Jasmin Kovačević",
+    "Vlado Lenardić",
+    "Dejan Lončarek",
+    "Hrvoje Pintar",
+    "Davor Sabolić",
+    "Marko Slivar",
+    "Dejan Vranković",
+    "Den Škvorc"
+   ],
+   "renamed": [
+    [
+     "Lončarek",
+     "Dejan Lončarek"
+    ],
+    [
+     "Baruškin",
+     "Filip Baruškin"
+    ],
+    [
+     "Pintar",
+     "Hrvoje Pintar"
+    ],
+    [
+     "Kovačević",
+     "Jasmin Kovačević"
+    ],
+    [
+     "Gaži",
+     "Marino Gaži"
+    ],
+    [
+     "Slivar",
+     "Marko Slivar"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Ivan Balog",
+    "Igor Horvat",
+    "Siniša Hruško",
+    "Zlatko Hržin",
+    "Vlado Lenardić",
+    "Davor Sabolić",
+    "Den Škvorc"
+   ],
+   "gone": [],
+   "moved": [],
+   "note": "Voditelj Mladen Vidačak. Svih sedam igrača iz prošle sezone ostaje, sedam je novih."
+  },
+  {
    "id": 318,
    "league": "Liga bez briga",
    "lg": "lbb",
@@ -677,57 +940,7 @@
     "Strbat"
    ],
    "moved": [],
-   "note": "Popis je stigao bez naziva ekipe — prema igračima prošle sezone to su Čekićari. Sitar i Strbat nisu na novom popisu."
-  },
-  {
-   "id": 312,
-   "league": "Liga bez briga",
-   "lg": "lbb",
-   "name": "Bimbo",
-   "prev": "",
-   "status": "carried",
-   "updated": "",
-   "rep": "",
-   "coach": "",
-   "roster": [
-    "Bebek",
-    "Ištvan",
-    "Kuhar",
-    "G. Ogrizović",
-    "Krešo Škvorc"
-   ],
-   "renamed": [],
-   "from": [],
-   "new": [],
-   "gone": [],
-   "moved": [],
-   "note": ""
-  },
-  {
-   "id": 311,
-   "league": "Liga bez briga",
-   "lg": "lbb",
-   "name": "coARt",
-   "prev": "",
-   "status": "carried",
-   "updated": "",
-   "rep": "",
-   "coach": "",
-   "roster": [
-    "Kolman",
-    "Lovreković",
-    "Martan",
-    "Pakasin",
-    "Puhač",
-    "Suvalj",
-    "Vegh"
-   ],
-   "renamed": [],
-   "from": [],
-   "new": [],
-   "gone": [],
-   "moved": [],
-   "note": ""
+   "note": "Popis je stigao bez naziva ekipe — prema igračima prošle sezone to su Čekićari. Sitar i Strbat nisu na novom popisu. Dado Lončarek upisan je kao novi igrač (Romantičari i dalje imaju Dejana Lončareka)."
   },
   {
    "id": 464,
@@ -754,33 +967,6 @@
    "note": "KURS u Ligi bez briga sada nastupa kao ENDURA fit. Roster prenesen iz prošle sezone (KURS) — čekamo popis."
   },
   {
-   "id": 317,
-   "league": "Liga bez briga",
-   "lg": "lbb",
-   "name": "Forma Legalis",
-   "prev": "",
-   "status": "carried",
-   "updated": "",
-   "rep": "",
-   "coach": "",
-   "roster": [
-    "Evačić",
-    "Horvat",
-    "Kucel",
-    "Kunštić",
-    "Kurcinak",
-    "Sinjeri",
-    "Zagorščak",
-    "Šimek"
-   ],
-   "renamed": [],
-   "from": [],
-   "new": [],
-   "gone": [],
-   "moved": [],
-   "note": ""
-  },
-  {
    "id": 315,
    "league": "Liga bez briga",
    "lg": "lbb",
@@ -804,32 +990,6 @@
    "gone": [],
    "moved": [],
    "note": "Ista ekipa, naziv dopunjen u HEP-ODS (i u povijesti)."
-  },
-  {
-   "id": 313,
-   "league": "Liga bez briga",
-   "lg": "lbb",
-   "name": "Romantičari",
-   "prev": "",
-   "status": "carried",
-   "updated": "",
-   "rep": "",
-   "coach": "",
-   "roster": [
-    "Baruškin",
-    "Gaži",
-    "Kovačević",
-    "Lončarek",
-    "Pintar",
-    "Slivar",
-    "Dejan Vranković"
-   ],
-   "renamed": [],
-   "from": [],
-   "new": [],
-   "gone": [],
-   "moved": [],
-   "note": ""
   }
  ],
  "questions": [
@@ -840,17 +1000,6 @@
    "why": "Upisat ćemo ga kao trenera ekipe.",
    "opts": [],
    "text": "Ime i prezime",
-   "team_name": "Čekićari"
-  },
-  {
-   "id": "cek-loncarek",
-   "team": 318,
-   "q": "Je li Dado Lončarek isti Lončarek koji je prošle sezone igrao za Romantičare?",
-   "why": "Ako jest, prelazi iz Romantičara u Čekićare (u istoj ligi može biti samo u jednoj ekipi).",
-   "opts": [
-    "Da, prelazi u Čekićare",
-    "Ne, to je druga osoba"
-   ],
    "team_name": "Čekićari"
   },
   {
@@ -901,7 +1050,7 @@
    "id": "pravilo-dvije-lige",
    "team": 0,
    "q": "Smije li isti igrač igrati i u KC Ligi i u Ligi bez briga?",
-   "why": "Sustav to dopušta; pitamo zbog Kovačeka, Varge i Bebeka.",
+   "why": "Sustav to dopušta; pitamo zbog Kovačeka, Varge, Kokše i Štefaneca.",
    "opts": [
     "Da, smije",
     "Ne, samo u jednoj ligi"
@@ -919,17 +1068,6 @@
    ],
    "text": "Ako netko drugi — ime i prezime",
    "team_name": "Profesori OBSKC"
-  },
-  {
-   "id": "robin-bebek",
-   "team": 306,
-   "q": "Je li Marko Bebek (Robin Marketi) isti Bebek koji igra za Bimbo u Ligi bez briga?",
-   "why": "Za sada je upisan kao nova osoba.",
-   "opts": [
-    "Da, ista osoba",
-    "Ne, druga osoba"
-   ],
-   "team_name": "Robin Marketi"
   },
   {
    "id": "etm-loinjak",
@@ -952,6 +1090,74 @@
     "Ne, maknuti ga"
    ],
    "team_name": "Knjigovodstveni obrt Doroteja"
+  },
+  {
+   "id": "coart-pozgaj",
+   "team": 311,
+   "q": "Je li Josip Požgaj (coARt) isti Josip Požgaj koji je na popisu ekipe 193?",
+   "why": "Oba popisa su za Ligu bez briga, a igrač može biti samo u jednoj ekipi lige. Za sada su upisana dvojica.",
+   "opts": [
+    "Da — igra za coARt",
+    "Da — igra za 193",
+    "Ne, dvije različite osobe"
+   ],
+   "team_name": "coARt"
+  },
+  {
+   "id": "coart-koksa",
+   "team": 311,
+   "q": "Je li Stanko Kokša (coARt) isti Kokša koji igra u KC Ligi za AL Nemčić/Klesarstvo Habek?",
+   "why": "Za sada su upisani kao dvije osobe.",
+   "opts": [
+    "Da, ista osoba",
+    "Ne, druga osoba"
+   ],
+   "team_name": "coARt"
+  },
+  {
+   "id": "coart-blazic",
+   "team": 311,
+   "q": "Piše li se Marko Blažic ili Marko Blažić (coARt)?",
+   "why": "Na popisu piše „Blažic”.",
+   "opts": [
+    "Blažić",
+    "Blažic"
+   ],
+   "team_name": "coARt"
+  },
+  {
+   "id": "forma-simek",
+   "team": 317,
+   "q": "Prošle sezone za Formu Legalis igrao je „Šimek” (1 gol). Koji je to Šimek?",
+   "why": "Na novom popisu su Zlatko i Matija Šimek; za sada je prošla sezona pripisana Zlatku.",
+   "opts": [
+    "Zlatko Šimek",
+    "Matija Šimek"
+   ],
+   "team_name": "Forma Legalis"
+  },
+  {
+   "id": "forma-stefanec",
+   "team": 317,
+   "q": "Je li Ivan Štefanec (Forma Legalis) isti Ivan Štefanec koji je na popisu ETM Elektroinstalacija u KC Ligi?",
+   "why": "Za sada su upisani kao dvije osobe.",
+   "opts": [
+    "Da, ista osoba",
+    "Ne, druga osoba"
+   ],
+   "team_name": "Forma Legalis"
+  },
+  {
+   "id": "bimbo-bebek",
+   "team": 312,
+   "q": "U Ligi bez briga sada su dva Damira Bebeka — jedan u Bimbu, jedan u Profesorima OBŠKC. Jesu li to dvije različite osobe?",
+   "why": "Prošle sezone obojica su zabijala za svoje ekipe (Bimbo 9, Profesori 7 golova), pa su upisani kao dvije osobe.",
+   "opts": [
+    "Da, dvije različite osobe",
+    "Ne — greška na jednom popisu"
+   ],
+   "text": "Ako je greška, na kojem popisu i tko je točno",
+   "team_name": "Bimbo"
   },
   {
    "id": "ind-popijac",

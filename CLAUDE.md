@@ -129,7 +129,7 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   **stvarni podaci Pan Ljetne lige 2026** (iz službenih izvještaja; kolo = natjecateljski dan; zaključana), **KC liga 2025/2026**
   (svih 9 kola kao stvarne utakmice — izvještaji s FB stranice KC lige; dio golova 2./3. kola kao preneseni golovi igrača;
   arhivirana i zaključana) i **početna KC 2026/2027** (ekipe i rosteri prošle sezone; Gudsport u KC Ligi zamijenjen novom ekipom „Knjigovodstveni obrt Doroteja” s rosterom bez brojeva, KURS u LBB novom „ENDURA fit”, CB Beertija odustala → KC Liga 9, LBB 9 ekipa; HEP preimenovan u HEP-ODS; start 14. 11. 2026.,
-  službeni raspored 9 kola do 13. 2. 2027. unesen 2026-11-12; rosteri prema popisima ekipa za 8 ekipa — ETM, Inducta, Doroteja, Robin Marketi, ZIP Drnje, 193, Čekićari, Profesori — ostalih 10 preneseno, pregled na `/presjek/`) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
+  službeni raspored 9 kola do 13. 2. 2027. unesen 2026-11-12; rosteri prema popisima ekipa za 12 ekipa — ETM, Inducta, Doroteja, Robin Marketi, ZIP Drnje, 193, Čekićari, Profesori, coARt, Forma Legalis, Bimbo, Romantičari — ostalih 6 preneseno, pregled na `/presjek/`) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
 - **Local gotcha**: nginx round-robin na **dva php-cgi workera** (10008/10009,
   `fastcgi_read_timeout 1200s`) — ako jedan zapne, **svaki drugi zahtjev visi** → restartaj site u Localu.
 
