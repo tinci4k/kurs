@@ -114,6 +114,86 @@
 	});
 	updateDone();
 
+	// ── Sponzori ekipa (1.29.0) ──────────────────────────────────────────
+	var spons = KP.spons || {};
+	function renderSpons(box, list) {
+		var ul = box.querySelector('.kp-spons__list');
+		var team = box.getAttribute('data-team');
+		ul.innerHTML = (list || []).map(function (s) {
+			return '<li class="kp-sp kp-sp--' + esc(s.tier) + '">' +
+				(s.logo ? '<img class="kp-sp__logo" src="' + esc(s.logo) + '" alt="">' : '<span class="kp-sp__logo kp-sp__logo--none">bez loga</span>') +
+				'<span class="kp-sp__body"><b>' + esc(s.name) + '</b><span class="kp-sp__tier">' + esc(s.tierL) + ' sponzor</span>' +
+				(s.link ? '<a href="' + esc(s.link) + '" target="_blank" rel="noopener nofollow">' + esc(s.link.replace(/^https?:\/\/(www\.)?/, '')) + '</a>' : '<span class="kp-sp__nolink">bez linka</span>') +
+				'</span><button type="button" class="kp-sp__x" data-i="' + s.i + '" title="Ukloni" aria-label="Ukloni ' + esc(s.name) + '">&times;</button></li>';
+		}).join('');
+		var n = (list || []).length;
+		box.querySelector('.kp-spons__badge').textContent = n ? n + ' poslano' : 'još nije poslano';
+		box.classList.toggle('is-done', n > 0);
+		var link = document.querySelector('[data-spons-link="' + team + '"]');
+		if (link) { link.classList.toggle('is-done', n > 0); link.querySelector('span').textContent = n || '—'; }
+		var cnt = document.getElementById('kp-spons-n');
+		if (cnt) cnt.textContent = Object.keys(spons).filter(function (k) { return spons[k] && spons[k].length; }).length;
+	}
+	function postSpons(fd, box, status, done) {
+		fd.append('action', 'kurs_presjek_sponzor');
+		fd.append('k', KP.k);
+		fd.append('team', box.getAttribute('data-team'));
+		var hp = document.getElementById('kp-web');
+		fd.append('web', hp ? hp.value : '');
+		fetch(KP.ajax, { method: 'POST', credentials: 'same-origin', body: fd })
+			.then(function (r) { return r.json(); })
+			.then(function (res) {
+				if (!res || !res.success) throw new Error((res && res.data && res.data.msg) || 'Greška pri spremanju.');
+				spons[box.getAttribute('data-team')] = res.data.list;
+				renderSpons(box, res.data.list);
+				done(null);
+			})
+			.catch(function (e) { done(e); });
+	}
+	document.querySelectorAll('.kp-spons').forEach(function (box) {
+		renderSpons(box, spons[box.getAttribute('data-team')]);
+		var form = box.querySelector('.kp-spons__form');
+		var status = form.querySelector('.kp-status');
+		var btn = form.querySelector('button[type=submit]');
+		form.addEventListener('submit', function (ev) {
+			ev.preventDefault();
+			var fd = new FormData(form);
+			if (!String(fd.get('name') || '').trim()) { status.className = 'kp-status is-err'; status.textContent = 'Upišite naziv sponzora.'; return; }
+			if (!fd.get('tier')) { status.className = 'kp-status is-err'; status.textContent = 'Odaberite razinu: glavni, srednji ili mali.'; return; }
+			var file = form.querySelector('input[type=file]').files[0];
+			if (file && file.size > 5 * 1024 * 1024) { status.className = 'kp-status is-err'; status.textContent = 'Logo je veći od 5 MB.'; return; }
+			fd.append('who', who ? who.value.trim() : '');
+			btn.disabled = true; status.className = 'kp-status'; status.textContent = file ? 'Šaljem logo…' : 'Šaljem…';
+			postSpons(fd, box, status, function (err) {
+				btn.disabled = false;
+				if (err) { status.className = 'kp-status is-err'; status.textContent = err.message; return; }
+				form.reset();
+				status.className = 'kp-status is-ok'; status.textContent = 'Dodano ✓ Možete dodati sljedećeg.';
+			});
+		});
+		box.querySelector('.kp-spons__list').addEventListener('click', function (ev) {
+			var x = ev.target.closest('.kp-sp__x');
+			if (!x || !window.confirm('Ukloniti ovog sponzora?')) return;
+			var fd = new FormData();
+			fd.append('remove', x.getAttribute('data-i'));
+			postSpons(fd, box, status, function (err) {
+				if (err) { status.className = 'kp-status is-err'; status.textContent = err.message; }
+			});
+		});
+	});
+	function openFromHash() {
+		var m = /^#spons-(\d+)$/.exec(location.hash);
+		if (!m) return;
+		var box = document.getElementById('spons-' + m[1]);
+		if (!box) return;
+		var card = box.closest('.kp-team');
+		if (card && card.hidden) { var all = document.querySelector('.kp-filter__btn[data-f="all"]'); if (all) all.click(); }
+		box.open = true;
+		setTimeout(function () { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); var i = box.querySelector('input[name=name]'); if (i) i.focus({ preventScroll: true }); }, 30);
+	}
+	window.addEventListener('hashchange', openFromHash);
+	openFromHash();
+
 	// filter ekipa
 	var fbtns = document.querySelectorAll('.kp-filter__btn');
 	fbtns.forEach(function (b) {

@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.45'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.62'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.45'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.62'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -152,7 +152,7 @@ Kreira termove ako ne postoje (`term_exists` → `wp_insert_term`):
 
 Struktura odozgo prema dolje:
 
-1. `<!DOCTYPE html>` + `<head>`: charset, viewport, `preconnect` na Google Fonts, favicon `assets/img/favicon.svg`, `wp_head()`.
+1. `<!DOCTYPE html>` + `<head>`: charset, viewport, `preconnect` na Google Fonts, favicon = grb KC lige (`favicon.ico` + `favicon-32/192.png` + `apple-touch-icon.png`, `theme-color` #111317), `wp_head()`.
 2. `<body body_class()>` + `wp_body_open()`.
 3. **Live ticker** — renderira se SAMO ako `class_exists('Kurs_Ticker')` i `Kurs_Ticker::is_visible($state)`. Stanje daje plugin `Kurs_Ticker::get_state()` (`includes/class-ticker.php`): status `live` / `results` / `upcoming` / `champions` računa se iz rasporeda i zaključanih zapisnika, kešira u transientu `kurs_ticker_state_v1` (TTL po statusu) i ruši na `kurs_data_changed`. Header samo iscrtava `.site-ticker--{status}` sa stavkama `.ticker-item--finished|upcoming|live|champ` (≤3 stavke → statično, inače CSS petlja). Najave koriste hrvatske kratice dana (`sub 17.10. 15:00`) neovisno o jeziku WP-a, a podij prvaka linka na pravu ligu preko `kurs_league_url()` (✅ ISPRAVCI #10, #11).
 4. **`<header class="site-header">`**:
@@ -240,7 +240,7 @@ Nedostaju (svjesno): `home.php`, `archive.php`, `taxonomy.php`, `category.php`, 
 | `KURS-clean.png` | logo u footeru (`site-footer__logo`) |
 | `KURS-monogram.png` | ikona liga kartica (front-page), banner ikona (`page-liga.php`) |
 | `KURS-KC-boje.png` | nije referencirano u pregledanim predlošcima |
-| `favicon.svg` | favicon u `<head>` |
+| `favicon.ico`, `favicon-32.png`, `favicon-192.png`, `apple-touch-icon.png` | favicon (grb KC lige, 1.0.46) u `<head>` |
 | `kurs-media-logo.png` | **NOVO 2026-10-16** — bijeli KURS logo (240 px) u tamnom zaglavlju paketa „Za medije" (`Kurskc_Media_Kit::html()`, apsolutni URL) |
 
 ---
@@ -287,7 +287,7 @@ Front-end kombinira **WordPress objekte** (ekipe/igrači kao `WP_Post`, njihovi 
 | `kurs_team_badge_html($team_id, $size, …)` | plugin `includes/helpers.php` | kružni badge: thumbnail ekipe ili dvoslovni inicijali na boji ekipe |
 | `kurs_team_color($team_id)` | plugin `includes/helpers.php` | meta `_kurs_team_color` ili default `#1a3a6b` |
 | `kurs_team_text_color($hex)` | plugin `includes/helpers.php` | WCAG luminancija → bijeli/crni tekst |
-| `kurs_league_icon($text, $size)` | plugin `includes/helpers.php` | inline SVG grb lige (KC / Liga bez briga / Pan) |
+| `kurs_league_icon($text, $size)` | plugin `includes/helpers.php` | grb lige: KC = službeni logo (`<img>`, plugin `assets/kc-liga-logo.png`), Liga bez briga / Pan = inline SVG |
 | `kurs_league_url($division_id, $args)` | plugin `includes/helpers.php` | **NOVO** — URL huba prave lige (`/kc-liga/` ili `/pan-ljetna/`) + `season_id`/`division_id`/`$args` |
 | `kurs_render_standings($group_id, $args)` | plugin `includes/helpers.php` | dijeljeni render ljestvice; novi argumenti `max_round`, `rows`, `show_move` |
 | `kurs_render_playoff_bracket($division_id)` + `kurs_playoff_label($label)` | plugin `includes/helpers.php` | bracket; nepoznati sudionici „Pobjednik ČF 1" / „1. skupine A" umjesto „QF1-W" / „A1" |
@@ -295,7 +295,7 @@ Front-end kombinira **WordPress objekte** (ekipe/igrači kao `WP_Post`, njihovi 
 | `kurs_schedule_date_label($datetime)` | plugin `includes/helpers.php` | „Subota, 12. srpnja 2026." |
 | `kurs_time_ago($date_str)` | tema `functions.php` | hrvatski relativni datum |
 | `kurskc_badge_color/label($post_id)` | tema `inc/news.php` | boja/oznaka vijesti po `vijest_kategorija` |
-| `kurskc_thumb_placeholder($post_id, $size = 72)` | tema `inc/news.php` | vijest bez istaknute slike: `<span class="kc-ph">` (podloga u boji lige + `kurs_league_icon()`, izvan liga KURS monogram) — kartice naslovnice/arhive/pretrage, povezano, hero i izdvojena vijest (tema 1.0.43) |
+| `kurskc_thumb_placeholder($post_id, $size = 72)` | tema `inc/news.php` | vijest bez istaknute slike: `<span class="kc-ph kc-ph--kc|lbb|pan|kurs">` — tamna podloga, plameni rub u bojama lige (`.kc-ph__fire`, SVG maska), grb (`kurs_league_icon()`, izvan liga KURS monogram) i naziv lige (`.kc-ph__lbl`, samo u okvirima ≥300×170 — container query); na mobitelu u heroju/izdvojenoj grb malen gore desno — kartice naslovnice/arhive/pretrage, povezano, hero i izdvojena vijest (tema 1.0.43, redizajn 1.0.46) |
 | `kurskc_active_league()` | tema `inc/news.php` | „aktivna" liga = najbliža utakmica (`league`, `season_id`, `division_id`, `round`, `label`, `url`); transient 30 min, ruši se na `kurs_data_changed`. **2026-10-16:** `label` = naziv lige („KC Liga · 5. kolo", ranije sirovi slug `kc_liga`), `url` → `?tab=kola&kolo=N#kola` (✅ ISPRAVCI #12). Koriste ga widget „Iz lige · uživo", naslovnica („Iz lige") i „Za medije" (zadano natjecanje). |
 | `Kurskc_Media_Kit::*` | tema `inc/media-kit.php` | **NOVO** — paket „Za medije" (vidi §16a) |
 
@@ -556,7 +556,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.45'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.62'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.
@@ -576,3 +576,105 @@ Glavne komponentne klase po sekcijama:
 18. **„Za medije" HTML mora preživjeti kses:** inline stilovi + tablice, hex boje, apsolutni URL-ovi, jedan red, `font-family` **bez navodnika** — ne dodavati `<style>`, `rgba()`, SVG ni komentare u `Kurskc_Media_Kit::html()` (vidi §16a).
 19. **PNG izvoz:** koristi html-to-image 1.11.11 (cdnjs) s ugrađenim latin/latin-ext fontovima; **ne vraćati html2canvas** (krivo crta Barlow).
 20. **„Po kolima" ovisi o `matches.round`** — krivo kolo kvari ljestvicu nakon kola i „slobodnu" ekipu (admin upozorava `.kurs-round-warn`).
+
+
+## Izmjene 1.0.47 (2026-11-12)
+
+- **Blok „KURS — iz lige” (`kurs/liga`, `inc/embed-block.php` + `assets/js/embed-block.js`)** — zamjena za nejasan odabir „Ugradi iz lige” u bočnom stupcu (izbornici su bili odrezani, a ugradnja se vidjela tek nakon objave). Dinamički blok (bez build koraka, `wp.*` globali): atribut `value` u istom zapisu kao `_kurs_embed` (`round|table|results:DIV:KOLO`, `live|schedule|bracket:DIV`), render = `kurskc_embed_render()` u `<div class="post-embed post-embed--block">`. U uređivaču: odabir lige (najnovija sezona prva — `KURSKC_EMBED.order`) i prikaza u samom bloku + **pregled u `<iframe srcdoc>` s `main.css`** (REST `GET kurskc/v1/embed?value=` samo za `edit_posts`). Kategorija blokova „KURS”. Radi i u Pretpregledu jer je dio sadržaja. Metabox „KURS — opcije objave”: gumb „+ Dodaj blok „Iz lige”” (`wp.data.dispatch('core/block-editor').insertBlocks`), a stara ugradnja ispod teksta (`_kurs_embed`) prikazuje se s „Pretvori u blok” / „Ukloni” (i dalje se renderira ispod teksta dok se ne ukloni). Shortcode `[kurs_kolo]` i dalje radi.
+- **Poveznice na igrače i ekipe** (plugin helperi `kurs_team_link()` / `kurs_player_link()`): Po kolima (ekipe + strijelci), lista strijelaca kola, raspored, bracket, „Iz lige” na naslovnici (+ „Vodi:”), statistika i Zlatna kopačka (ekipa), semafor i postave na stranici utakmice, tijek utakmice (igrač), sljedeća utakmica na profilu ekipe. CSS `.kurs-tlink/.kurs-plink` (boja okoline, podcrtano na hover) i uzorak `.has-row-link` + `.kc-row-link` (rastegnut link retka ispod, imena iznad, `z-index`). Retci `rr-match`, `sched-match`, `hr-match`, `kurs-bracket__match` su sada `<div>` (prije `<a>`) — nema ugniježđenih linkova.
+- **Odabir lige na stranici lige** (`page-liga.php`, `.league-pick`): kad sezona ima više liga (KC Liga / Liga bez briga), ispod bannera su dvije velike kartice „Odaberi ligu” (grb, naziv, broj ekipa, „prikazano” / „Prikaži ovu ligu →”, kvačica u boji lige) umjesto malog prekidača; u traci kartica `.hub-tabs__league` pokazuje odabranu ligu. **Izravne poveznice:** padajući izbornik „KC Liga” u zaglavlju (odjeljak „Lige”) i podnožje (Natjecanja) vode na obje lige aktualne sezone — `kurskc_league_divisions( $is_pan )` u `inc/nav-menus.php`.
+- **Potpis izrade u podnožju:** `.site-footer__credit` — „Web izradio [ikona] webdot (ikona = Webdotov „O” znak `assets/img/webdot-o.png`, preuzet s webdot.hr, unutrašnjost popunjena bijelom da se vidi na tamnom; tema 1.0.49) — domaći web iz Koprivnice · asistencija za svaki gol” → https://webdot.hr/ (`rel="noopener"`, bez nofollow).
+
+## Izmjene 1.0.48 (2026-11-12) — „Obje lige”
+
+- Korisnik: u rasporedu samo KC lige izgleda kao da utakmice traju 1 h 20 min (lige se igraju naizmjence iste večeri). **Raspored i Po kolima zadano prikazuju obje lige zajedno** (`$all_mode` u `page-liga.php`: sezona s više liga + tab `raspored|kola` + URL bez `division_id` ili `division_id=0`), kronološki, s oznakom lige `kurs_division_chip()` (KC crveno / LBB zlatno). **Tablica i Statistika ostaju po ligi.**
+- Kartice „Odaberi ligu”: na Rasporedu i Po kolima prva je **„Obje lige”** (18 ekipa, „Cijela večer →”), uz KC Liga / Liga bez briga za suženi prikaz. Kartice prikaza „Raspored” i „Po kolima” uvijek vode na obje lige (`$tab_div`), Tablica/Statistika zadržavaju odabranu ligu.
+- Po kolima (obje lige): jedna kronološka lista rezultata (+ slobodne ekipe obiju liga), zatim za svaku ligu „Ljestvica nakon N. kola — liga” i „Strijelci nakon N. kola — liga”; bočni stupac (Zlatna kopačka, Disciplina) za svaku ligu s oznakom.
+- Plugin helperi: `kurs_render_schedule()` i `kurs_render_round_results()` primaju **ID lige ili niz ID-eva** (stari pozivi s jednim ID-em rade isto); `kurs_division_badge()` / `kurs_division_chip()`.
+
+## Izmjene 1.0.50 (2026-11-12) — ticker
+
+- Korisnik: ticker „sve sivo, ne kuži se što je što” i prebrz. Sada: **ekipe bijele i podebljane**, oznaka lige kao obojena pločica (**KC** crveno, **LBB** zlatno, **LJ** narančasto — `Kurs_Ticker::league_short()` sada razlikuje Ligu bez briga po nazivu divizije), **sat zlatnom bojom** ispred para, rezultat kao bijela pločica, točka između utakmica. Kad su sve najave isti dan, dan piše jednom u oznaci („Najava | sub 14.11.”), inače uz sat. Petlja sporija: `max(40, broj_stavki × 8)` s (prije `max(24, × 5)`).
+- Plugin `Kurs_Ticker` (1.29.0): stavke imaju `tone`, `home_id`/`away_id`, najava `day` + `time` odvojeno; transient `kurs_ticker_state_v2`.
+
+## Izmjene 1.0.51 (2026-11-12) — ugradnja = kartica „Za medije”
+
+- Korisnik: blok „KURS — iz lige” neka izgleda **identično paketu „Za medije”**. `kurskc_embed_render()` za `round` / `results` / `table` / `live` / `bracket` sada vraća **istu karticu** kao `/za-medije/` (`kurskc_embed_media_card()` → `Kurskc_Media_Kit::html()`, inline stilovi, KURS zaglavlje, trobojna crta, „Izvor: KURS” podnožje) u `<div class="post-embed__card">`. Vrijedi za blok, stari `_kurs_embed` i shortcode `[kurs_kolo]`. Raspored (`schedule`) i stari `standings:SKUPINA` ostaju klasični prikaz.
+- `Kurskc_Media_Kit::html( $datas, $round, $competition, $season, $opts )` — novi `$opts['parts']` (`results` / `table` / `scorers`) i `$round === 'live'` (+ `live_data()` = aktualna ljestvica); `/za-medije/` zove bez `$opts` (nepromijenjeno). U kartici nema poveznica na igrače/ekipe (namjerno — isto što dobivaju portali).
+
+## Izmjene 1.0.52 (2026-11-12) — centar utakmice + ticker na mobitelu
+
+- **`page-utakmica.php`** (korisnik: „stranica s rezultatom nedorečena”) — klasa `.mc`:
+  - **Semafor:** kicker (sezona · liga · kolo, grb lige), ispod imena ekipa **strijelci** (prezime + minute / broj golova, (p), (ag); poveznice na igrače) i **isključeni** (crveni karton), u sredini **poluvrijeme** (kad događaji imaju `half`), status (Završeno / Najava) i termin (dan, datum + sat zlatno; 00:00 se ne prikazuje).
+  - **Tijek utakmice** dvostrano: domaćin lijevo, gost desno, u sredini minuta i **međurezultat** nakon svakog gola (samo kad postoje minute — inače pravi redoslijed nije poznat), separatori „1./2. poluvrijeme”, „Poluvrijeme X:Y”, „Kraj X:Y”; autogol ide na stranu protivnika. Prije utakmice: poruka s terminom.
+  - **Statistika** (trake domaćin/gost): golovi, žuti, crveni, prekršaji po poluvremenu (`event_type='foul'`) — prikazuju se samo retci s vrijednošću.
+  - **Sastavi:** broj dresa samo ako ga netko ima, oznake G (golman), C (kapetan utakmice — `Kurs_Match::get_match_captain`), ikone gol/autogol/žuti/crveni; trener i voditelj **bez telefona** (prije su se javno ispisivali brojevi).
+  - **Bočni stupac:** O utakmici (natjecanje, kolo/skupina, termin, suci `referee1/2`, status), **Ostale utakmice večeri** (sve lige sezone u istom kolu, oznaka KC/LBB, trenutna istaknuta), **Ljestvica** skupine s istaknute dvije ekipe, **Međusobni susreti** (sve sezone, zadnjih 6 + omjer pobjeda/neriješeno).
+- **Ticker na mobitelu (≤700px):** oznaka uska — riječ i dan jedno ispod drugog, manji razmaci, više mjesta za utakmice.
+
+## Izmjene 1.0.53 (2026-11-12)
+
+- **Profil ekipe → „Puna tablica”** vodi na tablicu **odabrane** sezone (`kurs_league_url( $division_id )` sa `season_id`), ne na aktualnu.
+- **Logotipi ekipa** (`kurs_team_badge_html`, plugin): logo je bijela zaobljena pločica s cijelim logom (`object-fit:contain`, tanki obrub) — prije krug s `cover` unutar tamnog okvira `.team-badge` (26 px) → „krivo izrezani” rubovi. `.team-badge` više nema tamnu podlogu ni rezanje. Inicijali svijetle boje ekipe dobiju tanki obrub.
+- **„Iz lige” widget** (`inc/league-widget.php`, `kurskc_league_widget()`, keš 10 min, briše se na `kurs_data_changed`) mijenja se s fazom natjecanja (najbliže po datumu, `kurskc_active_league`): **pre** (odbrojavanje + parovi 1. kola) · **today** (današnje utakmice s rezultatima, pulsirajuća točka) · **mid** (sljedeće kolo + vrh tablice svake lige s jednom skupinom) · **post** (prvaci: playoff pobjednik ili prvi na ljestvici). Zamjenjuje „Vrh tablice · KC” i „Iz lige · uživo” u bočnom stupcu vijesti i na `/vijesti/` (stara funkcija je pokazivala LBB s oznakom „KC” i nule prije sezone).
+- **Društvene mreže** (`inc/social.php`): Izgled → Prilagodi → **„KURS — društvene mreže”** (Facebook zadano = stranica KC lige, Instagram/YouTube/TikTok prazno = skriveno). Prikaz: podnožje (ikone iz postavki umjesto `href="#"`), **„Pratite KC ligu”** kartica u bočnom stupcu vijesti i stranice lige te traka na kraju članka. `kurskc_icon()` = SVG ikone.
+- **Dijeljenje članka** (`kurskc_share_html( $id, 'compact'|'full' )`): u zaglavlju ikone, ispod članka obojeni gumbi — **Podijeli** (Web Share API, samo gdje preglednik podržava — mobitel), Facebook, WhatsApp, Viber, Telegram, X, e-mail, kopiraj link.
+- **Open Graph / Twitter kartica** u `<head>` (ako nema Yoast/Rank Math/SEOPress): naslov, sažetak, istaknuta slika ili **`assets/img/og-default.png`** (1200×630, grb KC lige) — link na Facebooku/WhatsAppu ima naslov i sliku.
+
+## Izmjene 1.0.54 (2026-11-12)
+
+- **Font oznaka:** `--font-mono` više nije Space Mono („previše informatički”) nego **Barlow** (ista obitelj kao ostatak teme); brojke u vremenima/rezultatima `tabular-nums`. Space Mono se više ne učitava na webu (Google Fonts URL u `inc/enqueue.php` i `inc/embed-block.php`); i paket „Za medije” (`Kurskc_Media_Kit::F_MONO`) koristi Barlow. Admin, `/zapisnik/` i `/presjek/` i dalje imaju Space Mono.
+- **Profil ekipe — zaglavlje:** umjesto oznake za svaku sezonu (raslo bi s godinama) **jedna oznaka po natjecanju**: „KC liga · 2 sezone · od 2025.” / „Pan Ljetna liga · 1 sezona · od 2026.” (`ekipa_sezona()`, `ekipa_ctx_label()`). Izbornik „Liga / natjecanje” grupiran po natjecanju (`.hub-dd__grp`), kraći nazivi („KC Liga 2026/2027” umjesto „KC Liga · KC Liga 2026/2027”).
+- **Javni zapisnik:** `/utakmica/?match_id=X&zapisnik=1` — samo **završene** utakmice → isti A4 zapisnik kao u adminu (`admin/views/match-record.php` PDF grana, `$GLOBALS['kurs_record_public']`), s „Ispiši” / „Preuzmi PDF” / „← Natrag na utakmicu”; prazni obrazac javno nije dostupan; `noindex`. Gumb „Zapisnik utakmice · ispis · PDF” u bočnom stupcu centra utakmice. U PDF-u se rezultat poluvremena prikazuje samo kad su poluvremena upisana (inače `___ : ___`).
+- **Vodoravno pomicanje na mobitelu** (`main.js`): `.career-table-wrap`, `.pf-table-wrap`, `.kurs-bracket`, `.media-paper`, `.view-tabs`, `.round-nav__pills` dobiju zatamnjen rub (`.xs-left/.xs-right`, CSS mask) gdje ima još sadržaja, a iznad tablica žuta oznaka „↔ Povuci lijevo-desno za cijelu tablicu” dok se prvi put ne pomakne.
+- **Ticker na mobitelu:** manje praznog prostora u oznaci, veći tekst („NAJAVA” 12,5 px, dan 11,5 px).
+
+## Izmjene 1.0.55 (2026-11-12)
+
+- **Blok „KURS — iz lige” — „Obje lige”:** za sezonu s više liga izbornik nudi i „KC Liga 2026/2027 — Obje lige” (ključ `3+4`). Zapis u `value` sadrži ID-eve spojene s `+` (`round:3+4:1`, `results|table:…`, `live:3+4`, `schedule:3+4`); `kurskc_embed_parse()` vraća i `division_ids`. Kartica je ista kao paket „Za medije” s obje lige (`Kurskc_Media_Kit::html( [ d1, d2 ], … )`, naslov „KC liga · N. kolo”); raspored obje lige = `kurs_render_schedule( [ids] )`. Paket na `/za-medije/` je već bio objedinjen (obje lige + PNG po ligi).
+- **Naslovnica — nove sekcije** ispod „Najnovije” (`inc/home-extra.php`, `kurskc_home_extra()`, keš 10 min, `kurs_data_changed`): **Liga u brojkama** (N. sezona = godina − 2011, ekipe, prijavljeni igrači, odigrane utakmice i golovi u arhivi), **Ekipe sezone** (grbovi obje lige → profili), **Zlatna kopačka** (top 5 po ligi aktualne sezone; dok nema golova — prošla sezona s oznakom), **Aktualni prvaci** (zadnja zaključana sezona svakog natjecanja: playoff pobjednik ili prvi na ljestvici), **Pratite KC ligu** + **Gdje igramo** (dvorana, karta).
+
+## Izmjene 1.0.56 (2026-11-12)
+
+- **Pretraga** (`inc/search.php` + `search.php`): rezultati grupirani — **Ekipe** (grb), **Igrači** (zadnja ekipa, `kurskc_player_last_team()`), **Vijesti** (slika, kategorija, datum, isječak oko pogotka), **Stranice**; kartice filtera `?tip=ekipe|igraci|vijesti|stranice` s brojem rezultata; pojam istaknut `<mark>` bez obzira na kvačice (`kurskc_search_regex()`: c↔č↔ć, s↔š, z↔ž, d↔đ — baza je `utf8mb4_unicode_520_ci` pa i LIKE ignorira kvačice); prazno stanje s prijedlozima. Glavni upit pretrage = samo vijesti, 12 po stranici (`pre_get_posts`).
+- **Prijedlozi dok se tipka:** REST `GET kurskc/v1/search?q=` (javno; ekipe 4, igrači 5, vijesti 4) → padajući izbornik ispod tražilice u zaglavlju i u mobilnom izborniku (`form[data-suggest]`, `main.js`; strelice ↑↓, Esc, „Svi rezultati →”). `.header-search` više nema `overflow:hidden`.
+- **Mobilni izbornik (≤880px):** tamni panel preko cijelog ekrana — gore KURS trake + bijeli logo i X (hamburger se pretvara u X, `position:fixed` u redu s logom), tražilica s prijedlozima, lige kao tamne kartice s obojenim rubom (KC crveno, Pan narančasto) i podlinkovima u dva stupca (lige + Tablica/Po kolima/Raspored/Statistika), O nama / Kontakt, dolje mreže. Pozadina se ne pomiče (`body.nav-locked`), Esc zatvara. Mobilni dijelovi su u `header.php` kao `.site-nav__mob` (skriveni na desktopu).
+- **Naslovnica „Iz lige”:** veći font ekipa (15,5 px) i sitnog teksta (kolo/datum 12,5 px, podnožje 14 px); dugi nazivi se lome u dva reda (iza „/” preko `<wbr>`) umjesto „…”.
+- **Profil ekipe:** **Roster** i **Utakmice sezone** kao kartice s tamnim zaglavljem (`.tm-card`) — roster: broj dresa ili inicijali u boji ekipe, GLM / C (`_kurs_team_captain`), golovi; utakmice: kolo · termin · protivnik (doma / u gostima, grb, link) · P/N/I s rezultatom ili sat početka, obojeni lijevi rub; zaglavlje s omjerom P·N·I.
+
+## Izmjene 1.0.57 (2026-11-12)
+
+- **Zapisnik (PDF, plugin `match-record-pdf.php`):** u zaglavlju pravi logo KURS-a (`KURS-clean-ink.png` iz teme; bez teme ostaju trake + natpis) i grb natjecanja (`kurs_league_icon`, KC grb / Pan ikona) — i u adminu, /zapisnik/ i javnom ispisu.
+- **Ikona gola = nogometna lopta** (SVG data-URI u `main.css`, `#` mora biti `%23`): tijek utakmice, postave (autogol s crvenim rubom), semafor, roster na profilu ekipe.
+- **/vijesti/:** izdvojena vijest i desni stupac jednake visine — slika izdvojene vijesti raste (`.kc-lead-row .kc-feature__img { flex:1 }`), na mobitelu 16:9; widget lige u tom stupcu je sažet (`kurskc_league_widget( true )` — najviše 4 utakmice + „još N”).
+- **Kartica „Za medije” / ugradnja u vijest — poveznice:** rezultat ili sat → `/utakmica/?match_id=`, ekipe → profil ekipe, strijelci → profil igrača, ekipe u ljestvici → profil (`Kurskc_Media_Kit::a()`, inline stil `color:inherit;text-decoration:none` da ih portal ne preboji). Vrijedi za HTML paket koji portali kopiraju i za ugradnju na našem webu (PNG i tekst nemaju poveznice). `division_data()` / `live_data()` vraćaju i `did`.
+- **Dijeljenje ispod članka:** 8 gumba u mreži 4×2 (na mobitelu ikona iznad naziva); bez Web Share API-ja „Kopiraj link” zauzme dva mjesta.
+
+## Izmjene 1.0.58 (2026-11-12) — Facebook stranice
+
+- Dvije službene Facebook stranice: **KC liga** `https://www.facebook.com/profile.php?id=100054493718852` i **Pan Ljetna liga** `https://www.facebook.com/panljetnaligakoprivnica/`. U `inc/social.php` ključevi `facebook` i `facebook_pan` (Customizer „KURS — društvene mreže”), `kurskc_social_links()` vraća i `icon`; ikone mreža sada imaju i naziv (podnožje, mobilni izbornik), „Pratite nas” kartica ima oba gumba (Pan narančasto).
+- Stranica **Kontakt**: gumbi „Pan Ljetna liga Koprivnica” / „Zimska KC Liga” vode na prave stranice (predložak u `functions.php` + lokalna baza). Vijesti #115 i #121: Facebookovi preusmjeravajući linkovi (`l.facebook.com/l.php?u=…&fbclid…`) zamijenjeni izravnim `https://klikaj.hr/` (backup `backups/local-prije-fb-linkova-20261112.sql`).
+
+## Izmjene 1.0.59 (2026-11-12)
+
+- **Profil ekipe:** traka „Prikazano” je uvijek vidljiva — izbornik kad ekipa ima više liga/sezona, inače fiksna oznaka (`.hub-dd__static`); uz nju **„Aktualna sezona”** ili **„Arhiva · završena sezona”** (uspoređuje s `Kurs_Season::current_for_league()`), a ako ekipa ne igra u aktualnoj sezoni: „Ekipa ne nastupa u sezoni …”. Kartica utakmica: „Utakmice · Liga bez briga · KC Liga 2025/2026”.
+- **/vijesti/ — izdvojena vijest:** slika uvijek **16:9** (fotografije se ne režu ni ne razvlače); desni stupac = sažeti widget lige + „Pratite nas”, a **„Najčitanije” je vodoravna traka** ispod (`.kc-mostread-row`, 3 stupca; na mobitelu lista).
+
+## Izmjene 1.0.60 (2026-11-12)
+- **Profil ekipe → Utakmice:** playoff runda više ne ispisuje puni naziv („Četvrtfinale”) u uskom stupcu kola. Plugin helper
+  `kurs_round_short($round, $po_round)` vraća `[veliko, malo]`: `5.`/kolo, `1/4`/finale, `1/2`/finale, pehar (SVG)/finale, `3.`/mjesto.
+  Playoff oznaka je zlatna pločica (finale tamna sa zlatnim), puni naziv u `title`; prije prvog playoff meča razdjelnik `.tm-sep` „Doigravanje”.
+- Lakši rez u popisima profila ekipe (imena 600, brojke 700).
+
+## Izmjene 1.0.61 (2026-11-12)
+- **Profil ekipe u diviziji s doigravanjem (Pan):** gornje kartice više ne pokazuju samo grupnu ljestvicu.
+  **Plasman** iz bracketa (`Kurs_Playoff::winner_side`, penali uključeni): Prvak / Finalist / 3. ili 4. mjesto /
+  Polufinale / Četvrtfinale / Skupina (samo kad su svi parovi prvog kola doigravanja popunjeni); zatim pozicija i bodovi
+  „u skupini X”, te **P/N/I i golovi svih utakmica** (skupina + doigravanje). KC (bez playoffa) ostaje Pozicija/Bodova/P-N-I/Golovi.
+- „Statistika lige” → „Statistika sezone · skupina + doigravanje” kad postoji playoff; „Forma (zadnje 4 utakmice)” — ispravan padež.
+- Playoff utakmice u popisu: ispod rezultata „prošli/ispali · pen. 4:5” (iz perspektive ekipe).
+
+## Izmjene 1.0.62 (2026-11-12)
+- **Za medije / blok `kurs/liga` — doigravanje:** ispod rezultata playoff meča koji je završio neriješeno piše
+  „pen. 4:5” (`Kurs_Media_Kit::match_rows()` novi argument `$sub`). Prije se bilješka s penalima prikazivala samo za
+  neodigrane mečeve (umjesto rezultata) pa je kod odigranih nestajala. Tekstualna verzija ih je već imala („(pen. 4:5)”).

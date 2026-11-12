@@ -27,10 +27,7 @@
 						<span class="article-author__sub"><?php echo esc_html( get_the_date( 'd.m.Y.' ) . ' · ' . get_the_time( 'H:i' ) . ' · ' . $read_min . ' min čitanja' ); ?></span>
 					</span>
 				</div>
-				<div class="article-share">
-					<a class="article-share__btn" href="https://www.facebook.com/sharer/sharer.php?u=<?php echo $share_url; ?>" target="_blank" rel="noopener" aria-label="Podijeli na Facebooku">f</a>
-					<button type="button" class="article-share__btn" data-copy-link="<?php echo esc_url( get_permalink() ); ?>" aria-label="Kopiraj poveznicu">🔗</button>
-				</div>
+				<?php echo kurskc_share_html( $pid, 'compact' ); ?>
 			</div>
 		</div>
 	</header>
@@ -61,6 +58,9 @@
 			</div>
 			<?php endif; ?>
 
+			<?php echo kurskc_share_html( $pid, 'full' ); ?>
+			<?php echo kurskc_follow_box( 'inline' ); ?>
+
 			<?php if ( get_the_author_meta( 'description', $author_id ) ) : ?>
 			<div class="author-box">
 				<?php echo get_avatar( $author_id, 54, '', '', [ 'class' => 'author-box__ava' ] ); ?>
@@ -75,15 +75,12 @@
 
 		<aside class="article-side">
 			<?php
-			// Admin-konfiguriran widget (npr. „Vrh tablice" s više grupa) zamjenjuje
-			// automatsku ljestvicu; najčitanije + liga uvijek ostaju.
-			if ( is_active_sidebar( 'kurskc-news-sidebar' ) ) {
-				dynamic_sidebar( 'kurskc-news-sidebar' );
-			} else {
-				echo kurskc_widget_standings();
-			}
+			// „Iz lige" ovisi o fazi sezone (najava / danas / sljedeće kolo + vrh tablice / prvaci) — inc/league-widget.php.
+			// Admin-konfigurirani widgeti (Izgled → Widgeti) dolaze ispod.
+			echo kurskc_league_widget();
+			if ( is_active_sidebar( 'kurskc-news-sidebar' ) ) dynamic_sidebar( 'kurskc-news-sidebar' );
 			echo kurskc_widget_most_read( false );
-			echo kurskc_widget_league_live();
+			echo kurskc_follow_box( 'card' );
 			?>
 		</aside>
 	</div>

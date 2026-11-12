@@ -4,7 +4,7 @@
 > Cilj: omogućiti drugoj AI sesiji da razumije strukturu podataka bez čitanja cijelog koda.
 > Sve činjenice su provjerene u stvarnom kodu (`includes/class-database.php`, `includes/class-cpt.php`, `includes/helpers.php`, `kurs-liga.php`, `app/public/kurs_seed.sql`).
 >
-> ⚠️ **Stanje sheme:** ovaj dokument detaljno opisuje shemu do `DB_VERSION` **1.5**. Kod je na **`DB_VERSION = '1.14'`** — dodani su stupci (1.12) nova tablica **`match_players`** — postava utakmice spremljena pri završetku (`match_id, team_id, player_id, jersey_no`, UNIQUE(match_id, player_id)); karijera i sastavi čitaju nju, a ne trenutni `squads`. Ranije su dodani stupci `seasons.locked`, `seasons.max_fouls_per_half`, `seasons.referees` (1.10, JSON `[{ime, prezime}]` — baza sudaca sezone), `playoff_matches.home_pen/away_pen` (1.11, penali kod neriješenog), `divisions.has_playoff`, `divisions.advance_per_group`, `divisions.base_round` (1.14 — kolo do kojeg su postignuti preneseni golovi igrača), preneseno stanje `group_teams.base_*`/`rank_hint` i `squads.base_goals/base_own_goals` (1.13), `matches.referee1/referee2`, `match_events.half`, a `event_type` danas obuhvaća `goal|penalty|own_goal|yellow_card|second_yellow|red_card|foul` (+ inertni `captain`/`absent`). Sažetak je u `PLUGIN-KURS-LIGA.md` §3.2; mjerodavan je `includes/class-database.php`.
+> ⚠️ **Stanje sheme:** ovaj dokument detaljno opisuje shemu do `DB_VERSION` **1.5**. Kod je na **`DB_VERSION = '1.15'`** — dodani su stupci (1.12) nova tablica **`match_players`** — postava utakmice spremljena pri završetku (`match_id, team_id, player_id, jersey_no`, UNIQUE(match_id, player_id)); karijera i sastavi čitaju nju, a ne trenutni `squads`. Ranije su dodani stupci `seasons.locked`, `seasons.max_fouls_per_half`, `seasons.referees` (1.10, JSON `[{ime, prezime}]` — baza sudaca sezone), `playoff_matches.home_pen/away_pen` (1.11, penali kod neriješenog), `divisions.has_playoff`, `divisions.advance_per_group`, `divisions.base_round` (1.14 — kolo do kojeg su postignuti preneseni golovi igrača), preneseno stanje `group_teams.base_*`/`rank_hint` i `squads.base_goals/base_own_goals` (1.13), `matches.referee1/referee2`, `match_events.half`, a `event_type` danas obuhvaća `goal|penalty|own_goal|yellow_card|second_yellow|red_card|foul` (+ inertni `captain`/`absent`). Sažetak je u `PLUGIN-KURS-LIGA.md` §3.2; mjerodavan je `includes/class-database.php`.
 >
 > **2026-10-16 — kako nastaju redovi strukture:** shema se nije mijenjala, ali se redovi `divisions` / `phases` / `groups` više **ne unose ručno** — kreira ih `Kurs_Season::scaffold()` pri kreiranju sezone prema konstanti `Kurs_Season::COMPETITIONS`:
 > - `seasons.league` = `kc_liga` → `divisions`: „KC Liga" (`sort_order` 0) + „Liga bez briga" (1), `has_playoff=0`, `advance_per_group=0`; po diviziji jedna faza „Grupna faza" (`type='group'`) i **jedna** grupa s imenom divizije, `playoff_spots=0`.
@@ -28,7 +28,7 @@ Bootstrap, konstante i hookovi nalaze se u glavnoj datoteci `kurs-liga.php`.
 
 | Konstanta | Vrijednost | Značenje |
 |-----------|-----------|----------|
-| `KURS_VERSION` | `'1.27.0'` | Verzija koda plugina (header plugina je `1.2.0` — ne podiže se) |
+| `KURS_VERSION` | `'1.30.0'` | Verzija koda plugina (header plugina je `1.2.0` — ne podiže se) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutna putanja do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks za DB tablice; sklapa se kao `$wpdb->prefix . KURS_PREFIX` → npr. `wp_kurs_` |
@@ -260,6 +260,23 @@ Golovi, autogolovi, kartoni s minutama i igračima.
 
 ---
 
+### 4.10 `wp_kurs_stats` — Statistika posjeta (1.15)
+
+Jedan redak po pregledu javne stranice (`Kurs_Stats`). Bez IP adrese i kolačića.
+
+| Stupac | Tip | Značenje |
+|---|---|---|
+| `id` | BIGINT UNSIGNED AI | PK |
+| `ts`, `day` | DATETIME, DATE | vrijeme pregleda (lokalno, Europe/Zagreb) |
+| `visitor` | CHAR(16) | dnevni anonimni hash (sol se mijenja svaki dan) |
+| `entry` | TINYINT(1) | 1 = prvi pregled posjetitelja u danu (= jedan posjet) |
+| `ptype`, `obj`, `league` | VARCHAR(16), BIGINT, VARCHAR(4) | vrsta stranice, ID (post / match_id / season_id), `kc`/`pan` |
+| `path` | VARCHAR(191) | put s dopuštenim parametrima |
+| `src`, `ref` | VARCHAR(16), VARCHAR(100) | izvor (`izravno/facebook/instagram/trazilice/interno/ostalo`) + domena |
+| `device` | VARCHAR(8) | `mobitel` / `tablet` / `racunalo` |
+
+Indeksi: `idx_day (day, visitor)`, `idx_obj (ptype, obj)`. Brisanje starijih od 760 dana: cron `kurs_stats_cleanup`.
+
 ## 5. Veze prema WordPress postovima (CPT)
 
 ### 5.1 Mapiranje stupaca na postove
@@ -310,7 +327,7 @@ Klasa `Kurs_CPT`; konstruktor veže `register()` na `init`.
 
 ## 6. Verzioniranje sheme
 
-- **`Kurs_Database::DB_VERSION = '1.14'`** — trenutna verzija sheme (ovaj dokument detaljno pokriva do 1.5; mehanizam migracije je isti — novi stupci dolaze kroz `dbDelta`).
+- **`Kurs_Database::DB_VERSION = '1.15'`** — trenutna verzija sheme (ovaj dokument detaljno pokriva do 1.5; mehanizam migracije je isti — novi stupci dolaze kroz `dbDelta`).
 - Pohranjuje se u WP opciju **`kurs_db_version`** (`update_option` na kraju `install()`).
 - **`Kurs_Database::maybe_upgrade()`** (hook `plugins_loaded`): čita `get_option('kurs_db_version', '0')`; ako je `version_compare($installed, DB_VERSION, '<')` izvršava migracije i zatim ponovno poziva `install()` (dbDelta je idempotentan).
 
@@ -328,7 +345,7 @@ Na kraju `install()` poziva `update_option('kurs_db_version', DB_VERSION)`.
 >
 > **Gotcha migracija:** migracije nisu uvjetovane pojedinom verzijom (npr. `if installed < 1.2`); cijeli blok se izvrši svaki put kad je instalirana verzija < `DB_VERSION`. Sigurno je jer su koraci idempotentni (`dbDelta` + `MODIFY`).
 >
-> **Gotcha verzija:** plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.27.0`, a `DB_VERSION` `1.14` — kod i shema imaju različite verzijske sheme (namjerno).
+> **Gotcha verzija:** plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.30.0`, a `DB_VERSION` `1.15` — kod i shema imaju različite verzijske sheme (namjerno).
 
 ---
 
@@ -356,7 +373,7 @@ Seed (prvih ~250 redaka) popunjava samo dio sustava:
 5. CPT-ovi ne registriraju vlastite taksonomije; natjecateljska pripadnost je isključivo u custom tablicama (taksonomije `liga`/`sezona` iz `CLAUDE.md` pripadaju temi, ne pluginu).
 6. `kurs_seed.sql` je krhak: ovisi o tvrdo kodiranim `team_id` (9–25), `division_id=2`, `group_id` 5–7 i `matches.id` 1–24; pretpostavlja da ekipe/utakmice/grupe već postoje.
 7. Seed NE puni `seasons`/`divisions`/`phases`/`groups`/`group_teams`/`match_events`/`playoff_matches` — samo igrače (`wp_posts`), `squads` i `UPDATE` rezultata u `matches`.
-8. Plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.27.0`, a `DB_VERSION` `1.14` — različite verzijske sheme za kod i bazu.
+8. Plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.30.0`, a `DB_VERSION` `1.15` — različite verzijske sheme za kod i bazu.
 9. (2026-10-16) Redove `divisions`/`phases`/`groups` kreira isključivo `Kurs_Season::scaffold()` prema `COMPETITIONS`; `groups.playoff_spots` dolazi iz divizije (0 za KC). Playoff zapisnici (`matches.group_id = 0`) brišu se zajedno s bracketom (`Kurs_Playoff::reset()`), pa više ne ostaju siročad.
 10. Lokalni demo podaci (`tools/demo-podaci.php`) označeni su postmetom `_kurs_demo = 1` i opcijom `kurs_demo_seed` — vidi `POSTAVKE-I-KONVENCIJE.md` §1.4.
 
@@ -366,7 +383,7 @@ Seed (prvih ~250 redaka) popunjava samo dio sustava:
 
 - **Prefiks tablica:** `$wpdb->prefix . KURS_PREFIX` = `wp_kurs_` (`KURS_PREFIX = 'kurs_'`).
 - **10 custom tablica:** `seasons`, `divisions`, `phases`, `groups`, `group_teams`, `squads`, `matches`, `match_events`, `match_players` (postava utakmice, od 1.12), `playoff_matches`.
-- **Verzija sheme:** `DB_VERSION = '1.14'`, pohranjena u WP opciji `kurs_db_version`; migracije u `Kurs_Database::maybe_upgrade()` na hooku `plugins_loaded`.
+- **Verzija sheme:** `DB_VERSION = '1.15'`, pohranjena u WP opciji `kurs_db_version`; migracije u `Kurs_Database::maybe_upgrade()` na hooku `plugins_loaded`.
 - **Vrijednosti `seasons.league`:** `kc_liga` | `pan_ljetna` (ključevi `Kurs_Season::COMPETITIONS`).
 - **Tip strukturnih ID-eva:** `INT UNSIGNED`. **Tip stupaca koji drže WP post ID:** `BIGINT UNSIGNED` (`team_id`, `player_id`, `home_team_id`, `away_team_id`, `scored_for`).
 - **CPT:** `kurs_ekipa` (slug `ekipe`) i `kurs_igrac` (slug `igraci`), oba `show_in_rest => true`.

@@ -55,6 +55,15 @@ $tabs    = [ 'tablica' => 'Tablica', 'kola' => 'Po kolima', 'raspored' => 'Raspo
 $req_tab = is_string( $_GET['tab'] ?? null ) ? sanitize_key( $_GET['tab'] ) : '';
 $tab     = isset( $tabs[ $req_tab ] ) ? $req_tab : 'tablica';
 
+/* „Obje lige" (1.0.47): Raspored i Po kolima zadano prikazuju sve lige sezone zajedno
+   (igraju se iste večeri, naizmjence) — dok posjetitelj ne odabere jednu ligu (division_id u URL-u).
+   Tablica i Statistika su uvijek po ligi. */
+$both_tabs = [ 'raspored', 'kola' ];
+$req_div   = $_GET['division_id'] ?? null;
+$all_mode  = count( $divisions ) > 1 && in_array( $tab, $both_tabs, true ) && ( $req_div === null || (string) $req_div === '0' );
+$show_dids = $all_mode ? $div_ids : ( $division_id ? [ $division_id ] : [] );
+$tab_div   = fn( string $t ) => ( count( $divisions ) > 1 && in_array( $t, $both_tabs, true ) ) ? 0 : $division_id;
+
 /* Kolo (samo tab „Po kolima"): broj kola ili „playoff"; zadano = playoff ako je
    generiran, inače zadnje kolo s odigranom utakmicom */
 $rounds = [];
@@ -124,17 +133,49 @@ function kurs_hub_url( string $base, int $sid, int $did, string $tab, array $ext
 	<?php endif; ?>
 </div>
 
-<!-- Tabs: División toggle + view tabs -->
-<div class="hub-tabs" id="liga">
-	<?php if ( count( $divisions ) > 1 ) : ?>
-	<div class="div-toggle">
-		<?php foreach ( $divisions as $d ) : /* u „Po kolima" zadrži isto kolo i u drugoj ligi */ ?>
-		<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, (int) $d->id, $tab, $tab === 'kola' && $kolo ? [ 'kolo' => $kolo ] : [] ) ); ?>"
-		   class="<?php echo ( (int) $d->id === $division_id ) ? 'is-active' : ''; ?>">
-			<?php echo esc_html( $d->name ); ?>
+<?php if ( count( $divisions ) > 1 ) : /* Istaknuti odabir lige (1.0.47) — KC Liga / Liga bez briga kao dvije velike kartice */ ?>
+<nav class="league-pick" aria-label="Odaberi ligu">
+	<span class="league-pick__lbl">Odaberi ligu</span>
+	<div class="league-pick__list<?php echo in_array( $tab, $both_tabs, true ) ? ' league-pick__list--3' : ''; ?>">
+		<?php if ( in_array( $tab, $both_tabs, true ) ) :
+			$all_n = 0;
+			foreach ( $divisions as $d ) { $d_ph = Kurs_Season::group_phase( (int) $d->id ); foreach ( $d_ph ? Kurs_Season::get_groups( (int) $d_ph->id ) : [] as $g ) $all_n += count( Kurs_Season::get_group_teams( (int) $g->id ) ); }
+		?>
+		<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, 0, $tab, $tab === 'kola' && $kolo ? [ 'kolo' => $kolo ] : [] ) . '#liga' ); ?>"
+		   class="league-pick__item league-pick__item--all<?php echo $all_mode ? ' is-active' : ''; ?>"<?php echo $all_mode ? ' aria-current="page"' : ''; ?>>
+			<span class="league-pick__icon league-pick__icon--duo"><?php foreach ( $divisions as $d ) echo kurs_league_icon( $is_pan ? 'Pan Ljetna' : $d->name, 30 ); ?></span>
+			<span class="league-pick__txt">
+				<b>Obje lige</b>
+				<small><?php echo $all_n ? (int) $all_n . ' ekipa · ' : ''; ?><?php echo $all_mode ? 'prikazano' : 'Cijela večer &rarr;'; ?></small>
+			</span>
+			<?php if ( $all_mode ) : ?><span class="league-pick__check" aria-hidden="true">✓</span><?php endif; ?>
+		</a>
+		<?php endif; ?>
+		<?php foreach ( $divisions as $d ) :
+			$d_on   = ! $all_mode && (int) $d->id === $division_id;
+			$d_tone = $is_pan ? 'pan' : ( stripos( $d->name, 'briga' ) !== false ? 'lbb' : 'kc' );
+			$d_ph   = Kurs_Season::group_phase( (int) $d->id );
+			$d_n    = 0;
+			foreach ( $d_ph ? Kurs_Season::get_groups( (int) $d_ph->id ) : [] as $g ) $d_n += count( Kurs_Season::get_group_teams( (int) $g->id ) );
+		?>
+		<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, (int) $d->id, $tab, $tab === 'kola' && $kolo ? [ 'kolo' => $kolo ] : [] ) . '#liga' ); /* u „Po kolima" zadrži isto kolo */ ?>"
+		   class="league-pick__item league-pick__item--<?php echo $d_tone; ?><?php echo $d_on ? ' is-active' : ''; ?>"<?php echo $d_on ? ' aria-current="page"' : ''; ?>>
+			<span class="league-pick__icon"><?php echo kurs_league_icon( $is_pan ? 'Pan Ljetna' : $d->name, 40 ); ?></span>
+			<span class="league-pick__txt">
+				<b><?php echo esc_html( $d->name ); ?></b>
+				<small><?php echo $d_n ? (int) $d_n . ' ekipa · ' : ''; ?><?php echo $d_on ? 'prikazano' : 'Prikaži ovu ligu &rarr;'; ?></small>
+			</span>
+			<?php if ( $d_on ) : ?><span class="league-pick__check" aria-hidden="true">✓</span><?php endif; ?>
 		</a>
 		<?php endforeach; ?>
 	</div>
+</nav>
+<?php endif; ?>
+
+<!-- Tabs: liga (kad je samo jedna) + prikazi -->
+<div class="hub-tabs" id="liga">
+	<?php if ( count( $divisions ) > 1 ) : ?>
+	<div class="hub-tabs__league"><?php if ( $all_mode ) : ?><span>Obje lige</span><?php else : echo kurs_league_icon( $is_pan ? 'Pan Ljetna' : ( $division->name ?? '' ), 22 ); ?><span><?php echo esc_html( $division->name ?? '' ); ?></span><?php endif; ?></div>
 	<?php elseif ( $division ) : ?>
 	<div class="div-toggle">
 		<a class="is-active"><?php echo esc_html( $division->name ); ?></a>
@@ -146,7 +187,7 @@ function kurs_hub_url( string $base, int $sid, int $did, string $tab, array $ext
 	<div class="hub-tabs__end">
 		<div class="view-tabs">
 			<?php foreach ( $tabs as $slug => $label ) : ?>
-			<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, $division_id, $slug ) ); ?>"
+			<a href="<?php echo esc_url( kurs_hub_url( $base_url, $season_id, $tab_div( $slug ), $slug ) ); ?>"
 			   class="<?php echo $tab === $slug ? 'is-active' : ''; ?>">
 				<?php echo esc_html( $label ); ?>
 			</a>
@@ -198,7 +239,7 @@ elseif ( $tab === 'kola' ) :
 		$idx      = $kolo === 'playoff' ? count( $nums ) : (int) array_search( $kolo, $nums, true );
 		$prev     = $nums[ $idx - 1 ] ?? null;
 		$next     = $kolo === 'playoff' ? null : ( $nums[ $idx + 1 ] ?? ( $has_bracket ? 'playoff' : null ) );
-		$kolo_url = fn( $k ) => kurs_hub_url( $base_url, $season_id, $division_id, 'kola', [ 'kolo' => $k ] ) . '#kola';
+		$kolo_url = fn( $k ) => kurs_hub_url( $base_url, $season_id, $all_mode ? 0 : $division_id, 'kola', [ 'kolo' => $k ] ) . '#kola';
 	?>
 	<nav class="round-nav" id="kola" aria-label="Kola">
 		<?php if ( $prev !== null ) : ?>
@@ -236,12 +277,15 @@ elseif ( $tab === 'kola' ) :
 
 	<?php else :
 		$st        = $rounds[ $kolo ] ?? [ 'total' => 0, 'finished' => 0 ];
+		if ( $all_mode ) { // odigrano u bilo kojoj ligi
+			foreach ( $show_dids as $sd ) if ( $sd !== $division_id ) { $o = Kurs_Rounds::round_status( $sd )[ $kolo ] ?? null; if ( $o ) { $st['total'] += $o['total']; $st['finished'] += $o['finished']; } }
+		}
 		$r_date    = Kurs_Rounds::date_label( Kurs_Rounds::matches( $division_id, $kolo ) );
 		$media_url = add_query_arg( [ 'liga' => $is_pan ? 'pan' : 'kc', 'season_id' => $season_id, 'kolo' => $kolo ], home_url( '/za-medije/' ) );
 	?>
 	<div class="round-head">
 		<div>
-			<div class="round-head__kicker"><?php echo esc_html( $division->name ?? '' ); ?></div>
+			<div class="round-head__kicker"><?php echo esc_html( $all_mode ? implode( ' · ', array_map( fn( $d ) => $d->name, $divisions ) ) : ( $division->name ?? '' ) ); ?></div>
 			<h2 class="round-head__title"><?php echo (int) $kolo; ?>. kolo</h2>
 			<?php if ( $r_date ) : ?><div class="round-head__date"><?php echo esc_html( $r_date ); ?></div><?php endif; ?>
 		</div>
@@ -254,20 +298,24 @@ elseif ( $tab === 'kola' ) :
 
 	<section class="round-sec">
 		<h3 class="round-sec__title"><?php echo $st['finished'] ? 'Rezultati' : 'Utakmice'; ?></h3>
-		<?php echo kurs_render_round_results( $division_id, $kolo ); ?>
+		<?php echo kurs_render_round_results( $show_dids, $kolo ); ?>
 	</section>
 
 	<?php if ( $st['finished'] ) :
-		$tables = Kurs_Rounds::standings( $division_id, $kolo );
+		foreach ( $show_dids as $sd ) :
+			$sd_div   = Kurs_Season::get_division( $sd );
+			$sd_po    = ! empty( $sd_div->has_playoff );
+			$sd_lbl   = $all_mode ? ' — ' . ( $sd_div->name ?? '' ) : '';
+			$tables   = Kurs_Rounds::standings( $sd, $kolo );
 	?>
-	<section class="round-sec">
-		<h3 class="round-sec__title">Ljestvica nakon <?php echo (int) $kolo; ?>. kola</h3>
+	<section class="round-sec<?php echo $all_mode ? ' round-sec--league' : ''; ?>">
+		<h3 class="round-sec__title"><?php if ( $all_mode ) echo kurs_division_chip( $sd ) . ' '; ?>Ljestvica nakon <?php echo (int) $kolo; ?>. kola<?php echo esc_html( $sd_lbl ); ?></h3>
 		<?php foreach ( $tables as $t ) :
 			echo kurs_render_standings( (int) $t['group']->id, [
 				'rows'          => $t['rows'],
 				'show_move'     => true,
 				'title'         => count( $tables ) > 1 ? $t['group']->name : '',
-				'playoff_spots' => $has_playoff ? null : 0,
+				'playoff_spots' => $sd_po ? null : 0,
 			] );
 			if ( $t['unplayed'] ) : ?>
 		<p class="round-note">Neodigranih utakmica zaključno s ovim kolom: <strong><?php echo (int) $t['unplayed']; ?></strong> — nisu uračunate u ljestvicu.</p>
@@ -276,9 +324,10 @@ elseif ( $tab === 'kola' ) :
 	</section>
 
 	<section class="round-sec">
-		<h3 class="round-sec__title">Strijelci nakon <?php echo (int) $kolo; ?>. kola</h3>
-		<?php echo kurs_render_round_scorers( $division_id, $kolo ) ?: '<p class="kurs-empty">Nema evidentiranih golova.</p>'; ?>
+		<h3 class="round-sec__title"><?php if ( $all_mode ) echo kurs_division_chip( $sd ) . ' '; ?>Strijelci nakon <?php echo (int) $kolo; ?>. kola<?php echo esc_html( $sd_lbl ); ?></h3>
+		<?php echo kurs_render_round_scorers( $sd, $kolo ) ?: '<p class="kurs-empty">Nema evidentiranih golova.</p>'; ?>
 	</section>
+	<?php endforeach; ?>
 	<?php else : ?>
 	<p class="round-note">Ovo kolo još nije odigrano — ljestvica i strijelci pojavit će se nakon prvih rezultata.</p>
 	<?php endif; ?>
@@ -287,7 +336,10 @@ elseif ( $tab === 'kola' ) :
 
 elseif ( $tab === 'raspored' ) :
 	/* ── Raspored: skupine + playoff, po danu (oznaka kola / playoff runde) ── */
-	echo kurs_render_schedule( $division_id, [ 'round_labels' => true ] ) ?: '<p class="kurs-empty">Nema utakmica za ovu diviziju.</p>';
+	if ( $all_mode ) : ?>
+	<p class="sched-hint">Raspored obje lige — utakmice idu redom kako se igraju u dvorani. Oznaka <?php foreach ( $divisions as $i => $d ) echo ( $i ? ' / ' : '' ) . kurs_division_chip( (int) $d->id ); ?> pokazuje ligu, a gore možeš odabrati samo jednu ligu.</p>
+	<?php endif;
+	echo kurs_render_schedule( $show_dids, [ 'round_labels' => true ] ) ?: '<p class="kurs-empty">Nema utakmica za ovu diviziju.</p>';
 
 elseif ( $tab === 'statistika' ) :
 	/* ── Statistika strijelaca ─────────────────────────────── */
@@ -304,8 +356,8 @@ elseif ( $tab === 'statistika' ) :
 			<div class="scorer-left">
 				<div class="scorer-badge"><?php echo esc_html( $abbr ); ?></div>
 				<div>
-					<div class="scorer-name"><?php echo esc_html( $sc->player_name ?: '—' ); ?></div>
-					<div style="font-family:var(--font-mono);font-size:9px;color:var(--c-muted);"><?php echo esc_html( $sc->team_name ?: '' ); ?></div>
+					<div class="scorer-name"><?php echo kurs_player_link( (int) $sc->player_id, $sc->player_name ?: '—' ); ?></div>
+					<div style="font-family:var(--font-mono);font-size:9px;color:var(--c-muted);"><?php echo kurs_team_link( (int) ( $sc->team_id ?? 0 ), (string) ( $sc->team_name ?: '' ), (int) $division_id ); ?></div>
 				</div>
 			</div>
 			<div class="scorer-goals"><?php echo (int) $sc->goals; ?></div>
@@ -319,12 +371,13 @@ endif; ?>
 
 <!-- Side rail — uvijek vidljiv kada je odabrana divizija -->
 <aside class="hub-side">
-<?php if ( $division_id ) :
+<?php foreach ( $show_dids as $division_id ) : /* „Obje lige" → widgeti za svaku ligu */
+	$side_lbl = $all_mode ? ( Kurs_Season::get_division( $division_id )->name ?? '' ) : '';
 	/* ── Strijelci (uvijek vidljivo) ──────────────────────── */
 	$scorers = Kurs_Match::get_top_scorers( $division_id, 10 );
 ?>
 	<div class="widget">
-		<div class="widget__title">&#127942; Zlatna kopačka</div>
+		<div class="widget__title">&#127942; Zlatna kopačka<?php if ( $side_lbl ) echo ' <span class="widget__title-sub">' . kurs_division_chip( $division_id ) . '</span>'; ?></div>
 		<?php if ( $scorers ) :
 			foreach ( $scorers as $rank => $sc ) :
 				$player_url = $sc->player_id ? get_permalink( (int) $sc->player_id ) : '#';
@@ -339,7 +392,7 @@ endif; ?>
 					<a href="<?php echo esc_url( $player_url ); ?>" class="scorer-name" style="display:block;">
 						<?php echo esc_html( $sc->player_name ?: '—' ); ?>
 					</a>
-					<div style="font-family:var(--font-mono);font-size:9px;color:var(--c-muted);"><?php echo esc_html( $sc->team_name ?: '' ); ?></div>
+					<div style="font-family:var(--font-mono);font-size:9px;color:var(--c-muted);"><?php echo kurs_team_link( (int) ( $sc->team_id ?? 0 ), (string) ( $sc->team_name ?: '' ), (int) $division_id ); ?></div>
 				</div>
 			</div>
 			<div class="scorer-goals"><?php echo (int) $sc->goals; ?></div>
@@ -373,7 +426,7 @@ endif; ?>
 	) );
 	if ( $disc && ( (int) $disc->yellow > 0 || (int) $disc->red > 0 ) ) : ?>
 	<div class="widget">
-		<div class="widget__title red">&#9888; Disciplina</div>
+		<div class="widget__title red">&#9888; Disciplina<?php if ( $side_lbl ) echo ' <span class="widget__title-sub">' . kurs_division_chip( $division_id ) . '</span>'; ?></div>
 		<div class="disc-boxes">
 			<div class="disc-box disc-box--y">
 				<div class="disc-box__num"><?php echo (int) $disc->yellow; ?></div>
@@ -386,7 +439,8 @@ endif; ?>
 		</div>
 	</div>
 	<?php endif;
-endif; ?>
+endforeach; ?>
+<?php if ( function_exists( 'kurskc_follow_box' ) ) echo kurskc_follow_box( 'card' ); ?>
 </aside>
 
 </div><!-- /.hub-body -->

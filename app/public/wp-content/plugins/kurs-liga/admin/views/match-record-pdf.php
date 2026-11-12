@@ -23,7 +23,8 @@ if ( ! function_exists( 'kurs_pdf_surname' ) ) {
 	}
 }
 
-$blank   = ! empty( $_GET['prazni'] );
+$public  = ! empty( $GLOBALS['kurs_record_public'] ); // javni ispis s /utakmica/ (1.29.0) — samo završene utakmice, bez praznog obrasca
+$blank   = ! $public && ! empty( $_GET['prazni'] );
 $home_id = (int) $match->home_team_id;
 $away_id = (int) $match->away_team_id;
 $ts      = $match->match_date ? strtotime( $match->match_date ) : 0;
@@ -54,6 +55,7 @@ foreach ( $ev_list as $e ) {
 $goals = array_values( array_filter( $ev_list, fn( $e ) => in_array( $e->event_type, [ 'goal', 'penalty', 'own_goal' ], true ) ) );
 usort( $goals, fn( $a, $b ) => [ (int) $a->half ?: 1, $a->minute === null ? 999 : (int) $a->minute, (int) $a->id ] <=> [ (int) $b->half ?: 1, $b->minute === null ? 999 : (int) $b->minute, (int) $b->id ] );
 $prog = []; $h = 0; $a = 0; $ht = [ 0, 0 ];
+$ht_known = (bool) array_filter( $events, fn( $e ) => $e->half !== null && in_array( $e->event_type, [ 'goal', 'penalty', 'own_goal', 'foul' ], true ) );
 foreach ( $goals as $g ) {
 	$for_home = ( (int) $g->team_id === $home_id ) !== ( $g->event_type === 'own_goal' );
 	$for_home ? $h++ : $a++;
@@ -145,6 +147,7 @@ header( 'Content-Type: text/html; charset=utf-8' );
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<?php echo function_exists( 'kurs_favicon_links' ) ? kurs_favicon_links() : ''; ?>
 <title>Zapisnik — <?php echo esc_html( $match->home_name . ' : ' . $match->away_name ); ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
@@ -172,6 +175,9 @@ body { font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif; 
 .z-logo__s { display: flex; gap: .8mm; }
 .z-logo__s i { display: block; width: 2mm; height: 8mm; transform: skewX(-14deg); }
 .z-logo b { font-weight: 800; font-style: italic; font-size: 20pt; letter-spacing: .02em; }
+.z-logo__img { height: 9mm; width: auto; display: block; }
+.z-logo__crest { display: flex; padding-left: 2.5mm; border-left: .3mm solid #ddd; }
+.z-logo__crest img, .z-logo__crest svg { height: 12mm !important; width: auto !important; }
 .z-title { text-align: center; }
 .z-title__comp { font-weight: 800; font-size: 9pt; letter-spacing: .1em; text-transform: uppercase; color: var(--red); }
 .z-title h1 { font-weight: 800; font-size: 17pt; letter-spacing: .03em; text-transform: uppercase; line-height: 1.05; }
@@ -250,7 +256,9 @@ body { font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif; 
 <div class="z-bar">
 	<button type="button" class="is-primary" onclick="window.print()">&#128424; Ispiši</button>
 	<button type="button" class="is-ghost" id="pdf-download">&#11015; Preuzmi PDF</button>
-	<?php if ( $blank ) : ?>
+	<?php if ( $public ) : ?>
+	<a class="is-ghost" href="<?php echo esc_url( add_query_arg( 'match_id', $match_id, home_url( '/utakmica/' ) ) ); ?>">&larr; Natrag na utakmicu</a>
+	<?php elseif ( $blank ) : ?>
 	<a class="is-ghost" href="<?php echo esc_url( $full_url ); ?>">Popunjeni zapisnik</a>
 	<?php else : ?>
 	<a class="is-ghost" href="<?php echo esc_url( $blank_url ); ?>">Prazni zapisnik</a>
@@ -264,8 +272,16 @@ body { font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif; 
 
 	<header class="z-head">
 		<div class="z-logo">
+			<?php
+			// Logo KURS-a (tema) + grb natjecanja (1.29.0); bez teme ostaju trake i natpis
+			$z_logo = function_exists( 'get_template_directory' ) && file_exists( get_template_directory() . '/assets/img/KURS-clean-ink.png' ) ? get_template_directory_uri() . '/assets/img/KURS-clean-ink.png' : '';
+			if ( $z_logo ) : ?>
+			<img class="z-logo__img" src="<?php echo esc_url( $z_logo ); ?>" alt="KURS">
+			<?php else : ?>
 			<span class="z-logo__s"><i style="background:#DA0F1E"></i><i style="background:#F47B16"></i><i style="background:#FDE206"></i></span>
 			<b>KURS</b>
+			<?php endif; ?>
+			<?php if ( function_exists( 'kurs_league_icon' ) && $comp ) echo '<span class="z-logo__crest">' . kurs_league_icon( $comp, 46 ) . '</span>'; ?>
 		</div>
 		<div class="z-title">
 			<div class="z-title__comp"><?php echo esc_html( $comp ); ?></div>
@@ -283,7 +299,7 @@ body { font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif; 
 		<div class="z-score__team z-score__team--home"><?php echo esc_html( $match->home_name ); ?><span class="z-dot" style="background:<?php echo esc_attr( kurs_team_color( $home_id ) ); ?>;margin:0 0 0 1.5mm"></span></div>
 		<div class="z-score__box">
 			<div class="z-score__nums"><span><?php echo $blank ? '&nbsp;' : (int) $disp_home; ?></span><span class="z-score__sep">:</span><span><?php echo $blank ? '&nbsp;' : (int) $disp_away; ?></span></div>
-			<div class="z-score__ht">Poluvrijeme <b><?php echo $blank ? '___ : ___' : $ht[0] . ' : ' . $ht[1]; ?></b><?php echo $pens ? ' · penali <b>' . esc_html( $pens ) . '</b>' : ''; ?><?php echo ! $blank && ! $is_finished ? ' · <b>u tijeku</b>' : ''; ?></div>
+			<div class="z-score__ht">Poluvrijeme <b><?php echo $blank || ! $ht_known ? '___ : ___' : $ht[0] . ' : ' . $ht[1]; /* bez upisanih poluvremena (stari unosi) rezultat poluvremena nije poznat */ ?></b><?php echo $pens ? ' · penali <b>' . esc_html( $pens ) . '</b>' : ''; ?><?php echo ! $blank && ! $is_finished ? ' · <b>u tijeku</b>' : ''; ?></div>
 		</div>
 		<div class="z-score__team"><span class="z-dot" style="background:<?php echo esc_attr( kurs_team_color( $away_id ) ); ?>"></span><?php echo esc_html( $match->away_name ); ?></div>
 	</div>

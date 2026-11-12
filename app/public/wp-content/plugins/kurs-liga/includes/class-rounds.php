@@ -172,7 +172,7 @@ class Kurs_Rounds {
 			$side     = ( $is_home xor $own ) ? 'home' : 'away'; // autogol domaćina = gol gosta
 			$name     = $e->player_id ? ( $names[ (int) $e->player_id ] ?? get_post_field( 'post_title', (int) $e->player_id ) ) : 'nepoznat';
 			$key      = ( $own ? 'og:' : '' ) . ( $e->player_id ?: $name );
-			$out[ (int) $m->id ][ $side ][ $key ] ??= [ 'name' => $name, 'goals' => 0, 'own' => $own ];
+			$out[ (int) $m->id ][ $side ][ $key ] ??= [ 'name' => $name, 'goals' => 0, 'own' => $own, 'pid' => (int) $e->player_id ];
 			$out[ (int) $m->id ][ $side ][ $key ]['goals']++;
 		}
 		foreach ( $out as &$sides ) {
@@ -252,6 +252,7 @@ class Kurs_Rounds {
 		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'goal','penalty'" ) ), 'base_goals', $base ) as $r ) {
 			$groups[ (int) $r->goals ][] = [
 				'name'    => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
+				'pid'     => (int) $r->player_id,
 				'team_id' => (int) $r->team_id,
 				'team'    => get_post_field( 'post_title', (int) $r->team_id ),
 			];
@@ -263,9 +264,11 @@ class Kurs_Rounds {
 		$own = [];
 		foreach ( self::with_base( $division_id, $wpdb->get_results( $sql( "'own_goal'" ) ), 'base_own_goals', $base ) as $r ) {
 			$own[] = [
-				'name'  => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
-				'team'  => get_post_field( 'post_title', (int) $r->team_id ),
-				'goals' => (int) $r->goals,
+				'name'    => $names[ (int) $r->player_id ] ?? get_post_field( 'post_title', (int) $r->player_id ),
+				'pid'     => (int) $r->player_id,
+				'team_id' => (int) $r->team_id,
+				'team'    => get_post_field( 'post_title', (int) $r->team_id ),
+				'goals'   => (int) $r->goals,
 			];
 		}
 		return [ 'groups' => $groups, 'own' => $own ];
@@ -280,7 +283,7 @@ class Kurs_Rounds {
 		global $wpdb;
 		$rows = $wpdb->get_results(
 			'SELECT m.id, m.round, pm.round AS po_round, m.match_date, m.status, m.home_score, m.away_score,
-			        h.post_title AS home_name, a.post_title AS away_name, pm.home_pen, pm.away_pen
+			        m.home_team_id, m.away_team_id, h.post_title AS home_name, a.post_title AS away_name, pm.home_pen, pm.away_pen
 			 FROM ' . self::t( 'matches' ) . ' m
 			 JOIN ' . $wpdb->posts . ' h ON h.ID = m.home_team_id
 			 JOIN ' . $wpdb->posts . ' a ON a.ID = m.away_team_id
@@ -298,6 +301,7 @@ class Kurs_Rounds {
 			$rows[] = (object) [
 				'id' => 0, 'round' => null, 'po_round' => $pm->round, 'match_date' => $pm->match_date, 'status' => $pm->status,
 				'home_score' => $pm->home_score, 'away_score' => $pm->away_score, 'home_pen' => $pm->home_pen, 'away_pen' => $pm->away_pen,
+				'home_team_id' => (int) $pm->home_team_id, 'away_team_id' => (int) $pm->away_team_id,
 				'home_name' => $pm->home_name ?: kurs_playoff_label( (string) $pm->home_label ),
 				'away_name' => $pm->away_name ?: kurs_playoff_label( (string) $pm->away_label ),
 			];

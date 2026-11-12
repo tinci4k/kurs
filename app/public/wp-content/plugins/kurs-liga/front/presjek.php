@@ -13,6 +13,10 @@ $n_done  = count( array_filter( $qs, fn( $q ) => ! empty( $answers[ $q['id'] ] )
 $q_by_team = [];
 foreach ( $qs as $q ) $q_by_team[ (int) $q['team'] ][] = $q['id'];
 
+$spons   = [];
+foreach ( $teams as $t ) $spons[ (int) $t['id'] ] = Kurs_Presjek::sponsors( (int) $t['id'] );
+$n_spons = count( array_filter( $spons ) );
+
 $initial = [];
 foreach ( $answers as $qid => $list ) $initial[ $qid ] = Kurs_Presjek::public_entries( (array) $list );
 
@@ -41,6 +45,7 @@ $note_box = function ( string $qid, string $label, string $ph ) {
 <meta charset="<?php bloginfo( 'charset' ); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<?php echo function_exists( 'kurs_favicon_links' ) ? kurs_favicon_links() : ''; ?>
 <title>Presjek ekipa — KURS</title>
 <?php wp_print_styles( [ 'kurs-presjek' ] ); ?>
 </head>
@@ -70,6 +75,23 @@ $note_box = function ( string $qid, string $label, string $ph ) {
 			<div class="kp-stat kp-stat--ok"><b><?php echo (int) $n_upd; ?></b><span>ažurirano prema popisu</span></div>
 			<div class="kp-stat kp-stat--wait"><b><?php echo count( $teams ) - $n_upd; ?></b><span>čeka novi popis</span></div>
 			<div class="kp-stat kp-stat--q"><b><span id="kp-done"><?php echo (int) $n_done; ?></span> / <?php echo count( $qs ); ?></b><span>pitanja odgovoreno</span></div>
+		</div>
+	</section>
+
+	<!-- ── Sponzori ekipa (1.29.0) ──────────────────────────────────────── -->
+	<section class="kp-section kp-callout" id="sponzori">
+		<div class="kp-callout__txt">
+			<h2 class="kp-h2">Pošaljite sponzore svoje ekipe</h2>
+			<p>Za svaku ekipu trebamo <b>sve sponzore</b>: naziv, <b>razinu</b> (glavni, srednji ili mali sponzor), <b>logo</b> i <b>link</b> na njihovu stranicu. Razina određuje koliko je sponzor istaknut na stranici ekipe. Kliknite svoju ekipu i dodajte sponzore jednog po jednog.</p>
+			<p class="kp-muted">Logo: PNG ili JPG do 5 MB, najbolje s prozirnom ili bijelom pozadinom. Ako logo trenutno nemate, pošaljite bez njega pa ga dodajte kasnije.</p>
+		</div>
+		<div class="kp-callout__teams">
+			<p class="kp-callout__count"><b id="kp-spons-n"><?php echo (int) $n_spons; ?></b> / <?php echo count( $teams ); ?> ekipa poslalo sponzore</p>
+			<ul class="kp-spons-teams">
+				<?php foreach ( $teams as $t ) : $n = count( $spons[ (int) $t['id'] ] ); ?>
+				<li><a href="#spons-<?php echo (int) $t['id']; ?>" class="kp-spons-team<?php echo $n ? ' is-done' : ''; ?>" data-spons-link="<?php echo (int) $t['id']; ?>"><?php echo esc_html( $t['name'] ); ?><span><?php echo $n ? $n : '—'; ?></span></a></li>
+				<?php endforeach; ?>
+			</ul>
 		</div>
 	</section>
 
@@ -190,6 +212,28 @@ $note_box = function ( string $qid, string $label, string $ph ) {
 					</p>
 					<?php endif; ?>
 
+					<details class="kp-spons" id="spons-<?php echo (int) $t['id']; ?>" data-team="<?php echo (int) $t['id']; ?>">
+						<summary><span class="kp-spons__sum">Sponzori ekipe</span> <span class="kp-spons__badge"><?php echo count( $spons[ (int) $t['id'] ] ) ? count( $spons[ (int) $t['id'] ] ) . ' poslano' : 'još nije poslano'; ?></span></summary>
+						<ul class="kp-spons__list"></ul>
+						<form class="kp-spons__form" enctype="multipart/form-data" novalidate>
+							<p class="kp-spons__h">Dodaj sponzora</p>
+							<label class="kp-field"><span>Naziv sponzora *</span><input type="text" name="name" maxlength="120" required placeholder="npr. Pekara Kruh"></label>
+							<div class="kp-field"><span>Razina *</span>
+								<div class="kp-tiers" role="radiogroup" aria-label="Razina sponzora">
+									<?php foreach ( Kurs_Presjek::TIERS as $tk => $tl ) : ?>
+									<label class="kp-tier"><input type="radio" name="tier" value="<?php echo esc_attr( $tk ); ?>"><span><?php echo esc_html( $tl ); ?></span></label>
+									<?php endforeach; ?>
+								</div>
+							</div>
+							<label class="kp-field"><span>Link (web ili Facebook)</span><input type="url" name="link" maxlength="300" placeholder="https://…" inputmode="url"></label>
+							<label class="kp-field"><span>Logo</span><input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+							<div class="kp-row">
+								<button type="submit" class="kp-btn">Dodaj sponzora</button>
+								<span class="kp-status" role="status" aria-live="polite"></span>
+							</div>
+						</form>
+					</details>
+
 					<details class="kp-fix"<?php echo empty( $answers[ 'team-' . (int) $t['id'] ] ) ? '' : ' open'; ?>>
 						<summary><?php echo $upd ? 'Ispravak za ovu ekipu' : 'Pošalji popis ili ispravak'; ?></summary>
 						<?php $note_box( 'team-' . (int) $t['id'], $upd ? 'Što treba ispraviti?' : 'Popis igrača 2026/27 ili napomena', $upd ? 'npr. krivo prezime, igrač koji nedostaje, broj dresa…' : "Ime Prezime\nIme Prezime\n…" ); ?>
@@ -227,6 +271,7 @@ window.KP = <?php echo wp_json_encode( [
 	'k'       => Kurs_Presjek::key(), // stranica se otvara samo s ispravnim ključem (ili adminu)
 	'answers' => (object) $initial,
 	'qids'    => array_column( $qs, 'id' ),
+	'spons'   => (object) $spons,
 ] ); ?>;
 </script>
 <script src="<?php echo esc_url( KURS_URL . 'front/presjek.js?ver=' . KURS_VERSION ); ?>"></script>

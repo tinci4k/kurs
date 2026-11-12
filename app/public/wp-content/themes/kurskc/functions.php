@@ -1,7 +1,7 @@
 <?php
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURSKC_VERSION', '1.0.45' );
+define( 'KURSKC_VERSION', '1.0.62' );
 define( 'KURSKC_DIR', get_template_directory() );
 define( 'KURSKC_URI', get_template_directory_uri() );
 
@@ -9,6 +9,11 @@ require_once KURSKC_DIR . '/inc/post-types.php';
 require_once KURSKC_DIR . '/inc/enqueue.php';
 require_once KURSKC_DIR . '/inc/nav-menus.php';
 require_once KURSKC_DIR . '/inc/news.php';
+require_once KURSKC_DIR . '/inc/embed-block.php';
+require_once KURSKC_DIR . '/inc/league-widget.php';
+require_once KURSKC_DIR . '/inc/social.php';
+require_once KURSKC_DIR . '/inc/home-extra.php';
+require_once KURSKC_DIR . '/inc/search.php';
 require_once KURSKC_DIR . '/inc/sponsors.php';
 require_once KURSKC_DIR . '/inc/media-kit.php';
 
@@ -298,11 +303,11 @@ add_action( 'init', function () {
 <!-- wp:buttons -->
 <div class="wp-block-buttons">
 <!-- wp:button {"style":{"color":{"background":"#F47B16","text":"#ffffff"},"border":{"radius":"6px"}}} -->
-<div class="wp-block-button"><a class="wp-block-button__link has-text-color has-background wp-element-button" style="border-radius:6px;color:#ffffff;background-color:#F47B16" href="https://www.facebook.com/" target="_blank" rel="noreferrer noopener">⚽ Pan Ljetna liga Koprivnica</a></div>
+<div class="wp-block-button"><a class="wp-block-button__link has-text-color has-background wp-element-button" style="border-radius:6px;color:#ffffff;background-color:#F47B16" href="https://www.facebook.com/panljetnaligakoprivnica/" target="_blank" rel="noreferrer noopener">⚽ Pan Ljetna liga Koprivnica</a></div>
 <!-- /wp:button -->
 
 <!-- wp:button {"style":{"color":{"background":"#DA0F1E","text":"#ffffff"},"border":{"radius":"6px"}}} -->
-<div class="wp-block-button"><a class="wp-block-button__link has-text-color has-background wp-element-button" style="border-radius:6px;color:#ffffff;background-color:#DA0F1E" href="https://www.facebook.com/" target="_blank" rel="noreferrer noopener">🏆 Zimska KC Liga</a></div>
+<div class="wp-block-button"><a class="wp-block-button__link has-text-color has-background wp-element-button" style="border-radius:6px;color:#ffffff;background-color:#DA0F1E" href="https://www.facebook.com/profile.php?id=100054493718852" target="_blank" rel="noreferrer noopener">🏆 Zimska KC Liga</a></div>
 <!-- /wp:button -->
 </div>
 <!-- /wp:buttons -->';
@@ -322,7 +327,7 @@ add_action( 'init', function () {
 
 /**
  * Kreiraj "Kolačići" (politika kolačića) stranicu — editabilno u Gutenbergu.
- * Sadržaj odražava stvarno stanje: samo nužni WordPress kolačići, bez analitike/praćenja.
+ * Sadržaj odražava stvarno stanje: samo nužni WordPress kolačići; statistika posjeta (Kurs_Stats) je bez kolačića.
  */
 add_action( 'init', function () {
 	if ( get_page_by_path( 'kolacici' ) ) return;
@@ -348,7 +353,7 @@ add_action( 'init', function () {
 <!-- /wp:heading -->
 
 <!-- wp:paragraph -->
-<p>Naša stranica koristi <strong>isključivo nužne (funkcionalne) kolačiće</strong> koje postavlja sustav WordPress. <strong>Ne koristimo kolačiće za analitiku, oglašavanje niti praćenje</strong> na društvenim mrežama.</p>
+<p>Naša stranica koristi <strong>isključivo nužne (funkcionalne) kolačiće</strong> koje postavlja sustav WordPress. <strong>Ne koristimo kolačiće za analitiku, oglašavanje niti praćenje</strong> na društvenim mrežama. Broj posjeta mjerimo vlastitim anonimnim brojačem koji <strong>ne koristi kolačiće</strong> i ne sprema IP adrese (više u <a href="/privatnost/">Politici privatnosti</a>).</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:paragraph -->
@@ -481,6 +486,14 @@ add_action( 'init', function () {
 
 <!-- wp:paragraph -->
 <p>Poslužitelj može bilježiti standardne tehničke zapise (IP adresa, vrsta preglednika, vrijeme pristupa) radi sigurnosti i ispravnog rada stranice. Više o kolačićima pročitajte u <a href="/kolacici/">Politici kolačića</a>.</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading {"level":3} -->
+<h3 class="wp-block-heading">Anonimna statistika posjeta</h3>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>Da bismo znali koliko se stranica čita (npr. za izvještaje pokroviteljima), vodimo anonimnu statistiku posjeta vlastitim sustavom — <strong>bez kolačića i bez vanjskih servisa</strong>. Za svaki pregled spremamo samo koja je stranica otvorena, odakle je posjetitelj došao (samo naziv stranice, npr. facebook.com), vrstu uređaja (mobitel, tablet ili računalo) i vrijeme. <strong>IP adresu ne spremamo</strong>: iz nje i podataka o pregledniku računa se dnevni anonimni identifikator koji se svaki dan mijenja, pa posjetitelja nije moguće prepoznati niti pratiti kroz dulje razdoblje. Podaci se čuvaju najviše 25 mjeseci, koriste se samo zbirno i ne dijele se s trećima.</p>
 <!-- /wp:paragraph -->
 
 <!-- wp:heading -->

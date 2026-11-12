@@ -101,10 +101,12 @@ $render_card = function () {
 			<div class="kc-feature__excerpt"><p><?php echo esc_html( wp_trim_words( get_the_excerpt(), 34 ) ); ?></p></div>
 		</a>
 		<div class="kc-rail">
-			<?php echo kurskc_widget_most_read( true ); ?>
-			<?php echo kurskc_widget_league_live(); ?>
+			<?php echo kurskc_league_widget( true ); ?>
+			<?php echo function_exists( 'kurskc_follow_box' ) ? kurskc_follow_box( 'card' ) : ''; ?>
 		</div>
 	</div>
+	<?php /* Najčitanije kao vodoravna traka ispod (1.0.59) — desni stupac ostaje kratak, slika izdvojene vijesti uvijek 16:9 */ ?>
+	<div class="kc-mostread-row"><?php echo kurskc_widget_most_read( true ); ?></div>
 	<?php endif; ?>
 
 	<!-- Najnovije -->

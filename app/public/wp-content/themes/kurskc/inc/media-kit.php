@@ -30,7 +30,7 @@ class Kurskc_Media_Kit {
 	// Portal nema Barlow pa pada na Arial Narrow/Segoe UI/Consolas; PNG (naša stranica) ima prave fontove.
 	const F_HEAD = 'Barlow Semi Condensed,Arial Narrow,Arial,sans-serif';
 	const F_BODY = 'Barlow,Segoe UI,Roboto,Helvetica,Arial,sans-serif';
-	const F_MONO = 'Space Mono,Consolas,Courier New,monospace';
+	const F_MONO = 'Barlow,Segoe UI,Roboto,Helvetica,Arial,sans-serif'; // 1.0.54: bez Space Mono
 
 	const PO_LABELS = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale' ];
 
@@ -74,6 +74,7 @@ class Kurskc_Media_Kit {
 	public static function division_data( object $division, $round, bool $is_pan ): array {
 		$did = (int) $division->id;
 		$d   = [
+			'did'    => $did,
 			'name'   => $division->name,
 			'accent' => self::accent( $division->name, $is_pan ),
 			'spots'  => ! empty( $division->has_playoff ),
@@ -114,6 +115,20 @@ class Kurskc_Media_Kit {
 
 	private static function e( $s ): string { return esc_html( (string) $s ); }
 
+	/* Poveznice (1.0.57): rezultat/sat → stranica utakmice, ekipa → profil ekipe, strijelac → profil igrača.
+	   Inline stilovi da portal ne oboji/podcrta tekst svojim stilom poveznica. */
+	private static function a( string $inner, string $url, string $title = '' ): string {
+		if ( ! $url ) return $inner;
+		return '<a href="' . esc_url( $url ) . '"' . ( $title ? ' title="' . esc_attr( $title ) . '"' : '' ) . ' style="color:inherit;text-decoration:none;border:0;box-shadow:none;background:none;">' . $inner . '</a>';
+	}
+	private static function match_url( int $id ): string { return $id ? add_query_arg( 'match_id', $id, home_url( '/utakmica/' ) ) : ''; }
+	private static function team_url( int $id, int $did = 0 ): string { return $id && function_exists( 'kurs_team_url' ) && get_post_status( $id ) === 'publish' ? kurs_team_url( $id, $did ) : ''; }
+	private static function player_url( int $id ): string { return $id && get_post_status( $id ) === 'publish' ? (string) get_permalink( $id ) : ''; }
+	/** Strijelci utakmice s poveznicama na igrače („Ranilović 3, Rac 2"). */
+	private static function scorers_links( array $list ): string {
+		return implode( ', ', array_map( fn( $sc ) => self::a( self::e( $sc['name'] ), self::player_url( (int) ( $sc['pid'] ?? 0 ) ) ) . ( $sc['goals'] > 1 ? ' ' . (int) $sc['goals'] : '' ) . ( ! empty( $sc['own'] ) ? ' (ag)' : '' ), $list ) );
+	}
+
 	/** Tablica bez okvira/razmaka — štiti od stilova tablica s portala. */
 	private static function table( string $inner, string $style = '' ): string {
 		return '<table width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;border:0;margin:0;padding:0;background:transparent;' . $style . '">' . $inner . '</table>';
@@ -149,24 +164,27 @@ class Kurskc_Media_Kit {
 	}
 
 	/** Jedna utakmica: ekipe + rezultat, ispod strijelci domaćina / gosta. */
-	private static function match_rows( string $home, string $away, ?string $score, string $hs, string $as, string $note ): string {
+	private static function match_rows( string $home, string $away, ?string $score, string $hs, string $as, string $note, string $murl = '', string $sub = '' ): string {
 		$line = 'border-top:1px solid ' . self::LINE . ';';
 		$team = 'width:42%;font-family:' . self::F_BODY . ';font-weight:700;font-size:15px;line-height:1.25;color:' . self::DARK . ';vertical-align:middle;';
 		$mid  = $score !== null
 			? self::pill( $score, self::DARK, '#ffffff', 18, 68, 32 )
+				// ispod rezultata: penali u doigravanju (1.0.62) — „pen. 4:5"
+				. ( $sub ? '<span style="display:block;margin-top:4px;font-family:' . self::F_MONO . ';font-size:11.5px;font-weight:700;letter-spacing:.02em;color:' . self::DARK . ';white-space:nowrap;">' . self::e( $sub ) . '</span>' : '' )
 			: '<span style="font-family:' . self::F_MONO . ';font-size:11px;color:' . self::MUTED . ';white-space:nowrap;">' . self::e( $note ?: '–' ) . '</span>';
+		$mid  = self::a( $mid, $murl, 'Detalji utakmice' );
 		$pad  = ( $hs || $as ) ? '10px' : '11px';
 		$html = '<tr>'
-			. self::td( self::e( $home ), $team . $line . 'padding:' . $pad . ' 12px ' . ( ( $hs || $as ) ? '3px' : '11px' ) . ' 0;text-align:right;' )
+			. self::td( $home, $team . $line . 'padding:' . $pad . ' 12px ' . ( ( $hs || $as ) ? '3px' : '11px' ) . ' 0;text-align:right;' )
 			. self::td( $mid, 'width:16%;text-align:center;vertical-align:middle;white-space:nowrap;' . $line . 'padding:' . $pad . ' 0 ' . ( ( $hs || $as ) ? '3px' : '11px' ) . ';' )
-			. self::td( self::e( $away ), $team . $line . 'padding:' . $pad . ' 0 ' . ( ( $hs || $as ) ? '3px' : '11px' ) . ' 12px;text-align:left;' )
+			. self::td( $away, $team . $line . 'padding:' . $pad . ' 0 ' . ( ( $hs || $as ) ? '3px' : '11px' ) . ' 12px;text-align:left;' )
 			. '</tr>';
 		if ( $hs || $as ) {
 			$sc = 'font-family:' . self::F_BODY . ';font-size:12.5px;line-height:1.35;color:#5b5e66;vertical-align:top;padding-bottom:10px;';
 			$html .= '<tr>'
-				. self::td( self::e( $hs ), $sc . 'padding-right:12px;text-align:right;' )
+				. self::td( $hs, $sc . 'padding-right:12px;text-align:right;' )
 				. self::td( '', 'padding:0;' )
-				. self::td( self::e( $as ), $sc . 'padding-left:12px;text-align:left;' )
+				. self::td( $as, $sc . 'padding-left:12px;text-align:left;' )
 				. '</tr>';
 		}
 		return $html;
@@ -185,11 +203,13 @@ class Kurskc_Media_Kit {
 				$gl   = $done ? ( $d['goals'][ (int) $m->id ] ?? [] ) : [];
 				$ts   = $m->match_date ? strtotime( $m->match_date ) : 0;
 				$note = ! $ts ? 'termin naknadno' : ( $ts < current_time( 'timestamp' ) ? 'odgođeno' : date( 'H:i', $ts ) );
+				$did   = (int) ( $d['did'] ?? 0 );
 				$rows .= self::match_rows(
-					$m->home_name, $m->away_name,
+					self::a( self::e( $m->home_name ), self::team_url( (int) $m->home_team_id, $did ) ),
+					self::a( self::e( $m->away_name ), self::team_url( (int) $m->away_team_id, $did ) ),
 					$done ? (int) $m->home_score . ' : ' . (int) $m->away_score : null,
-					Kurs_Rounds::scorers_text( $gl['home'] ?? [] ), Kurs_Rounds::scorers_text( $gl['away'] ?? [] ),
-					$note
+					self::scorers_links( $gl['home'] ?? [] ), self::scorers_links( $gl['away'] ?? [] ),
+					$note, self::match_url( (int) $m->id )
 				);
 			}
 			$gid = (int) $list[0]->group_id;
@@ -222,7 +242,7 @@ class Kurskc_Media_Kit {
 			$pos_border = $i < $spots ? 'border-left:4px solid ' . $d['accent'] . ';padding-left:8px;' : 'padding-left:12px;';
 			$rows .= '<tr>'
 				. self::td( '<span style="font-family:' . self::F_HEAD . ';font-weight:800;font-size:16px;">' . ( $i + 1 ) . '.</span>' . $move, $c . $pos_border . 'white-space:nowrap;' )
-				. self::td( self::e( $r['team_name'] ), $c . 'font-weight:600;text-align:left;' )
+				. self::td( self::a( self::e( $r['team_name'] ), self::team_url( (int) $r['team_id'], (int) ( $d['did'] ?? 0 ) ) ), $c . 'font-weight:600;text-align:left;' )
 				. self::td( (int) $r['P'], $c . 'text-align:center;' ) . self::td( (int) $r['W'], $c . 'text-align:center;' )
 				. self::td( (int) $r['D'], $c . 'text-align:center;' ) . self::td( (int) $r['L'], $c . 'text-align:center;' )
 				. self::td( (int) $r['GF'] . ':' . (int) $r['GA'], $c . 'text-align:center;font-family:' . self::F_MONO . ';font-size:12px;white-space:nowrap;' )
@@ -241,7 +261,7 @@ class Kurskc_Media_Kit {
 		foreach ( $sc['groups'] as $goals => $list ) {
 			$pill  = $first ? self::pill( (string) $goals, self::GOLD, self::DARK, 15, 32, 26, false ) : self::pill( (string) $goals, self::DARK, '#ffffff', 15, 32, 26, false );
 			$first = false;
-			$names = implode( ', ', array_map( fn( $s ) => '<strong style="font-weight:700;color:' . self::DARK . ';">' . self::e( $s['name'] ) . '</strong><span style="color:' . self::MUTED . ';"> (' . self::e( $s['team'] ) . ')</span>', $list ) );
+			$names = implode( ', ', array_map( fn( $s ) => '<strong style="font-weight:700;color:' . self::DARK . ';">' . self::a( self::e( $s['name'] ), self::player_url( (int) ( $s['pid'] ?? 0 ) ) ) . '</strong><span style="color:' . self::MUTED . ';"> (' . self::e( $s['team'] ) . ')</span>', $list ) );
 			$rows .= '<tr>'
 				. self::td( $pill, 'width:44px;padding:7px 0;vertical-align:top;border-bottom:1px solid ' . self::LINE . ';' )
 				. self::td( $names, 'padding:8px 0;vertical-align:top;font-family:' . self::F_BODY . ';font-size:13.5px;line-height:1.45;color:' . self::DARK . ';border-bottom:1px solid ' . self::LINE . ';' )
@@ -272,11 +292,15 @@ class Kurskc_Media_Kit {
 				$done = $m->status === 'finished';
 				$gl   = $done ? ( $po['goals'][ (int) $m->match_id ] ?? [] ) : [];
 				$ts   = $m->match_date ? strtotime( $m->match_date ) : 0;
+				$did   = (int) ( $d['did'] ?? 0 );
 				$rows .= self::match_rows(
-					$m->home_name ?: kurs_playoff_label( $m->home_label ), $m->away_name ?: kurs_playoff_label( $m->away_label ),
+					$m->home_name ? self::a( self::e( $m->home_name ), self::team_url( (int) $m->home_team_id, $did ) ) : self::e( kurs_playoff_label( $m->home_label ) ),
+					$m->away_name ? self::a( self::e( $m->away_name ), self::team_url( (int) $m->away_team_id, $did ) ) : self::e( kurs_playoff_label( $m->away_label ) ),
 					$done ? (int) $m->home_score . ' : ' . (int) $m->away_score : null,
-					Kurs_Rounds::scorers_text( $gl['home'] ?? [] ), Kurs_Rounds::scorers_text( $gl['away'] ?? [] ),
-					trim( ( $ts ? date( 'j. n. H:i', $ts ) : 'termin naknadno' ) . ' ' . ( ( $p = Kurs_Playoff::pen_label( $m ) ) ? "· $p" : '' ) )
+					self::scorers_links( $gl['home'] ?? [] ), self::scorers_links( $gl['away'] ?? [] ),
+					$ts ? date( 'j. n. H:i', $ts ) : 'termin naknadno',
+					self::match_url( (int) ( $m->match_id ?? 0 ) ),
+					$done ? Kurs_Playoff::pen_label( $m ) : ''
 				);
 			}
 			$out .= self::subheading( self::PO_LABELS[ $r ] ) . self::table( $rows );
@@ -285,17 +309,40 @@ class Kurskc_Media_Kit {
 	}
 
 	/**
-	 * Cijeli paket (jedna kartica) za odabrane lige.
-	 * @param array      $datas  rezultat division_data() za svaku ligu
-	 * @param int|string $round  broj kola ili 'playoff'
+	 * Aktualna ljestvica lige u obliku division_data() (za ugradnju „Ljestvica — uvijek aktualna").
 	 */
-	public static function html( array $datas, $round, string $competition, string $season_name ): string {
+	public static function live_data( object $division, bool $is_pan ): array {
+		$did    = (int) $division->id;
+		$tables = [];
+		$ph     = Kurs_Season::group_phase( $did );
+		foreach ( $ph ? Kurs_Season::get_groups( (int) $ph->id ) : [] as $g ) {
+			$rows = Kurs_Match::get_standings( (int) $g->id );
+			if ( $rows ) $tables[] = [ 'group' => $g, 'rows' => $rows, 'unplayed' => 0 ];
+		}
+		return [
+			'did' => $did, 'name' => $division->name, 'accent' => self::accent( $division->name, $is_pan ), 'spots' => ! empty( $division->has_playoff ),
+			'url'  => kurs_league_url( $did, [ 'tab' => 'tablica' ] ) . '#liga',
+			'matches' => [], 'goals' => [], 'byes' => [], 'date' => '', 'finished' => 0,
+			'tables' => $tables, 'scorers' => [ 'groups' => [], 'own' => [] ],
+		];
+	}
+
+	/**
+	 * Cijeli paket (jedna kartica) za odabrane lige.
+	 * Isti HTML koristi i ugradnja u vijesti (blok „KURS — iz lige", tema 1.0.51) — izgled je identičan paketu za medije.
+	 * @param array      $datas  rezultat division_data() / live_data() za svaku ligu
+	 * @param int|string $round  broj kola, 'playoff' ili 'live' (aktualna ljestvica)
+	 * @param array      $opts   [ parts => ['results','table','scorers'] (što prikazati) ]
+	 */
+	public static function html( array $datas, $round, string $competition, string $season_name, array $opts = [] ): string {
+		$parts   = $opts['parts'] ?? [ 'results', 'table', 'scorers' ];
+		$is_live = $round === 'live';
 		$home  = home_url( '/' );
 		$host  = wp_parse_url( $home, PHP_URL_HOST );
 		$logo  = get_template_directory_uri() . '/assets/img/kurs-media-logo.png';
 		$is_po = $round === 'playoff';
 		$dates = array_values( array_unique( array_filter( array_column( $datas, 'date' ) ) ) );
-		$title = $competition . ' · ' . ( $is_po ? 'Playoff' : (int) $round . '. kolo' );
+		$title = $competition . ' · ' . ( $is_po ? 'Playoff' : ( $is_live ? 'Ljestvica' : (int) $round . '. kolo' ) );
 		$sub   = implode( ' · ', array_filter( [ count( $dates ) === 1 ? $dates[0] : '', $season_name ] ) );
 
 		$html  = '<div style="max-width:680px;margin:0 auto 24px;background:' . self::PAPER . ';border:1px solid #dcdcd3;font-family:' . self::F_BODY . ';color:' . self::DARK . ';text-align:left;line-height:1.4;">';
@@ -320,13 +367,22 @@ class Kurskc_Media_Kit {
 			if ( $is_po ) {
 				$html .= self::heading( 'Playoff ' . self::genitive( $d['name'] ), $d['accent'], $d['date'] );
 				$html .= self::playoff_html( $d );
+			} elseif ( $is_live || ! in_array( 'results', $parts, true ) ) { // samo ljestvica (aktualna ili nakon kola)
+				$html .= self::heading( ( $is_live ? 'Ljestvica ' : 'Ljestvica nakon ' . (int) $round . '. kola ' ) . self::genitive( $d['name'] ), $d['accent'] );
+				foreach ( $d['tables'] as $t ) {
+					if ( count( $d['tables'] ) > 1 ) {
+						$html .= '<div style="font-family:' . self::F_HEAD . ';font-weight:800;font-style:italic;font-size:13px;text-transform:uppercase;color:' . $d['accent'] . ';margin:12px 0 5px;">' . self::e( $t['group']->name ) . '</div>';
+					}
+					$html .= self::standings_html( $t, $d );
+				}
+				if ( ! $d['tables'] ) $html .= self::note( 'Ljestvica će biti dostupna nakon prvih rezultata.' );
 			} elseif ( ! $d['matches'] ) {
 				$html .= self::heading( $d['name'], $d['accent'] ) . self::note( 'U ovom kolu nema utakmica.' );
 			} else {
 				$kind  = $d['finished'] ? 'Rezultati' : 'Najava';
 				$html .= self::heading( $kind . ' ' . (int) $round . '. kola ' . self::genitive( $d['name'] ), $d['accent'], count( $dates ) === 1 ? '' : $d['date'] );
 				$html .= self::results_html( $d );
-				if ( $d['tables'] ) {
+				if ( $d['tables'] && in_array( 'table', $parts, true ) ) {
 					$html .= self::subheading( 'Ljestvica nakon ' . (int) $round . '. kola' );
 					foreach ( $d['tables'] as $t ) {
 						if ( count( $d['tables'] ) > 1 ) {
@@ -335,7 +391,7 @@ class Kurskc_Media_Kit {
 						$html .= self::standings_html( $t, $d );
 					}
 				}
-				if ( $d['scorers']['groups'] || $d['scorers']['own'] ) {
+				if ( in_array( 'scorers', $parts, true ) && ( $d['scorers']['groups'] || $d['scorers']['own'] ) ) {
 					$html .= self::subheading( 'Strijelci' ) . self::scorers_html( $d['scorers'] );
 				}
 			}

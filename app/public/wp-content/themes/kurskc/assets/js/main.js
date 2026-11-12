@@ -5,19 +5,66 @@ document.addEventListener('DOMContentLoaded', function () {
 	const siteNav   = document.getElementById('site-nav');
 
 	if (navToggle && siteNav) {
-		navToggle.addEventListener('click', function () {
-			const isOpen = siteNav.classList.toggle('is-open');
-			navToggle.setAttribute('aria-expanded', isOpen);
-		});
+		const setNav = function (open) {
+			siteNav.classList.toggle('is-open', open);
+			navToggle.classList.toggle('is-open', open);
+			document.body.classList.toggle('nav-locked', open);
+			navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+			navToggle.setAttribute('aria-label', open ? 'Zatvori izbornik' : 'Otvori izbornik');
+		};
+		navToggle.addEventListener('click', function () { setNav(!siteNav.classList.contains('is-open')); });
 		document.addEventListener('click', function (e) {
-			if (!siteNav.contains(e.target) && !navToggle.contains(e.target)) {
-				siteNav.classList.remove('is-open');
-				navToggle.setAttribute('aria-expanded', 'false');
-			}
+			if (siteNav.classList.contains('is-open') && !siteNav.contains(e.target) && !navToggle.contains(e.target)) setNav(false);
 		});
+		document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && siteNav.classList.contains('is-open')) setNav(false); });
 	}
 
-	/* ── Tražilica je uvijek otvorena (inline form u headeru) — bez JS-a ── */
+	/* ── Prijedlozi pretrage dok se tipka (REST kurskc/v1/search) ── */
+	document.querySelectorAll('form[data-suggest]').forEach(function (form) {
+		var input = form.querySelector('input[name="s"]');
+		if (!input) return;
+		var box = document.createElement('div');
+		box.className = 'srch-suggest';
+		box.hidden = true;
+		form.appendChild(box);
+		var timer = null, last = '', ctrl = null;
+		function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+		function hide() { box.hidden = true; }
+		function run() {
+			var q = input.value.trim();
+			if (q.length < 2) { hide(); last = ''; return; }
+			if (q === last) return;
+			last = q;
+			if (ctrl && ctrl.abort) ctrl.abort();
+			ctrl = window.AbortController ? new AbortController() : null;
+			fetch(form.getAttribute('data-suggest') + (form.getAttribute('data-suggest').indexOf('?') > -1 ? '&' : '?') + 'q=' + encodeURIComponent(q), ctrl ? { signal: ctrl.signal } : {})
+				.then(function (r) { return r.json(); })
+				.then(function (d) {
+					if (!d || !d.groups) return;
+					if (!d.groups.length) { box.innerHTML = '<div class="srch-suggest__none">Nema rezultata za „' + esc(q) + '”</div>'; box.hidden = false; return; }
+					box.innerHTML = d.groups.map(function (g) {
+						return '<div class="srch-suggest__grp">' + esc(g.label) + '</div>' + g.items.map(function (it) {
+							return '<a class="srch-suggest__it" href="' + esc(it.url) + '">' + (it.img || '<span class="srch-suggest__dot"></span>') +
+								'<span class="srch-suggest__t"><b>' + it.title + '</b>' + (it.sub ? '<small>' + it.sub + '</small>' : '') + '</span></a>';
+						}).join('');
+					}).join('') + '<a class="srch-suggest__all" href="' + esc(d.all) + '">Svi rezultati za „' + esc(q) + '” &rarr;</a>';
+					box.hidden = false;
+				}).catch(function () {});
+		}
+		input.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(run, 180); });
+		input.addEventListener('focus', function () { if (box.innerHTML && input.value.trim().length >= 2) box.hidden = false; });
+		input.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') { hide(); return; }
+			if (e.key === 'ArrowDown' && !box.hidden) { var f = box.querySelector('a'); if (f) { e.preventDefault(); f.focus(); } }
+		});
+		box.addEventListener('keydown', function (e) {
+			var links = [].slice.call(box.querySelectorAll('a')), i = links.indexOf(document.activeElement);
+			if (e.key === 'ArrowDown' && i < links.length - 1) { e.preventDefault(); links[i + 1].focus(); }
+			if (e.key === 'ArrowUp') { e.preventDefault(); (i > 0 ? links[i - 1] : input).focus(); }
+			if (e.key === 'Escape') { hide(); input.focus(); }
+		});
+		document.addEventListener('click', function (e) { if (!form.contains(e.target)) hide(); });
+	});
 
 	/* ── Live ticker: pauza na dodir (hover je CSS) ──────────────── */
 	const ticker = document.querySelector('.site-ticker');
@@ -169,6 +216,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	}
 
+	/* Podijeli (Web Share API — mobitel nudi sve aplikacije) */
+	if (navigator.share) {
+		document.querySelectorAll('[data-share-native]').forEach(function (btn) {
+			btn.hidden = false;
+			btn.addEventListener('click', function () {
+				navigator.share({ title: btn.getAttribute('data-title') || document.title, url: btn.getAttribute('data-url') || location.href }).catch(function () {});
+			});
+		});
+	}
+
 	document.querySelectorAll('[data-copy-link]').forEach(function (btn) {
 		btn.addEventListener('click', function () {
 			var url = btn.getAttribute('data-copy-link');
@@ -228,5 +285,31 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (e.key === 'Escape') siteHeader.classList.remove('search-open');
 		});
 	}
+
+	/* ── Vodoravno pomicanje (1.0.54): rubovi se zatamne gdje ima još sadržaja,
+	   a iznad tablica piše „Povuci lijevo-desno" dok se prvi put ne pomakne ── */
+	var xsTables = '.career-table-wrap, .pf-table-wrap, .kurs-bracket, .media-paper';
+	var xsAll    = xsTables + ', .view-tabs, .round-nav__pills';
+	document.querySelectorAll(xsAll).forEach(function (el) {
+		var hint = null;
+		function update() {
+			var more = el.scrollWidth - el.clientWidth > 4;
+			el.classList.toggle('xs-left', more && el.scrollLeft > 4);
+			el.classList.toggle('xs-right', more && el.scrollLeft < el.scrollWidth - el.clientWidth - 4);
+			if (more && !hint && el.matches(xsTables) && !el.dataset.xsSeen) {
+				hint = document.createElement('div');
+				hint.className = 'xs-hint';
+				hint.innerHTML = '<span aria-hidden="true">&#8596;</span> Povuci lijevo-desno za cijelu tablicu';
+				el.parentNode.insertBefore(hint, el);
+			}
+			if (hint) hint.hidden = !more;
+		}
+		el.addEventListener('scroll', function () {
+			if (hint && el.scrollLeft > 10) { el.dataset.xsSeen = '1'; hint.remove(); hint = null; }
+			update();
+		}, { passive: true });
+		window.addEventListener('resize', update);
+		update();
+	});
 
 });

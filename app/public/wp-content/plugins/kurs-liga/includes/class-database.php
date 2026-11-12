@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.14';
+	const DB_VERSION = '1.15';
 
 	public static function install(): void {
 		global $wpdb;
@@ -161,6 +161,25 @@ class Kurs_Database {
 			PRIMARY KEY (id),
 			KEY idx_division (division_id),
 			KEY idx_round    (division_id, round)
+		) $c;" );
+
+		// Statistika posjeta (v1.15, Kurs_Stats) — jedan redak po pregledu stranice, bez IP-a
+		dbDelta( "CREATE TABLE {$p}stats (
+			id       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			ts       DATETIME        NOT NULL,
+			day      DATE            NOT NULL,
+			visitor  CHAR(16)        NOT NULL COMMENT 'dnevni anonimni hash (sol se mijenja svaki dan)',
+			entry    TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '1 = prvi pregled posjetitelja u danu (= posjet)',
+			ptype    VARCHAR(16)     NOT NULL DEFAULT 'ostalo',
+			obj      BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			league   VARCHAR(4)      NOT NULL DEFAULT '',
+			path     VARCHAR(191)    NOT NULL DEFAULT '/',
+			src      VARCHAR(16)     NOT NULL DEFAULT 'izravno',
+			ref      VARCHAR(100)    NOT NULL DEFAULT '',
+			device   VARCHAR(8)      NOT NULL DEFAULT 'racunalo',
+			PRIMARY KEY (id),
+			KEY idx_day (day, visitor),
+			KEY idx_obj (ptype, obj)
 		) $c;" );
 
 		update_option( 'kurs_db_version', self::DB_VERSION );

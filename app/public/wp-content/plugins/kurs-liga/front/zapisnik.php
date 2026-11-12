@@ -35,6 +35,7 @@ $match_row = function ( object $m, string $mode ) {
 <meta charset="<?php bloginfo( 'charset' ); ?>">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<?php echo function_exists( 'kurs_favicon_links' ) ? kurs_favicon_links() : ''; ?>
 <title><?php echo $can && $match_id ? 'Zapisnik utakmice' : 'Zapisnik'; ?> — KURS</title>
 <?php wp_print_styles( [ 'kurs-zapisnik' ] ); // samo naši stilovi (+ ovisnosti), bez teme ?>
 </head>

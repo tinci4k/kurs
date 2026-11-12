@@ -23,8 +23,8 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.27.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
-| `includes/class-database.php` | Sve 10 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.14'`, migracije (`maybe_upgrade()`) |
+| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.30.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
+| `includes/class-database.php` | Sve 11 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.15'`, migracije (`maybe_upgrade()`) |
 | `includes/class-cpt.php` | CPT-ovi `kurs_ekipa` (slug `ekipe`) i `kurs_igrac` (slug `igraci`) |
 | `includes/class-players.php` | `Kurs_Players` (1.19.0) — registar igrača: duplikati istog imena, zbroj nastupa/golova, ekipe u aktivnim sezonama, **spajanje** i brisanje igrača |
 | `includes/class-season.php` | `Kurs_Season` — **`COMPETITIONS`** (fiksna natjecanja) + `scaffold()` / `set_group_count()`; CRUD nad sezone/divizije/faze/grupe/group_teams/squads (static) |
@@ -45,7 +45,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `functions.php` | `KURSKC_VERSION='1.0.45'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
+| `functions.php` | `KURSKC_VERSION='1.0.62'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
 | `style.css` | Samo theme header (Version 1.0.0 — nedosljedno s functions.php) |
 | `inc/post-types.php` | Registrira SAMO CPT `vijest` + taksonomiju `vijest_kategorija` |
 | `inc/enqueue.php` | Google Fonts + `kurskc-main` CSS/JS |
@@ -63,7 +63,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 | `index.php` / `single.php` / `page.php` / `search.php` / `404.php` | Generički templati (index pokriva sve arhive) |
 | `assets/css/main.css` | Svi front-end stilovi; CSS varijable `--c-*` u `:root` |
 | `assets/js/main.js` | Mobilni meni, tražilica, `.hub-dd` dropdowni, kopiranje linka, „Za medije" (kopiranje, PNG preko html-to-image) |
-| `assets/img/` | Logotipi (`KURS-clean-ink.png`, `KURS-clean.png`, `kurs-media-logo*.png`), `favicon.svg` |
+| `assets/img/` | Logotipi (`KURS-clean-ink.png`, `KURS-clean.png`, `kurs-media-logo*.png`), favicon (grb KC lige: `favicon.ico`, `favicon-32.png`, `favicon-192.png`, `apple-touch-icon.png`) |
 
 ### Ostalo
 | Putanja | Opis |
@@ -158,4 +158,4 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 ---
 
-*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.27.0` vs DB `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.45` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*
+*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.30.0` vs DB `DB_VERSION=1.15`; tema `KURSKC_VERSION=1.0.62` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*

@@ -18,7 +18,7 @@ defined( 'ABSPATH' ) || exit;
  */
 class Kurs_Ticker {
 
-	const TRANSIENT     = 'kurs_ticker_state_v1';
+	const TRANSIENT     = 'kurs_ticker_state_v2'; // v2 (1.29.0): + tone, day, home_id/away_id
 	const OPT_OFFSEASON = 'kurs_ticker_offseason'; // 'champions' | 'hidden'
 
 	/** TTL po statusu (sekunde) — adaptivno osvježavanje. */
@@ -73,6 +73,7 @@ class Kurs_Ticker {
 		global $wpdb;
 		$posts = $wpdb->posts;
 		return "SELECT m.id, m.match_date, m.status, m.home_score, m.away_score, m.round,
+		               m.home_team_id, m.away_team_id, d.name AS division_name,
 		               h.post_title AS home_name, a.post_title AS away_name, s.league AS league
 		        FROM " . self::t( 'matches' ) . " m
 		        JOIN $posts h ON h.ID = m.home_team_id
@@ -174,12 +175,23 @@ class Kurs_Ticker {
 
 	// ── Item helperi (struktura podataka; render je u temi/header.php) ─────────
 
-	private static function league_short( ?string $league ): string {
+	private static function league_short( ?string $league, ?string $division = '' ): string {
 		$l = mb_strtolower( (string) $league );
 		if ( $l === '' ) return '';
 		if ( str_contains( $l, 'pan' ) || str_contains( $l, 'ljet' ) ) return 'LJ';
+		if ( stripos( (string) $division, 'briga' ) !== false ) return 'LBB'; // Liga bez briga (KC natjecanje)
 		if ( str_contains( $l, 'kc' ) ) return 'KC';
 		return mb_strtoupper( mb_substr( $league, 0, 2 ) );
+	}
+
+	/** Zajednička polja stavke: liga (oznaka + ton boje) i ekipe s ID-em (grb). */
+	private static function base( object $m ): array {
+		$lg = self::league_short( $m->league, $m->division_name ?? '' );
+		return [
+			'league' => $lg, 'tone' => [ 'LJ' => 'pan', 'LBB' => 'lbb' ][ $lg ] ?? 'kc',
+			'home' => $m->home_name, 'away' => $m->away_name,
+			'home_id' => (int) ( $m->home_team_id ?? 0 ), 'away_id' => (int) ( $m->away_team_id ?? 0 ),
+		];
 	}
 
 	private static function match_url( int $id ): string {
@@ -193,32 +205,28 @@ class Kurs_Ticker {
 	}
 
 	private static function item_finished( object $m ): array {
-		return [
-			'kind' => 'finished', 'league' => self::league_short( $m->league ),
-			'home' => $m->home_name, 'away' => $m->away_name,
+		return [ 'kind' => 'finished' ] + self::base( $m ) + [
 			'home_score' => (int) $m->home_score, 'away_score' => (int) $m->away_score,
 			'url' => self::match_url( (int) $m->id ),
 		];
 	}
 
 	private static function item_live( object $m ): array {
-		return [
-			'kind' => 'live', 'league' => self::league_short( $m->league ),
-			'home' => $m->home_name, 'away' => $m->away_name,
+		return [ 'kind' => 'live' ] + self::base( $m ) + [
 			'note' => 'U TIJEKU', 'url' => self::match_url( (int) $m->id ),
 		];
 	}
 
 	private static function item_upcoming( object $m, bool $today ): array {
-		$time = '';
+		$time = $day = '';
 		if ( $m->match_date ) {
 			$ts   = strtotime( $m->match_date );
 			$days = [ 'ned', 'pon', 'uto', 'sri', 'čet', 'pet', 'sub' ]; // neovisno o jeziku WP-a
-			$time = $today ? date( 'H:i', $ts ) : $days[ (int) date( 'w', $ts ) ] . ' ' . date( 'j.n. H:i', $ts );
+			$time = date( 'H:i', $ts );
+			$day  = $today ? '' : $days[ (int) date( 'w', $ts ) ] . ' ' . date( 'j.n.', $ts );
 		}
-		return [
-			'kind' => 'upcoming', 'league' => self::league_short( $m->league ),
-			'home' => $m->home_name, 'away' => $m->away_name, 'time' => $time,
+		return [ 'kind' => 'upcoming' ] + self::base( $m ) + [
+			'time' => $time, 'day' => $day,
 			'url' => self::schedule_url( $m->league ),
 		];
 	}

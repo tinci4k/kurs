@@ -19,6 +19,9 @@ class Kurs_Presjek {
 	const SLUG   = 'presjek';
 	const OPTION = 'kurs_presjek_odgovori';
 	const MAX    = 20;   // zadnjih N odgovora po pitanju
+	const SPONS  = 'kurs_presjek_sponzori'; // [ team_id => [ {name, tier, link, att, who, at, removed?} ] ] (1.29.0)
+	const TIERS  = [ 'glavni' => 'Glavni', 'srednji' => 'Srednji', 'mali' => 'Mali' ];
+	const SPONS_MAX = 15;  // po ekipi
 
 	public static function init(): void {
 		add_action( 'init',              [ __CLASS__, 'rewrite' ] );
@@ -27,6 +30,8 @@ class Kurs_Presjek {
 		add_action( 'template_redirect', [ __CLASS__, 'render' ], 0 );
 		add_action( 'wp_ajax_kurs_presjek_odgovor',        [ __CLASS__, 'ajax_answer' ] );
 		add_action( 'wp_ajax_nopriv_kurs_presjek_odgovor', [ __CLASS__, 'ajax_answer' ] );
+		add_action( 'wp_ajax_kurs_presjek_sponzor',        [ __CLASS__, 'ajax_sponsor' ] );
+		add_action( 'wp_ajax_nopriv_kurs_presjek_sponzor', [ __CLASS__, 'ajax_sponsor' ] );
 		add_action( 'admin_menu',        [ __CLASS__, 'admin_menu' ], 20 );
 	}
 
@@ -122,6 +127,99 @@ class Kurs_Presjek {
 		wp_send_json_success( [ 'entries' => self::public_entries( $all[ $qid ] ) ] );
 	}
 
+	// ── Sponzori ekipa (1.29.0): naziv, razina (glavni/srednji/mali), link, logo ─────────
+
+	public static function sponsors_all(): array {
+		$a = get_option( self::SPONS, [] );
+		return is_array( $a ) ? $a : [];
+	}
+
+	/** Sponzori jedne ekipe za prikaz (bez uklonjenih), redom glavni → srednji → mali. */
+	public static function sponsors( int $team_id ): array {
+		$out = [];
+		foreach ( (array) ( self::sponsors_all()[ $team_id ] ?? [] ) as $i => $s ) {
+			if ( ! empty( $s['removed'] ) ) continue;
+			$att   = (int) ( $s['att'] ?? 0 );
+			$out[] = [
+				'i'     => $i,
+				'name'  => (string) $s['name'],
+				'tier'  => (string) $s['tier'],
+				'tierL' => self::TIERS[ $s['tier'] ] ?? '',
+				'link'  => (string) ( $s['link'] ?? '' ),
+				'logo'  => $att ? (string) wp_get_attachment_image_url( $att, 'medium' ) : '',
+				'att'   => $att,
+				'who'   => (string) ( $s['who'] ?? '' ),
+				'at'    => self::when( (string) ( $s['at'] ?? '' ) ),
+			];
+		}
+		$rank = array_flip( array_keys( self::TIERS ) );
+		usort( $out, fn( $a, $b ) => ( ( $rank[ $a['tier'] ] ?? 9 ) <=> ( $rank[ $b['tier'] ] ?? 9 ) ) ?: ( $a['i'] <=> $b['i'] ) );
+		return $out;
+	}
+
+	public static function ajax_sponsor(): void {
+		if ( ! self::has_key() ) wp_send_json_error( [ 'msg' => 'Link nije ispravan.' ], 403 );
+		if ( ! empty( $_POST['web'] ) ) wp_send_json_success( [ 'list' => [] ] );
+
+		$team = absint( $_POST['team'] ?? 0 );
+		if ( ! in_array( $team, array_map( 'intval', array_column( self::data()['teams'] ?? [], 'id' ) ), true ) ) {
+			wp_send_json_error( [ 'msg' => 'Nepoznata ekipa.' ], 400 );
+		}
+		$all  = self::sponsors_all();
+		$list = (array) ( $all[ $team ] ?? [] );
+
+		// uklanjanje (samo oznaka — logo ostaje u Medijima dok ga admin ne obriše)
+		if ( isset( $_POST['remove'] ) ) {
+			$i = absint( $_POST['remove'] );
+			if ( isset( $list[ $i ] ) ) {
+				$list[ $i ]['removed'] = current_time( 'mysql' );
+				$all[ $team ]          = $list;
+				update_option( self::SPONS, $all, false );
+			}
+			wp_send_json_success( [ 'list' => self::sponsors( $team ) ] );
+		}
+
+		$name = mb_substr( sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ), 0, 120 );
+		$tier = sanitize_key( $_POST['tier'] ?? '' );
+		$link = trim( (string) wp_unslash( $_POST['link'] ?? '' ) );
+		$who  = mb_substr( sanitize_text_field( wp_unslash( $_POST['who'] ?? '' ) ), 0, 80 );
+		if ( $name === '' ) wp_send_json_error( [ 'msg' => 'Upišite naziv sponzora.' ], 400 );
+		if ( ! isset( self::TIERS[ $tier ] ) ) wp_send_json_error( [ 'msg' => 'Odaberite razinu sponzora.' ], 400 );
+		if ( $link !== '' ) {
+			if ( ! preg_match( '#^https?://#i', $link ) ) $link = 'https://' . $link;
+			$link = esc_url_raw( $link, [ 'http', 'https' ] );
+			$host = (string) wp_parse_url( $link, PHP_URL_HOST );
+			if ( ! $link || ! filter_var( $link, FILTER_VALIDATE_URL ) || ! str_contains( $host, '.' ) ) {
+				wp_send_json_error( [ 'msg' => 'Link nije ispravan (npr. https://sponzor.hr).' ], 400 );
+			}
+		}
+		if ( count( array_filter( $list, fn( $s ) => empty( $s['removed'] ) ) ) >= self::SPONS_MAX ) {
+			wp_send_json_error( [ 'msg' => 'Najviše ' . self::SPONS_MAX . ' sponzora po ekipi — za više se javite KURS-u.' ], 400 );
+		}
+
+		$att = 0;
+		if ( ! empty( $_FILES['logo']['name'] ) ) {
+			$f = $_FILES['logo'];
+			if ( (int) $f['size'] > 5 * MB_IN_BYTES ) wp_send_json_error( [ 'msg' => 'Slika je veća od 5 MB.' ], 400 );
+			$mimes = [ 'jpg|jpeg|jpe' => 'image/jpeg', 'png' => 'image/png', 'webp' => 'image/webp', 'gif' => 'image/gif' ];
+			$chk   = wp_check_filetype_and_ext( $f['tmp_name'], $f['name'], $mimes );
+			if ( empty( $chk['type'] ) || ! @getimagesize( $f['tmp_name'] ) ) {
+				wp_send_json_error( [ 'msg' => 'Logo mora biti slika (PNG, JPG, WEBP ili GIF).' ], 400 );
+			}
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			require_once ABSPATH . 'wp-admin/includes/media.php';
+			require_once ABSPATH . 'wp-admin/includes/image.php';
+			$att = media_handle_upload( 'logo', 0, [ 'post_title' => 'Sponzor: ' . $name . ' (' . get_the_title( $team ) . ')' ], [ 'test_form' => false, 'mimes' => $mimes ] );
+			if ( is_wp_error( $att ) ) wp_send_json_error( [ 'msg' => 'Spremanje slike nije uspjelo: ' . $att->get_error_message() ], 400 );
+			update_post_meta( $att, '_kurs_presjek_team', $team );
+		}
+
+		$list[]       = [ 'name' => $name, 'tier' => $tier, 'link' => $link, 'att' => (int) $att, 'who' => $who, 'at' => current_time( 'mysql' ) ];
+		$all[ $team ] = $list;
+		update_option( self::SPONS, $all, false );
+		wp_send_json_success( [ 'list' => self::sponsors( $team ) ] );
+	}
+
 	/** Za prikaz na stranici: najnoviji prvi, s ljudskim datumom. */
 	public static function public_entries( array $list ): array {
 		return array_map( fn( $e ) => [
@@ -176,6 +274,35 @@ class Kurs_Presjek {
 				<?php endforeach; endforeach; ?>
 				</tbody>
 			</table>
+			<?php endif; ?>
+
+			<h2 style="margin-top:32px">Sponzori ekipa</h2>
+			<?php
+			$names = array_column( $d['teams'] ?? [], 'name', 'id' );
+			$rows  = [];
+			foreach ( $names as $tid => $tn ) foreach ( self::sponsors( (int) $tid ) as $sp ) $rows[] = [ $tn, $sp ];
+			$with  = count( array_filter( array_keys( $names ), fn( $tid ) => (bool) self::sponsors( (int) $tid ) ) );
+			?>
+			<p><b><?php echo (int) $with; ?> / <?php echo count( $names ); ?></b> ekipa poslalo je sponzore. Logotipi su u Medijima (naslov „Sponzor: …”).</p>
+			<?php if ( $rows ) : ?>
+			<table class="widefat striped" style="max-width:1100px">
+				<thead><tr><th>Ekipa</th><th>Logo</th><th>Sponzor</th><th>Razina</th><th>Link</th><th>Tko</th><th>Kada</th></tr></thead>
+				<tbody>
+				<?php foreach ( $rows as [ $tn, $sp ] ) : ?>
+					<tr>
+						<td><?php echo esc_html( $tn ); ?></td>
+						<td><?php if ( $sp['logo'] ) : ?><a href="<?php echo esc_url( (string) get_edit_post_link( $sp['att'] ) ); ?>"><img src="<?php echo esc_url( $sp['logo'] ); ?>" alt="" style="max-width:90px;max-height:44px;object-fit:contain;background:#f4f4ee"></a><?php else : ?>—<?php endif; ?></td>
+						<td><b><?php echo esc_html( $sp['name'] ); ?></b></td>
+						<td><?php echo esc_html( $sp['tierL'] ); ?></td>
+						<td><?php echo $sp['link'] ? '<a href="' . esc_url( $sp['link'] ) . '" target="_blank" rel="noopener">' . esc_html( preg_replace( '#^https?://(www\.)?#', '', $sp['link'] ) ) . '</a>' : '—'; ?></td>
+						<td><?php echo esc_html( $sp['who'] ); ?></td>
+						<td><?php echo esc_html( $sp['at'] ); ?></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<?php else : ?>
+				<p>Još nema poslanih sponzora.</p>
 			<?php endif; ?>
 		</div>
 		<?php

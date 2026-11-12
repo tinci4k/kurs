@@ -64,6 +64,7 @@ if ( $al && class_exists( 'Kurs_Rounds' ) ) {
 		}
 		$home_rounds[] = [
 			'name'    => $d->name,
+			'did'     => $did,
 			'tone'    => $hr_pan ? 'pan' : ( stripos( $d->name, 'briga' ) !== false ? 'lbb' : 'kc' ),
 			'icon'    => $hr_pan ? 'Pan Ljetna' : $d->name,
 			'round'   => $r,
@@ -160,20 +161,21 @@ if ( $al && class_exists( 'Kurs_Rounds' ) ) {
 					$hw   = $done && (int) $m->home_score > (int) $m->away_score;
 					$aw   = $done && (int) $m->away_score > (int) $m->home_score;
 				?>
-				<a class="hr-match" href="<?php echo esc_url( add_query_arg( 'match_id', (int) $m->id, home_url( '/utakmica/' ) ) ); ?>">
-					<span class="hr-match__team<?php echo $hw ? ' is-win' : ''; ?>"><?php echo esc_html( $m->home_name ); ?></span>
+				<div class="hr-match has-row-link">
+					<a class="kc-row-link" href="<?php echo esc_url( add_query_arg( 'match_id', (int) $m->id, home_url( '/utakmica/' ) ) ); ?>" aria-label="<?php echo esc_attr( $m->home_name . ' – ' . $m->away_name ); ?>"></a>
+					<span class="hr-match__team<?php echo $hw ? ' is-win' : ''; ?>"><?php echo kurs_team_link( (int) $m->home_team_id, $m->home_name, (int) $hb['did'], 'kurs-tlink', true ); ?></span>
 					<?php if ( $done ) : ?>
 					<span class="hr-match__score"><?php echo (int) $m->home_score; ?>:<?php echo (int) $m->away_score; ?></span>
 					<?php else : ?>
 					<span class="hr-match__score hr-match__score--tbd"><?php echo $m->match_date ? esc_html( date( 'H:i', strtotime( $m->match_date ) ) ) : '–'; ?></span>
 					<?php endif; ?>
-					<span class="hr-match__team hr-match__team--away<?php echo $aw ? ' is-win' : ''; ?>"><?php echo esc_html( $m->away_name ); ?></span>
-				</a>
+					<span class="hr-match__team hr-match__team--away<?php echo $aw ? ' is-win' : ''; ?>"><?php echo kurs_team_link( (int) $m->away_team_id, $m->away_name, (int) $hb['did'], 'kurs-tlink', true ); ?></span>
+				</div>
 				<?php endforeach; ?>
 			</div>
 			<div class="home-round__foot">
 				<?php if ( $hb['leader'] ) : ?>
-				<span>Vodi: <b><?php echo esc_html( $hb['leader']['team_name'] ); ?></b> · <?php echo (int) $hb['leader']['Pts']; ?> bod.</span>
+				<span>Vodi: <b><?php echo kurs_team_link( (int) $hb['leader']['team_id'], $hb['leader']['team_name'], (int) $hb['did'] ); ?></b> · <?php echo (int) $hb['leader']['Pts']; ?> bod.</span>
 				<?php elseif ( $hb['next'] ) : ?>
 				<span>Sljedeće: <b><?php echo (int) $hb['next']['round']; ?>. kolo</b><?php echo $hb['next']['date'] ? ' · ' . esc_html( $hb['next']['date'] ) : ''; ?></span>
 				<?php else : ?>
@@ -230,6 +232,8 @@ if ( $al && class_exists( 'Kurs_Rounds' ) ) {
 		<?php endfor; ?>
 	<?php endif; ?>
 	</div>
+
+	<?php if ( function_exists( 'kurskc_home_extra' ) ) echo kurskc_home_extra(); // brojke, ekipe, strijelci, prvaci, mreže (1.0.55) ?>
 
 </div>
 

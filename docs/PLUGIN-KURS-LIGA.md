@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.27.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.30.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -147,7 +147,7 @@ squads (roster)  ── igrač pripada ekipi unutar divizije
 
 > Od 2026-10-16 ovu strukturu kreira **isključivo** `Kurs_Season::scaffold()` pri kreiranju sezone (vidi §4.1). Faza tipa `'playoff'` se više ne kreira — playoff živi samo u `playoff_matches`.
 
-### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.14'`)
+### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.15'`)
 
 Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Niže se navode kratka imena.
 
@@ -444,7 +444,7 @@ Read-only klasa (static, `global $wpdb`) koja sprema podatke za „N. kolo" jedn
 | `kurs_render_schedule($division_id, $args)` | Raspored lige (skupine + playoff iz `Kurs_Rounds::schedule()`), po danu; `limit`, `status`, `round_labels` (oznaka kola / playoff runde). Koriste ga tab Raspored i ugradnja u vijesti (1.20.1). |
 | `kurs_schedule_date_label(?string $datetime): string` | Hrvatska oznaka datuma rasporeda („Subota, 12. srpnja 2026."; prazno → „Termin nije određen"). |
 
-Ostali helperi (iz ranijih izmjena, ovdje samo popis): `kurs_league_icon()` (inline SVG grbovi KC / Liga bez briga / Pan), `kurs_player_type()` / `kurs_player_type_label()`, `kurs_team_coach()` / `kurs_team_rep()` / `kurs_team_banners()` / `kurs_team_banner()` / `kurs_team_photo()`, `kurs_render_schedule()`. (Helperi `kurs_get_referees()` / `kurs_add_referees()` uklonjeni su u 1.17.0 — suci su sada `Kurs_Season::get_referees()` / `add_referees()` po sezoni.)
+Ostali helperi (iz ranijih izmjena, ovdje samo popis): `kurs_league_icon()` (KC Liga = službeni grb `assets/kc-liga-logo.png` kao `<img>` od 1.28.0; Liga bez briga / Pan = inline SVG), `kurs_favicon_links()` (favicon za /zapisnik/, /presjek/, PDF), **`kurs_player_url()` / `kurs_player_link()` / `kurs_team_link()` / `kurs_scorers_html()`**, **`kurs_division_badge()` / `kurs_division_chip()`** (oznaka lige KC/LBB/PAN) — `kurs_render_schedule()` i `kurs_render_round_results()` primaju i **niz liga** (zajednički prikaz „Obje lige”, 1.29.0) (1.29.0 — ime igrača/ekipe kao poveznica na profil svugdje: rezultati kola, raspored, bracket, strijelci; redak utakmice ostaje link preko `.has-row-link` + `a.kc-row-link`, a imena su zasebni linkovi iznad njega; `Kurs_Rounds::goals_by_match/scorers` vraćaju i `pid`/`team_id`, `schedule()` i `home_team_id`/`away_team_id`), `kurs_player_type()` / `kurs_player_type_label()`, `kurs_team_coach()` / `kurs_team_rep()` / `kurs_team_banners()` / `kurs_team_banner()` / `kurs_team_photo()`, `kurs_render_schedule()`. (Helperi `kurs_get_referees()` / `kurs_add_referees()` uklonjeni su u 1.17.0 — suci su sada `Kurs_Season::get_referees()` / `add_referees()` po sezoni.)
 
 Helpere koriste i admin viewovi i tema (tema ih uvjetno `require`-a iz `functions.php`).
 
@@ -790,5 +790,33 @@ Korisnik je tražio presjek svih ekipa nove sezone (tko je poslao popis, što se
   - Ključ = `substr(hash_hmac('sha256','kurs-presjek', wp_salt('auth')),0,12)` — **ovisi o solima, lokalno ≠ produkcija**; link se kopira iz **wp-admin → KURS Liga → Presjek ekipa** (`admin_page()`: link + tablica svih odgovora).
 - **Podaci su snimka** `front/presjek-data.json` (ekipe s rosterom, „novi / dopunjeno ime / došli / prešli / nisu na popisu”, napomene, pitanja, promjene u ligama, „što smo napravili”) — **ne čita bazu**, pa radi i na produkciji prije migracije baze. Generirano iz lokalne baze (stanje 12. 11. 2026.); nakon odgovora/novih popisa regeneriraj ili ručno uredi JSON.
 - **Odgovori:** AJAX `kurs_presjek_odgovor` (priv + nopriv, provjera ključa, honeypot `web`, odgovor mora biti jedna od ponuđenih opcija) → opcija **`kurs_presjek_odgovori`** (`[id => [{v,t,who,at}]]`, zadnjih 20, bez autoloada). Id = id pitanja, `team-<ID>` (ispravak/popis uz ekipu) ili `opce`. Vrijedi zadnji odgovor.
+- **Sponzori ekipa (1.29.0):** odjeljak „Pošaljite sponzore svoje ekipe” (popis 18 ekipa s brojem poslanih) + u svakoj kartici ekipe obrazac: naziv*, razina* (`Kurs_Presjek::TIERS` glavni/srednji/mali), link (http/https, bez DNS provjere), logo (PNG/JPG/WEBP/GIF ≤ 5 MB → `media_handle_upload`, prilog „Sponzor: … (ekipa)”, meta `_kurs_presjek_team`). AJAX `kurs_presjek_sponzor` (ključ, honeypot, najviše 15 po ekipi; `remove=i` samo označi `removed`). Opcija **`kurs_presjek_sponzori`** `[team_id => [ {name, tier, link, att, who, at, removed?} ]]`; admin → Presjek ekipa ima tablicu sponzora s logom. Na stranice ekipa još se **ne** prenose (kasnije u `_kurs_team_banners`).
 - ⚠️ Odgovori žive u bazi instalacije na kojoj su dani — **migracija lokalne baze na produkciju ih pregazi**; prije toga ih prepiši (admin → Presjek ekipa).
 
+
+
+## Statistika posjeta — `Kurs_Stats` (1.30.0)
+
+Vlastito, anonimno brojanje posjeta **bez kolačića** (za izvještaje sponzorima). Datoteke: `includes/class-stats.php`,
+`admin/views/stats.php`; tablica `wp_kurs_stats` (`DB_VERSION` 1.15).
+
+- **Zapis:** `Kurs_Stats::beacon()` (hook `wp_footer`, samo neprijavljeni) ispiše mali inline skript koji
+  `navigator.sendBeacon` pošalje `{t, o, l, p, r}` na REST `POST kurs/v1/posjet` (`text/plain` — bez CORS preflighta).
+  Vrstu stranice (`ptype`), ID objekta i ligu određuje **server** u `context()` (naslovna, liga, utakmica, ekipa, igrac,
+  vijest, vijesti, mediji, pretraga, stranica, 404, ostalo). `navigator.webdriver` (headless/automatizacija) se ne broji.
+- **`hit()`**: odbacuje prazan UA i botove (`BOT_RE`), neispravan JSON; put čisti `clean_path()` (zadržava samo
+  `tab, season_id, division_id, kolo, match_id, liga, tip` — utm/fbclid/pretraga se odbacuju); izvor `source()`
+  (fbclid/utm_source → facebook; referrer → facebook / instagram / trazilice / interno / ostalo + domena / izravno);
+  uređaj `device()` iz UA. Isti posjetitelj + isti put unutar 30 s se ne broji (osvježavanje).
+- **Privatnost:** `visitor` = prvih 16 znakova `sha256( dnevna sol | IP | UA | home_url )`; sol u opciji
+  `kurs_stats_salt` mijenja se svaki dan (stara se ne čuva) → nema praćenja kroz dane. IP se ne sprema.
+  `entry = 1` = prvi pregled posjetitelja u danu → **posjet = posjetitelj-dan**.
+- **Čišćenje:** dnevni cron `kurs_stats_cleanup` briše redke starije od `RETAIN_DAYS` (760 dana).
+- **Admin** KURS Liga → Statistika (`kurs-stats`, `KURS_CAP`): rasponi 7/30/90 dana, ovaj/prošli mjesec, godina,
+  vlastiti od–do; KPI (posjeti, pregledi, stranica po posjetu, % mobitel) s promjenom prema prethodnom razdoblju iste
+  duljine; graf posjeta po danu (SVG, hover); po vrsti stranice (liga/utakmice razdvojene KC/Pan), izvori + druge
+  domene, uređaji, dan u tjednu; top utakmice/ekipe/igrači/vijesti; najposjećenije adrese. `@media print` = izvještaj
+  bez WP sučelja (gumb „Ispiši / PDF izvještaj”).
+- Politika privatnosti (odjeljak „Anonimna statistika posjeta”) i Politika kolačića to opisuju (predlošci u temi `functions.php`).
+- **PAZI:** migracija lokalne baze na produkciju pregazi produkcijsku `wp_kurs_stats`. Kasnije iteracije: prikazi/klikovi
+  sponzorskih mjesta („sponzor kola”) — novi `ptype`/tablica događaja, ne mijenjati značenje postojećih stupaca.
