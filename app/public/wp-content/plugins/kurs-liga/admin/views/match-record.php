@@ -250,6 +250,22 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<button type="button" class="kurs-rc-half__opt<?php echo $cur_half === 1 ? ' is-active' : ''; ?>" data-half="1">1. poluvrijeme</button>
 				<button type="button" class="kurs-rc-half__opt<?php echo $cur_half === 2 ? ' is-active' : ''; ?>" data-half="2">2. poluvrijeme</button>
 			</div>
+			<!-- Štoperica utakmice (1.34.0): minuta se sama upiše kod gola/kartona; stanje u pregledniku (localStorage) -->
+			<div class="kurs-clock" id="kurs-clock" data-state="off">
+				<div class="kurs-clock__face">
+					<span class="kurs-clock__dot" aria-hidden="true"></span>
+					<span class="kurs-clock__time" id="kurs-clock-time">00:00</span>
+					<span class="kurs-clock__state" id="kurs-clock-state">Štoperica — pokreni na početku utakmice</span>
+				</div>
+				<div class="kurs-clock__btns">
+					<button type="button" class="kurs-clock__btn kurs-clock__btn--go" data-clock="start">&#9654; Početak utakmice</button>
+					<button type="button" class="kurs-clock__btn" data-clock="pause" hidden>&#10074;&#10074; Pauza</button>
+					<button type="button" class="kurs-clock__btn kurs-clock__btn--go" data-clock="half2" hidden>&#9654; Počni 2. poluvrijeme</button>
+					<button type="button" class="kurs-clock__btn" data-clock="resume" hidden>&#9654; Nastavi</button>
+					<span class="kurs-clock__adj" hidden><button type="button" class="kurs-clock__btn kurs-clock__btn--sm" data-clock="adj" data-d="-1" aria-label="Minuta manje">&minus;1&prime;</button><button type="button" class="kurs-clock__btn kurs-clock__btn--sm" data-clock="adj" data-d="1" aria-label="Minuta više">+1&prime;</button></span>
+					<button type="button" class="kurs-clock__btn kurs-clock__btn--ghost" data-clock="reset" hidden>Poništi</button>
+				</div>
+			</div>
 			<div class="kurs-rc-teams">
 				<?php foreach ( [ 'home' => [ (int) $match->home_team_id, $match->home_name, $home_color, 'Domaćin' ], 'away' => [ (int) $match->away_team_id, $match->away_name, $away_color, 'Gost' ] ] as $who => [ $tid, $tname, $tcolor, $trole ] ) : ?>
 				<div class="kurs-rc-team" data-who="<?php echo $who; ?>" data-team="<?php echo $tid; ?>" style="--tc:<?php echo esc_attr( $rc_tone( $tcolor ) ); ?>">
@@ -272,7 +288,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				</div>
 				<?php endforeach; ?>
 			</div>
-			<p class="kurs-rc-help">Klikni <b>Gol</b>, <b>Žuti</b> ili <b>Crveni</b> na strani ekipe pa igrača — sprema se odmah. Pogrešan unos ispravi s „Poništi” ili u popisu ispod (&#9998; / &times;).</p>
+			<p class="kurs-rc-help">Klikni <b>Gol</b>, <b>Žuti</b> ili <b>Crveni</b> na strani ekipe pa igrača — sprema se odmah. Pokreni <b>štopericu</b> na početku utakmice pa se minuta upiše sama. Pogrešan unos ispravi s „Poništi” ili u popisu ispod („Uredi” / „Obriši”).</p>
 		</div>
 		<?php endif; ?>
 
@@ -674,7 +690,14 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 			<button type="button" class="kurs-pick__x" data-close aria-label="Zatvori">&times;</button>
 		</div>
 		<div class="kurs-pick__opts">
-			<label class="kurs-pick__min">Minuta <input type="number" id="kurs-pick-min" min="0" max="120" inputmode="numeric" placeholder="—"></label>
+			<div class="kurs-pick__min">
+				<span>Minuta</span>
+				<button type="button" class="kurs-pick__step" data-step="-1" aria-label="Minuta manje">&minus;</button>
+				<input type="number" id="kurs-pick-min" min="0" max="120" inputmode="numeric" placeholder="—" aria-label="Minuta">
+				<button type="button" class="kurs-pick__step" data-step="1" aria-label="Minuta više">+</button>
+				<button type="button" class="kurs-pick__clr" id="kurs-pick-clr" title="Bez minute" aria-label="Bez minute">&times;</button>
+				<small class="kurs-pick__src" id="kurs-pick-src" hidden>iz štoperice</small>
+			</div>
 			<span class="kurs-pick__half" id="kurs-pick-half"></span>
 			<button type="button" class="kurs-pick__chip" id="kurs-pick-pen" aria-pressed="false">Penal</button>
 		</div>

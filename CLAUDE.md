@@ -150,5 +150,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.33.2` vs
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.34.0` vs
   `DB_VERSION=1.16`; tema `KURSKC_VERSION=1.0.63` vs `style.css` 1.0.0.

@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.33.2'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.34.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -853,3 +853,8 @@ Vlastito, anonimno brojanje posjeta **bez kolačića** (za izvještaje sponzorim
 - **1.33.1:** ćelija imena u postavi više nije `display:flex` (flex na `<td>` ju je izbacivao iz tablice — kvačica i ime nisu bili u istoj visini, obrubi su bili isprekidani); sve ćelije `vertical-align: middle`, visina retka 48 px.
 - **1.33.2:** u postavi je „igrao” tihi zadani prikaz (mala svijetlozelena kvačica; hover = crveni ×), a igrač koji nije došao ima crvenkasti redak, precrtano ime, oznaku „nije došao” i gumb ↺ za vraćanje. Uklonjen natpis „Poluvrijeme” ispred gumba 1./2. poluvrijeme.
   Aktivno poluvrijeme ima obrub u bojama KURS-a koji se polagano vrti (`@property --kh-a` + conic-gradient) i treptavu žutu točku; isključeno uz `prefers-reduced-motion`.
+
+## Zapisnik 1.34.0 — štoperica utakmice i lakši unos minute
+
+- Iznad unosa po ekipama je **štoperica** (`#kurs-clock`): „Početak utakmice” → „Pauza” → „Počni 2. poluvrijeme” (prebaci i poluvrijeme) ili „Nastavi”; ±1′ za ispravak; „Poništi”. Vrijeme teče kontinuirano (2. poluvrijeme nastavlja od minute pauze). Stanje je u **localStorage** preglednika (`kurs-clock-<match_id>`: `acc`, `at`, `h2`) — preživi osvježavanje, ali ne prelazi na drugi uređaj.
+- Prozor za gol/karton (`#kurs-pick`): minuta se **sama popuni** iz štoperice (nogometno: 0:00–0:59 = 1. minuta; oznaka „iz štoperice”), uz velike gumbe **−** / **+** (52 px) i × „bez minute”. Bez pokrenute štoperice polje je prazno kao prije (minuta je neobavezna).

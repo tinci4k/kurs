@@ -1284,9 +1284,59 @@ jQuery( function ( $ ) {
 			} );
 		}
 
+		// ── Štoperica utakmice (1.34.0) ─────────────────────────────────────────
+		// Stanje po utakmici u localStorage: { acc: ms do zadnje pauze, at: kad je pokrenuta (ili null), h2: 2. pol. počelo }
+		const CLOCK_KEY = 'kurs-clock-' + MATCH_ID;
+		function clockGet() { try { return JSON.parse( localStorage.getItem( CLOCK_KEY ) ) || null; } catch ( e ) { return null; } }
+		function clockSet( c ) { try { c ? localStorage.setItem( CLOCK_KEY, JSON.stringify( c ) ) : localStorage.removeItem( CLOCK_KEY ); } catch ( e ) {} renderClock(); }
+		function clockMs( c ) { c = c || clockGet(); return c ? Math.max( 0, c.acc + ( c.at ? Date.now() - c.at : 0 ) ) : 0; }
+		/** Minuta utakmice kao u nogometu: 0:00–0:59 = 1. minuta. 0 = štoperica ne radi. */
+		function clockMinute() { const c = clockGet(); return c ? Math.min( 120, Math.floor( clockMs( c ) / 60000 ) + 1 ) : 0; }
+		function renderClock() {
+			const $c = $( '#kurs-clock' );
+			if ( ! $c.length ) return;
+			const c = clockGet(), ms = clockMs( c ), m = Math.floor( ms / 60000 ), sec = Math.floor( ms / 1000 ) % 60;
+			const state = ! c ? 'off' : ( c.at ? 'run' : 'pause' );
+			$c.attr( 'data-state', state );
+			$( '#kurs-clock-time' ).text( String( m ).padStart( 2, '0' ) + ':' + String( sec ).padStart( 2, '0' ) );
+			$( '#kurs-clock-state' ).text( state === 'off' ? 'Štoperica — pokreni na početku utakmice' : ( state === 'run' ? ( c.h2 ? '2. poluvrijeme' : '1. poluvrijeme' ) + ' · ' + ( m + 1 ) + '. minuta' : 'Pauza' ) );
+			$c.find( '[data-clock="start"]' ).prop( 'hidden', state !== 'off' );
+			$c.find( '[data-clock="pause"]' ).prop( 'hidden', state !== 'run' );
+			$c.find( '[data-clock="half2"]' ).prop( 'hidden', state !== 'pause' || !! c.h2 );
+			$c.find( '[data-clock="resume"]' ).prop( 'hidden', state !== 'pause' );
+			$c.find( '.kurs-clock__adj, [data-clock="reset"]' ).prop( 'hidden', state === 'off' );
+		}
+		$( document ).on( 'click', '[data-clock]', function () {
+			const act = $( this ).data( 'clock' ), c = clockGet();
+			if ( act === 'start' ) { clockSet( { acc: 0, at: Date.now(), h2: false } ); setHalf( 1 ); }
+			else if ( act === 'pause' && c ) clockSet( { acc: clockMs( c ), at: null, h2: c.h2 } );
+			else if ( act === 'resume' && c ) clockSet( { acc: c.acc, at: Date.now(), h2: c.h2 } );
+			else if ( act === 'half2' && c ) { clockSet( { acc: c.acc, at: Date.now(), h2: true } ); setHalf( 2 ); }
+			else if ( act === 'adj' && c ) clockSet( { acc: Math.max( 0, c.acc + parseInt( $( this ).data( 'd' ) ) * 60000 ), at: c.at, h2: c.h2 } );
+			else if ( act === 'reset' && c && confirm( 'Poništiti štopericu? Već upisane minute ostaju.' ) ) clockSet( null );
+		} );
+		if ( $( '#kurs-clock' ).length ) {
+			const c0 = clockGet();
+			if ( c0 && c0.h2 ) setHalf( 2 );
+			renderClock();
+			setInterval( renderClock, 1000 );
+		}
+
+		// Minuta u prozoru za gol/karton: − / + / bez minute
+		$( document ).on( 'click', '.kurs-pick__step', function () {
+			const $i = $( '#kurs-pick-min' ), cur = parseInt( $i.val() );
+			const base = isNaN( cur ) ? ( clockMinute() || 0 ) : cur;
+			$i.val( Math.max( 1, Math.min( 120, base + parseInt( $( this ).data( 'step' ) ) ) ) );
+			$( '#kurs-pick-src' ).prop( 'hidden', true );
+		} );
+		$( document ).on( 'click', '#kurs-pick-clr', function () { $( '#kurs-pick-min' ).val( '' ); $( '#kurs-pick-src' ).prop( 'hidden', true ); } );
+		$( document ).on( 'input', '#kurs-pick-min', function () { $( '#kurs-pick-src' ).prop( 'hidden', true ); } );
+
 		function openPick( act, who ) {
 			PICK = { act, who, og: false };
-			$( '#kurs-pick-min' ).val( '' );
+			const cm = clockMinute();
+			$( '#kurs-pick-min' ).val( cm ? cm : '' );
+			$( '#kurs-pick-src' ).prop( 'hidden', ! cm );
 			$( '#kurs-pick-pen' ).attr( 'aria-pressed', 'false' ).removeClass( 'is-on' );
 			renderPick();
 			$( '#kurs-pick' ).removeAttr( 'hidden' );

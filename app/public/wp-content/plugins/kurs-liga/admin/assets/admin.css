@@ -2915,3 +2915,36 @@ a.kurs-league-tag:hover { filter: brightness(.95); }
 @keyframes kurs-half-spin { to { --kh-a: 360deg; } }
 @keyframes kurs-half-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .kurs-rc-half__opt.is-active, .kurs-rc-half__opt.is-active::before { animation: none; } }
+
+/* ── Štoperica utakmice + minuta za tablet (1.34.0) ──────────────────────── */
+.kurs-clock { display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap; margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--ka-dark); color: #fff; }
+.kurs-clock__face { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.kurs-clock__dot { width: 10px; height: 10px; border-radius: 50%; background: #55585f; flex: none; }
+.kurs-clock[data-state="run"] .kurs-clock__dot { background: #2ecc71; box-shadow: 0 0 0 0 rgba(46,204,113,.6); animation: kurs-clock-pulse 1.6s infinite; }
+.kurs-clock[data-state="pause"] .kurs-clock__dot { background: var(--ka-gold); }
+.kurs-clock__time { font-family: var(--font-cond); font-weight: 800; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.kurs-clock[data-state="off"] .kurs-clock__time { color: #6f727a; }
+.kurs-clock[data-state="pause"] .kurs-clock__time { color: var(--ka-gold); }
+.kurs-clock__state { font-size: 13px; color: #c9cac4; }
+.kurs-clock__btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.kurs-clock__adj { display: inline-flex; gap: 6px; }
+.kurs-clock__adj[hidden], .kurs-clock__btn[hidden] { display: none; }
+.kurs-clock__btn { min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1.5px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; cursor: pointer; font-family: var(--font-cond); font-weight: 800; font-size: 15px; text-transform: uppercase; }
+.kurs-clock__btn:hover { background: rgba(255,255,255,.16); }
+.kurs-clock__btn--go { background: var(--ka-green); border-color: var(--ka-green); }
+.kurs-clock__btn--go:hover { background: #24904f; }
+.kurs-clock__btn--sm { min-width: 54px; padding: 0 10px; }
+.kurs-clock__btn--ghost { background: none; border-color: transparent; color: #a9a9a2; font-size: 13px; }
+@keyframes kurs-clock-pulse { 70% { box-shadow: 0 0 0 8px rgba(46,204,113,0); } 100% { box-shadow: 0 0 0 0 rgba(46,204,113,0); } }
+@media (prefers-reduced-motion: reduce) { .kurs-clock[data-state="run"] .kurs-clock__dot { animation: none; } }
+
+.kurs-pick__min { display: flex !important; align-items: center; gap: 6px; flex-wrap: wrap; }
+.kurs-pick__min > span { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--ka-muted); margin-right: 2px; }
+.kurs-pick__min input { width: 76px !important; min-height: 52px; font-size: 24px !important; -moz-appearance: textfield; appearance: textfield; }
+.kurs-pick__min input::-webkit-outer-spin-button, .kurs-pick__min input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.kurs-pick__step { width: 52px; height: 52px; border-radius: 12px; border: 1.5px solid var(--ka-border); background: #fff; font-size: 26px; font-weight: 700; line-height: 1; cursor: pointer; color: var(--ka-dark); }
+.kurs-pick__step:active { background: #f0f0ea; }
+.kurs-pick__clr { width: 34px; height: 34px; border-radius: 50%; border: 0; background: #f0f0ea; color: var(--ka-muted); font-size: 18px; cursor: pointer; }
+.kurs-pick__src { font-size: 12px; font-weight: 700; color: var(--ka-green); background: #e6f3ea; border-radius: 10px; padding: 2px 8px; }
+.kurs-pick__src[hidden] { display: none; }
+@media (max-width: 600px) { .kurs-clock__time { font-size: 28px; } .kurs-clock__btns { width: 100%; } .kurs-clock__btn { flex: 1 1 auto; } }
