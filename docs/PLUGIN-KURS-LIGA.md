@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.30.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.33.2'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -147,7 +147,7 @@ squads (roster)  ── igrač pripada ekipi unutar divizije
 
 > Od 2026-10-16 ovu strukturu kreira **isključivo** `Kurs_Season::scaffold()` pri kreiranju sezone (vidi §4.1). Faza tipa `'playoff'` se više ne kreira — playoff živi samo u `playoff_matches`.
 
-### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.15'`)
+### 3.2 Tablice (`Kurs_Database::install`, `DB_VERSION = '1.16'`)
 
 Stvarno ime = `$wpdb->prefix . KURS_PREFIX . <ime>` (npr. `wp_kurs_seasons`). Niže se navode kratka imena.
 
@@ -791,6 +791,7 @@ Korisnik je tražio presjek svih ekipa nove sezone (tko je poslao popis, što se
 - **Podaci su snimka** `front/presjek-data.json` (ekipe s rosterom, „novi / dopunjeno ime / došli / prešli / nisu na popisu”, napomene, pitanja, promjene u ligama, „što smo napravili”) — **ne čita bazu**, pa radi i na produkciji prije migracije baze. Generirano iz lokalne baze (stanje 12. 11. 2026.); nakon odgovora/novih popisa regeneriraj ili ručno uredi JSON.
 - **Odgovori:** AJAX `kurs_presjek_odgovor` (priv + nopriv, provjera ključa, honeypot `web`, odgovor mora biti jedna od ponuđenih opcija) → opcija **`kurs_presjek_odgovori`** (`[id => [{v,t,who,at}]]`, zadnjih 20, bez autoloada). Id = id pitanja, `team-<ID>` (ispravak/popis uz ekipu) ili `opce`. Vrijedi zadnji odgovor.
 - **Sponzori ekipa (1.29.0):** odjeljak „Pošaljite sponzore svoje ekipe” (popis 18 ekipa s brojem poslanih) + u svakoj kartici ekipe obrazac: naziv*, razina* (`Kurs_Presjek::TIERS` glavni/srednji/mali), link (http/https, bez DNS provjere), logo (PNG/JPG/WEBP/GIF ≤ 5 MB → `media_handle_upload`, prilog „Sponzor: … (ekipa)”, meta `_kurs_presjek_team`). AJAX `kurs_presjek_sponzor` (ključ, honeypot, najviše 15 po ekipi; `remove=i` samo označi `removed`). Opcija **`kurs_presjek_sponzori`** `[team_id => [ {name, tier, link, att, who, at, removed?} ]]`; admin → Presjek ekipa ima tablicu sponzora s logom. Na stranice ekipa još se **ne** prenose (kasnije u `_kurs_team_banners`).
+- **Sponzori lige umjesto sponzora ekipa (1.30.1):** presjek je za KURS (organizatora), pa odjeljak „Sponzori lige” traži **sponzore natjecanja**: ključ `Kurs_Presjek::LEAGUE = 0` u istoj opciji, uz polje `comp` (`COMPS` kc / pan / obje; najviše `LEAGUE_MAX` 40). Iznad obrasca su sponzori koji su **već na webu** (CPT `sponzor`, `web_sponsors()`) s odgovorom `websp-<ID>` (`WEBSP_OPTS`: obje lige / samo KC / samo Pan / više nije sponzor) + napomena `sponzori`. Obrasci po ekipama uklonjeni s fronta (backend za `team_id` ostaje; admin tablicu „Sponzori ekipa” prikazuje samo ako postoje stari unosi). Unos poslanih na web je ručan (Sponzori CPT). Linkovi po ekipi (sponzori ekipe, provjera rostera) — još ne postoje.
 - ⚠️ Odgovori žive u bazi instalacije na kojoj su dani — **migracija lokalne baze na produkciju ih pregazi**; prije toga ih prepiši (admin → Presjek ekipa).
 
 
@@ -820,3 +821,35 @@ Vlastito, anonimno brojanje posjeta **bez kolačića** (za izvještaje sponzorim
 - Politika privatnosti (odjeljak „Anonimna statistika posjeta”) i Politika kolačića to opisuju (predlošci u temi `functions.php`).
 - **PAZI:** migracija lokalne baze na produkciju pregazi produkcijsku `wp_kurs_stats`. Kasnije iteracije: prikazi/klikovi
   sponzorskih mjesta („sponzor kola”) — novi `ptype`/tablica događaja, ne mijenjati značenje postojećih stupaca.
+
+
+## Portal ekipe — `/portal-ekipe/?e=ID&k=…` (1.31.0)
+
+`includes/class-portal.php` (`Kurs_Portal`), `front/portal.php|js|css` (nadograđuje `presjek.css`), `admin/views/requests.php`, tablica `wp_kurs_requests` (DB 1.16).
+
+- **Ključ:** `substr( hash_hmac( 'sha256', 'kurs-portal|ID|v', wp_salt('auth') ), 0, 14 )`, `v` = postmeta `_kurs_portal_v` (admin „Novi link” ga poveća → stari link vraća 404). Ovisi o solima instalacije — link uvijek iz admina (Zahtjevi ekipa → Linkovi za ekipe).
+- **Kontekst:** `context()` = prva nezaključana aktualna sezona ekipe (inače najnovija); roster = `Kurs_Season::get_squad( team, div )`. Zaključana sezona → bez izmjena rostera.
+- **AJAX** `kurs_portal` (nopriv, ključ + honeypot `web`, najviše 80 na čekanju po ekipi), `do`: `state`, `player_add` (ime i prezime, broj, golman), `player_edit`, `player_remove`, `logo` (upload ≤ 5 MB → Mediji, meta `_kurs_portal_upload`), `sponsor_add` (naziv, razina glavni/srednji/mali, link, slika obavezna), `sponsor_remove`, `info` (voditelj/trener + telefoni — samo promijenjena polja), `note`, `cancel` (povlačenje zahtjeva na čekanju). Svaki uspjeh vraća `state()` (roster s oznakama zahtjeva, sponzori, kontakt, zadnjih 60 zahtjeva).
+- **Odobravanje** (`admin_post_kurs_request_decide`, `KURS_CAP`, nonce): `apply()` — `player_add` nađe postojećeg igrača istog imena (`find_player`, bez obzira na velika slova) ili napravi novog; ako je u drugoj ekipi iste lige → prijelaz; `player_edit` mijenja naslov + slug i broj; `player_remove` = `remove_from_squad`; `logo` = `set_post_thumbnail`; `sponsor_add/remove` = `_kurs_team_banners` (JSON `{id, link, name, tier}`, glavni prvi — prikazuje ih profil ekipe „Sponzori ekipe”); `info` = `_kurs_team_rep/_rep_phone/_coach/_coach_phone`; `note` = samo „Pročitano”. Roster zahtjevi u zaključanoj sezoni se ne primjenjuju (poruka u obavijesti). Nakon odobrenja `kurs_data_changed`.
+- Admin stranica prikazuje savjet uz novog igrača (postoji u registru / igra za drugu ekipu iste lige → prelazi) i trenutnu vrijednost kontakta.
+
+## Sponzori lige u KURS sučelju — `kurs-sponsors` (1.31.0)
+
+`includes/class-sponsors.php` (`Kurs_Sponsors`) + `admin/views/sponsors.php`. Podaci ostaju u CPT-u `sponzor` iz teme (logo = istaknuta slika, `_kurs_sponsor_tier` 1–3, `_kurs_sponsor_link`, redoslijed `menu_order`), novo `_kurs_sponsor_comp` (`obje`/`kc`/`pan`, za kasnijeg „sponzora kola”). Radnje kao `admin_post_kurs_sponsor_{save,trash,untrash,move,toggle,import}`; uklanjanje = koš + „Poništi”. `load-edit.php` / `post-new.php` / `post.php` za `sponzor` preusmjeravaju ovamo. „Poslao KURS — još nisu na webu” = sponzori lige iz presjeka (ključ 0) bez `_kurs_presjek_ref` → „+ Dodaj na web”.
+
+## Prijava u KURS stilu — `Kurs_Branding` (1.31.0)
+
+`includes/class-branding.php`: `login_enqueue_scripts` (tamna pozadina, trobojna traka, logo `assets/kurs-logo-white.png`, crveni gumb, Barlow), `login_headerurl` → naslovnica, bez izbornika jezika, hrvatski tekstovi (`gettext` + `gettext_with_context` samo na `login_init`). `/zapisnik/` prijava: `body.kz-body--login` + `.kz-login-brand` u `front/zapisnik.css`.
+
+- **1.32.0:** sponzori ekipe **bez razina**, najviše `MAX_SPONS` = 3 (na webu + na čekanju); `_kurs_team_banners` = `{id, link, name}` redom slanja. Logo je **jedan** (novi zamjenjuje istaknutu sliku). Nova vrsta zahtjeva **`colors`** (`{color, color2}`; `color2 = ''` = jednobojni) → `_kurs_team_color` + **`_kurs_team_color2`**; na portalu odabir iz `COLORS` ili vlastite boje uz pregled dresa. Helperi `kurs_team_color2()` i `kurs_kit_svg($c1, $c2, $size)` (helpers.php); `kurs_team_badge_html()` bez loga s dvobojnim dresom = dijagonalno pola-pola. Admin → Ekipe → Uredi: „Dvobojni dres — druga boja”.
+
+## Zapisnik 1.33.0 — jasniji gumbi i postava
+
+- Događaji: gumbi **„✎ Uredi”** i **„× Obriši”** s natpisom (veći, s obrubom) umjesto sitnih ikona.
+- Postava: iznad tablice alatna traka s **jednim izbornikom „Kapetan”** po ekipi (`.kurs-cap-select`, AJAX `kurs_record_set_captain`) — opcija „— nije odabran —” makne kapetana. Gumb „★ Kapetan” u svakom retku je uklonjen. Igrač koji nije došao ne može se odabrati za kapetana.
+- `Kurs_Match::set_match_captain( $m, $t, 0 )` sada sprema redak `captain` **bez igrača** = izričito „bez kapetana” (pobjeđuje `_kurs_team_captain` iz registra); `get_match_captain()` vraća 0 za taj redak.
+- Tablica postave ima zaglavlje *Igrao · Br. · Igrač*; broj dresa je običan broj (prazno = „·”, prije crna pločica s „–”); igrač koji nije došao ima isprekidanu pločicu „nije”. Isto na portalu ekipe („bez br.”).
+- Crveni gumbi na presjeku/portalu imaju bijela slova (`.kp-body .kp-btn`).
+- **1.33.1:** ćelija imena u postavi više nije `display:flex` (flex na `<td>` ju je izbacivao iz tablice — kvačica i ime nisu bili u istoj visini, obrubi su bili isprekidani); sve ćelije `vertical-align: middle`, visina retka 48 px.
+- **1.33.2:** u postavi je „igrao” tihi zadani prikaz (mala svijetlozelena kvačica; hover = crveni ×), a igrač koji nije došao ima crvenkasti redak, precrtano ime, oznaku „nije došao” i gumb ↺ za vraćanje. Uklonjen natpis „Poluvrijeme” ispred gumba 1./2. poluvrijeme.
+  Aktivno poluvrijeme ima obrub u bojama KURS-a koji se polagano vrti (`@property --kh-a` + conic-gradient) i treptavu žutu točku; isključeno uz `prefers-reduced-motion`.

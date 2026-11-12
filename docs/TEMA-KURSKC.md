@@ -30,11 +30,11 @@ Putanja: `themes/kurskc/functions.php`
 ### 1.1 Konstante
 | Konstanta | Vrijednost | Izvor |
 |-----------|-----------|-------|
-| `KURSKC_VERSION` | `'1.0.62'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
+| `KURSKC_VERSION` | `'1.0.63'` | hardkodirano (cache-busting `main.css`/`main.js` — podigni pri izmjeni asseta) |
 | `KURSKC_DIR` | `get_template_directory()` | apsolutni FS put do teme |
 | `KURSKC_URI` | `get_template_directory_uri()` | URL do teme |
 
-> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.62'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
+> **GOTCHA (verzija):** `KURSKC_VERSION = '1.0.63'` u `functions.php` ne poklapa se sa `Version: 1.0.0` u `style.css` (namjerno — `style.css` se ne podiže).
 
 ### 1.2 Uključene datoteke (`require_once`)
 1. `inc/post-types.php`
@@ -556,7 +556,7 @@ Glavne komponentne klase po sekcijama:
 
 ## 21. Zbirni popis GOTCHA-a (za brzu referencu)
 
-1. **Verzija:** `KURSKC_VERSION='1.0.62'` (functions.php) ≠ `Version: 1.0.0` (style.css).
+1. **Verzija:** `KURSKC_VERSION='1.0.63'` (functions.php) ≠ `Version: 1.0.0` (style.css).
 2. **CLAUDE.md (ranije zastario, ✅ ispravljen 2026-06-22):** spominjao je CPT `momcad`/`utakmica` i taksonomije `liga`/`sezona` koje ne postoje. Stvarno: tema = `vijest` + `vijest_kategorija`; plugin = `kurs_ekipa` + `kurs_igrac` + custom DB tablice.
 3. **Mrtvi izbornici:** `register_nav_menus('primary','footer')`, ali `wp_nav_menu()` se nigdje ne poziva — sva navigacija hardkodirana.
 4. **Neiskorišten custom-logo:** `add_theme_support('custom-logo')` postoji, ali `the_custom_logo()` se ne koristi — logo je hardkodirani `<img>`.
@@ -678,3 +678,6 @@ Glavne komponentne klase po sekcijama:
 - **Za medije / blok `kurs/liga` — doigravanje:** ispod rezultata playoff meča koji je završio neriješeno piše
   „pen. 4:5” (`Kurs_Media_Kit::match_rows()` novi argument `$sub`). Prije se bilješka s penalima prikazivala samo za
   neodigrane mečeve (umjesto rezultata) pa je kod odigranih nestajala. Tekstualna verzija ih je već imala („(pen. 4:5)”).
+
+## Izmjene 1.0.63 (2026-11-12)
+- **Profil ekipe:** sponzori ekipe (1–3, `kurs_team_banners`) prikazuju se **u zaglavlju** desno (bijele pločice, jedan sponzor = veća pločica; na mobitelu ispod imena) — stari blok banera na dnu stranice je uklonjen. Uz oznake natjecanja chip **„Dres”** s malim dresom u bojama ekipe (`kurs_kit_svg`); donji rub zaglavlja dvobojan kad ekipa ima `_kurs_team_color2`; logo u zaglavlju je cijeli (`contain` na bijeloj podlozi, prije `cover` rezao rubove).

@@ -404,24 +404,22 @@ class Kurs_Match {
 	/** Kapetan tima u utakmici: per-match override → team default (postmeta) → 0. */
 	public static function get_match_captain( int $match_id, int $team_id ): int {
 		global $wpdb;
-		$pid = (int) $wpdb->get_var( $wpdb->prepare(
+		$row = $wpdb->get_row( $wpdb->prepare(
 			'SELECT player_id FROM ' . self::t( 'match_events' ) . "
 			 WHERE match_id = %d AND team_id = %d AND event_type = 'captain'
 			 ORDER BY id DESC LIMIT 1",
 			$match_id, $team_id
 		) );
-		if ( $pid ) return $pid;
+		if ( $row ) return (int) $row->player_id; // redak bez igrača = izričito „bez kapetana" (1.33.0)
 		return (int) get_post_meta( $team_id, '_kurs_team_captain', true );
 	}
 
 	public static function set_match_captain( int $match_id, int $team_id, int $player_id ): void {
 		global $wpdb;
 		$wpdb->delete( self::t( 'match_events' ), [ 'match_id' => $match_id, 'team_id' => $team_id, 'event_type' => 'captain' ] );
-		if ( $player_id ) {
-			$wpdb->insert( self::t( 'match_events' ), [
-				'match_id' => $match_id, 'team_id' => $team_id, 'player_id' => $player_id, 'event_type' => 'captain',
-			] );
-		}
+		$wpdb->insert( self::t( 'match_events' ), array_filter( [
+			'match_id' => $match_id, 'team_id' => $team_id, 'player_id' => $player_id ?: null, 'event_type' => 'captain',
+		], fn( $v ) => $v !== null ) ); // bez player_id = „bez kapetana" na ovoj utakmici
 	}
 
 	/** Player ID-evi koji NISU igrali u utakmici. */

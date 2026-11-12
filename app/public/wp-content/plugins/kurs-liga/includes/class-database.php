@@ -3,7 +3,7 @@ defined( 'ABSPATH' ) || exit;
 
 class Kurs_Database {
 
-	const DB_VERSION = '1.15';
+	const DB_VERSION = '1.16';
 
 	public static function install(): void {
 		global $wpdb;
@@ -180,6 +180,24 @@ class Kurs_Database {
 			PRIMARY KEY (id),
 			KEY idx_day (day, visitor),
 			KEY idx_obj (ptype, obj)
+		) $c;" );
+
+		// Zahtjevi ekipa s portala (v1.16, Kurs_Portal) — primjenjuju se tek kad ih KURS odobri
+		dbDelta( "CREATE TABLE {$p}requests (
+			id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+			team_id     BIGINT UNSIGNED NOT NULL,
+			division_id INT UNSIGNED    NOT NULL DEFAULT 0,
+			type        VARCHAR(20)     NOT NULL,
+			data        LONGTEXT        NOT NULL,
+			status      VARCHAR(10)     NOT NULL DEFAULT 'pending' COMMENT 'pending|approved|rejected|cancelled',
+			who         VARCHAR(80)     NOT NULL DEFAULT '',
+			created     DATETIME        NOT NULL,
+			decided     DATETIME        DEFAULT NULL,
+			decided_by  BIGINT UNSIGNED NOT NULL DEFAULT 0,
+			admin_note  VARCHAR(255)    NOT NULL DEFAULT '',
+			PRIMARY KEY (id),
+			KEY idx_team (team_id, status),
+			KEY idx_status (status)
 		) $c;" );
 
 		update_option( 'kurs_db_version', self::DB_VERSION );

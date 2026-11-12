@@ -39,7 +39,7 @@ $match_row = function ( object $m, string $mode ) {
 <title><?php echo $can && $match_id ? 'Zapisnik utakmice' : 'Zapisnik'; ?> — KURS</title>
 <?php wp_print_styles( [ 'kurs-zapisnik' ] ); // samo naši stilovi (+ ovisnosti), bez teme ?>
 </head>
-<body class="kz-body<?php echo $can && $match_id ? ' kz-body--record' : ''; ?>">
+<body class="kz-body<?php echo $can && $match_id ? ' kz-body--record' : ''; ?><?php echo $logged ? '' : ' kz-body--login'; ?>">
 
 <header class="kz-bar no-print">
 	<a class="kz-bar__brand" href="<?php echo esc_url( Kurs_Zapisnik::url() ); ?>">
@@ -61,6 +61,10 @@ $match_row = function ( object $m, string $mode ) {
 <main class="kz-main">
 <?php if ( ! $logged ) : ?>
 
+	<div class="kz-login-brand">
+		<img src="<?php echo esc_url( KURS_URL . 'assets/kurs-logo-white.png' ); ?>" alt="KURS" width="220">
+		<span>Zapisnik utakmica</span>
+	</div>
 	<section class="kz-card kz-login">
 		<h1 class="kz-h1">Prijava zapisničara</h1>
 		<p class="kz-lead">Prijavi se korisničkim imenom i lozinkom koje si dobio od KURS-a.</p>

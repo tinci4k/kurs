@@ -26,7 +26,7 @@ add_action( 'init', function () {
 		],
 		'public'        => false,
 		'show_ui'       => true,
-		'show_in_menu'  => true,
+		'show_in_menu'  => false, // uređuje se u KURS Liga → Sponzori (plugin Kurs_Sponsors, 1.31.0)
 		'menu_icon'     => 'dashicons-awards',
 		'menu_position' => 27,
 		'supports'      => [ 'title', 'thumbnail', 'page-attributes' ], // page-attributes → "Redoslijed"

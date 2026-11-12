@@ -122,17 +122,18 @@
 		ul.innerHTML = (list || []).map(function (s) {
 			return '<li class="kp-sp kp-sp--' + esc(s.tier) + '">' +
 				(s.logo ? '<img class="kp-sp__logo" src="' + esc(s.logo) + '" alt="">' : '<span class="kp-sp__logo kp-sp__logo--none">bez loga</span>') +
-				'<span class="kp-sp__body"><b>' + esc(s.name) + '</b><span class="kp-sp__tier">' + esc(s.tierL) + ' sponzor</span>' +
+				'<span class="kp-sp__body"><b>' + esc(s.name) + '</b><span class="kp-sp__tier">' + esc(s.tierL) + ' sponzor' + (s.compL ? ' · ' + esc(s.compL) : '') + '</span>' +
 				(s.link ? '<a href="' + esc(s.link) + '" target="_blank" rel="noopener nofollow">' + esc(s.link.replace(/^https?:\/\/(www\.)?/, '')) + '</a>' : '<span class="kp-sp__nolink">bez linka</span>') +
 				'</span><button type="button" class="kp-sp__x" data-i="' + s.i + '" title="Ukloni" aria-label="Ukloni ' + esc(s.name) + '">&times;</button></li>';
 		}).join('');
 		var n = (list || []).length;
-		box.querySelector('.kp-spons__badge').textContent = n ? n + ' poslano' : 'još nije poslano';
+		var badge = box.querySelector('.kp-spons__badge');
+		if (badge) badge.textContent = n ? n + ' poslano' : 'još nije poslano';
 		box.classList.toggle('is-done', n > 0);
 		var link = document.querySelector('[data-spons-link="' + team + '"]');
 		if (link) { link.classList.toggle('is-done', n > 0); link.querySelector('span').textContent = n || '—'; }
 		var cnt = document.getElementById('kp-spons-n');
-		if (cnt) cnt.textContent = Object.keys(spons).filter(function (k) { return spons[k] && spons[k].length; }).length;
+		if (cnt && team === '0') cnt.textContent = n ? n + ' poslano' : '';
 	}
 	function postSpons(fd, box, status, done) {
 		fd.append('action', 'kurs_presjek_sponzor');
@@ -160,6 +161,7 @@
 			var fd = new FormData(form);
 			if (!String(fd.get('name') || '').trim()) { status.className = 'kp-status is-err'; status.textContent = 'Upišite naziv sponzora.'; return; }
 			if (!fd.get('tier')) { status.className = 'kp-status is-err'; status.textContent = 'Odaberite razinu: glavni, srednji ili mali.'; return; }
+			if (box.getAttribute('data-team') === '0' && !fd.get('comp')) { status.className = 'kp-status is-err'; status.textContent = 'Odaberite natjecanje.'; return; }
 			var file = form.querySelector('input[type=file]').files[0];
 			if (file && file.size > 5 * 1024 * 1024) { status.className = 'kp-status is-err'; status.textContent = 'Logo je veći od 5 MB.'; return; }
 			fd.append('who', who ? who.value.trim() : '');
@@ -167,7 +169,9 @@
 			postSpons(fd, box, status, function (err) {
 				btn.disabled = false;
 				if (err) { status.className = 'kp-status is-err'; status.textContent = err.message; return; }
+				var keep = form.querySelector('input[name=comp]:checked');
 				form.reset();
+				if (keep) keep.checked = true; // natjecanje ostaje za idućeg sponzora
 				status.className = 'kp-status is-ok'; status.textContent = 'Dodano ✓ Možete dodati sljedećeg.';
 			});
 		});

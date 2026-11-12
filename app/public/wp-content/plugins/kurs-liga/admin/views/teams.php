@@ -153,8 +153,15 @@ if ( $action === 'edit' && $edit_id ) {
 									       value="<?php echo esc_attr( $edit_team->post_title ); ?>" required>
 								</div>
 								<div>
-									<label class="kurs-field-label" style="display:block;margin-bottom:6px;">Boja dresova</label>
+									<label class="kurs-field-label" style="display:block;margin-bottom:6px;">Glavna boja dresa</label>
 									<?php kurs_color_picker_html( 'team_color', $cur_color, 'edit-' . $edit_id ); ?>
+								</div>
+								<?php $cur_c2 = kurs_team_color2( $edit_id ); ?>
+								<div>
+									<label class="kurs-field-label" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;cursor:pointer;">
+										<input type="checkbox" name="team_color2_on" value="1" <?php checked( (bool) $cur_c2 ); ?> onchange="this.closest('div').querySelector('.kurs-c2').style.display=this.checked?'':'none'"> Dvobojni dres — druga boja
+									</label>
+									<div class="kurs-c2" style="<?php echo $cur_c2 ? '' : 'display:none;'; ?>"><?php kurs_color_picker_html( 'team_color2', $cur_c2 ?: '#ffffff', 'edit2-' . $edit_id ); ?></div>
 								</div>
 
 								<div style="border-top:1px solid var(--ka-border);padding-top:14px;">

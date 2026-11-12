@@ -4137,3 +4137,23 @@ body.nav-locked { overflow:hidden; }
 .tm-row__res b { display:flex; flex-direction:column; align-items:flex-end; line-height:1.05; }
 .tm-pen { font-family:var(--font-body); font-size:10.5px; font-weight:600; color:var(--c-kc); white-space:nowrap; margin-top:2px; }
 .tm-pen.is-won { color:var(--c-win, #1F7A43); }
+
+/* Profil ekipe (1.0.63): sponzori u zaglavlju, dres u bojama ekipe, logo cijeli */
+.team-hero__inner { width:100%; }
+.team-hero__badge img { object-fit:contain; background:#fff; padding:6px; }
+.team-hero__kit { padding-left:8px; }
+.team-hero__kit .kurs-kit { display:block; filter:drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+.team-hero__spons { margin-left:auto; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+.team-hero__spons-lbl { font-family:var(--font-mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:#c9cac4; }
+.team-hero__spons-row { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+.team-hero__sp { display:flex; align-items:center; justify-content:center; height:76px; min-width:120px; max-width:220px; padding:10px 14px; background:#fff; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.35); transition:transform .15s; }
+a.team-hero__sp:hover { transform:translateY(-2px); }
+.team-hero__sp img { max-height:56px; max-width:190px; width:auto; height:auto; object-fit:contain; display:block; }
+.team-hero__spons-row:has(.team-hero__sp:only-child) .team-hero__sp { height:96px; max-width:280px; }
+.team-hero__spons-row:has(.team-hero__sp:only-child) .team-hero__sp img { max-height:74px; max-width:250px; }
+@media (max-width:860px) {
+  .team-hero__spons { margin-left:0; width:100%; align-items:flex-start; }
+  .team-hero__spons-row { justify-content:flex-start; }
+  .team-hero__sp { height:64px; min-width:0; flex:1 1 0; max-width:none; }
+  .team-hero__sp img { max-height:46px; max-width:100%; }
+}

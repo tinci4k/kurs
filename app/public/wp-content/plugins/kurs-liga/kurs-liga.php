@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'KURS_VERSION', '1.30.0' );
+define( 'KURS_VERSION', '1.33.2' );
 define( 'KURS_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'KURS_URL',     plugin_dir_url( __FILE__ ) );
 define( 'KURS_PREFIX',  'kurs_' );
@@ -32,6 +32,9 @@ require_once KURS_DIR . 'includes/class-roles.php';
 require_once KURS_DIR . 'includes/class-zapisnik.php';
 require_once KURS_DIR . 'includes/class-presjek.php';
 require_once KURS_DIR . 'includes/class-stats.php';
+require_once KURS_DIR . 'includes/class-portal.php';
+require_once KURS_DIR . 'includes/class-sponsors.php';
+require_once KURS_DIR . 'includes/class-branding.php';
 
 new Kurs_CPT();
 Kurs_Ticker::init();
@@ -39,6 +42,9 @@ Kurs_Roles::init();
 Kurs_Zapisnik::init();
 Kurs_Presjek::init();
 Kurs_Stats::init();
+Kurs_Portal::init();
+Kurs_Sponsors::init();
+Kurs_Branding::init();
 
 add_action( 'plugins_loaded', [ 'Kurs_Database', 'maybe_upgrade' ] );
 

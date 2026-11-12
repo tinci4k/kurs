@@ -35,7 +35,7 @@ Sustav ima **dvije vlastite komponente**:
 ### Custom post typeovi (CPT)
 | Slug | Naziv | Registrira | Rewrite | Napomena |
 |------|-------|-----------|---------|----------|
-| `kurs_ekipa` | Ekipe | **plugin** (`includes/class-cpt.php`) | `/ekipe/` | naziv = `post_title`, logo = istaknuta slika, boja = postmeta `_kurs_team_color` |
+| `kurs_ekipa` | Ekipe | **plugin** (`includes/class-cpt.php`) | `/ekipe/` | naziv = `post_title`, logo = istaknuta slika (jedan), boja dresa = postmeta `_kurs_team_color` (+ `_kurs_team_color2` za dvobojni, 1.32.0), sponzori ekipe = `_kurs_team_banners` (najviše 3) |
 | `kurs_igrac` | Igrači | **plugin** (`includes/class-cpt.php`) | `/igraci/` | |
 | `vijest` | Vijesti | **tema** (`inc/post-types.php`) | `/vijesti/` | taksonomija `vijest_kategorija` |
 
@@ -64,7 +64,8 @@ Stupci `*_team_id` / `*_player_id` su `wp_posts.ID` CPT-ova `kurs_ekipa`/`kurs_i
 | `za-medije` | `page-za-medije.php` | Paket rezultata kola za druge portale (HTML/tekst/PNG); `?liga=kc\|pan&season_id=&kolo=` |
 | `o-kurs-u` | `page-o-nama.php` | Statična stranica o udruzi |
 | `zapisnik` | **plugin** `front/zapisnik.php` (`Kurs_Zapisnik`, rewrite, nije WP stranica) | Zapisnik za **zapisničare** (1.24.0): prijava → popis utakmica (čeka rezultat / nadolazeće / nedavno završene) → isti zapisnik kao u adminu (`?match_id=`), bez wp-admina i teme |
-| `presjek` | **plugin** `front/presjek.php` (`Kurs_Presjek`, rewrite, `?k=` ključ ovisan o solima — link iz admin → KURS Liga → Presjek ekipa) | Presjek ekipa i rostera nove sezone za KURS (1.27.0; snimka `front/presjek-data.json`, ne baza) + odgovori na otvorena pitanja u opciji `kurs_presjek_odgovori` — **migracija baze ih pregazi** |
+| `portal-ekipe` | **plugin** `front/portal.php` (`Kurs_Portal`, rewrite, `?e=ID&k=` ključ po ekipi ovisan o solima + `_kurs_portal_v`; linkovi u admin → KURS Liga → Zahtjevi ekipa → Linkovi) | **Portal ekipe** (1.31.0): ekipa provjerava/ispravlja roster aktualne lige, šalje logo, sponzore ekipe, kontakt voditelja/trenera i poruku — sve kao **zahtjev** (`wp_kurs_requests`) koji KURS odobrava; tek odobrenje (`Kurs_Portal::apply()`) mijenja roster / istaknutu sliku / `_kurs_team_banners` / `_kurs_team_rep*`/`coach*` |
+| `presjek` | **plugin** `front/presjek.php` (`Kurs_Presjek`, rewrite, `?k=` ključ ovisan o solima — link iz admin → KURS Liga → Presjek ekipa) | Presjek ekipa i rostera nove sezone za KURS (1.27.0; snimka `front/presjek-data.json`, ne baza) + odgovori na otvorena pitanja u opciji `kurs_presjek_odgovori` + **sponzori lige** koje šalje KURS (1.30.1, opcija `kurs_presjek_sponzori` ključ 0) — **migracija baze ih pregazi** |
 
 ## Admin (wp-admin → KURS Liga; plugin `admin/class-admin.php` + `admin/views/`)
 Organiziran **po natjecanjima** (od `KURS_VERSION` 1.16.0), sve iza `KURS_CAP`:
@@ -77,9 +78,11 @@ Organiziran **po natjecanjima** (od `KURS_VERSION` 1.16.0), sve iza `KURS_CAP`:
 | `kurs-players` | **Igrači** — registar igrača (`players.php`, `Kurs_Players`): tražilica, pozicija/godina rođenja/fotografija, karijera, spajanje dvostrukih upisa |
 | `kurs-seasons` | **Sve sezone** — arhiva po natjecanju + „Nova sezona" |
 | `kurs-stats` | **Statistika** posjeta (1.30.0, `includes/class-stats.php` `Kurs_Stats` + `admin/views/stats.php`): vlastito anonimno brojanje **bez kolačića** (beacon iz `wp_footer` → REST `kurs/v1/posjet` → tablica `wp_kurs_stats`; IP se ne sprema, dnevni hash s dnevnom soli; prijavljeni se ne broje); rasponi, posjeti/pregledi, izvori, uređaji, dan u tjednu, top utakmice/ekipe/igrači/vijesti; „Ispiši / PDF izvještaj” za sponzore. **Migracija lokalne baze na produkciju pregazi produkcijsku statistiku.** |
+| `kurs-requests` | **Zahtjevi ekipa** (1.31.0, `Kurs_Portal`, `admin/views/requests.php`): na čekanju po ekipi (Odobri / Odbij s napomenom / Odobri sve), riješeno, **tajni linkovi ekipa** (Kopiraj, „Novi link” poništi stari); brojač u izborniku |
+| `kurs-sponsors` | **Sponzori** lige (1.31.0, `Kurs_Sponsors`, `admin/views/sponsors.php`): CPT `sponzor` iz teme u KURS sučelju (kartice, razina, natjecanje `_kurs_sponsor_comp`, redoslijed ↑↓, sakrij, ukloni + Poništi, „Dodaj na web” za sponzore iz presjeka); WP ekrani CPT-a preusmjeravaju se ovamo (tema: `show_in_menu => false`) |
 | `kurs-settings` | **Postavke** — ticker izvan sezone (suci se vode po sezoni: stranica natjecanja → Postavke) |
 
-Skriven je `kurs-match-record` (zapisnik). **Uloga Zapisničar** (`kurs_zapisnicar`, samo `KURS_RECORD_CAP = 'kurs_zapisnik'`) vodi zapisnik na `/zapisnik/` i ne ulazi u wp-admin; AJAX `kurs_record_*` i forme završi/otvori za ispravak traže `KURS_RECORD_CAP` (imaju je i admin i urednik), promjena datuma/kola ostaje na `KURS_CAP`. Unos u zapisniku je **po ekipama** (1.25.0, `#kurs-rc`: svaka ekipa Gol · Žuti · Crveni · Prekršaj, klik na igrača odmah sprema, minuta neobavezna, „Poništi”). PDF zapisnika (`match-record-pdf.php`, 1.26.0) je službeni obrazac na **jednoj A4** (sam se smanji ako ne stane; `&prazni=1` = prazni obrazac s popisom igrača). Linkove/redirecte na stranicu natjecanja gradi
+Skriven je `kurs-match-record` (zapisnik). **Prijava** (wp-login.php i /zapisnik/) je u KURS stilu s logom (`Kurs_Branding`, `assets/kurs-logo-white.png`, hrvatski tekstovi preko `gettext` samo na login ekranu). **Uloga Zapisničar** (`kurs_zapisnicar`, samo `KURS_RECORD_CAP = 'kurs_zapisnik'`) vodi zapisnik na `/zapisnik/` i ne ulazi u wp-admin; AJAX `kurs_record_*` i forme završi/otvori za ispravak traže `KURS_RECORD_CAP` (imaju je i admin i urednik), promjena datuma/kola ostaje na `KURS_CAP`. Unos u zapisniku je **po ekipama** (1.25.0, `#kurs-rc`: svaka ekipa Gol · Žuti · Crveni · Prekršaj, klik na igrača odmah sprema, minuta neobavezna, „Poništi”). PDF zapisnika (`match-record-pdf.php`, 1.26.0) je službeni obrazac na **jednoj A4** (sam se smanji ako ne stane; `&prazni=1` = prazni obrazac s popisom igrača). Linkove/redirecte na stranicu natjecanja gradi
 **`Kurs_Admin::hub_url($season_id, $tab, $args)`** (bira `kurs-kc`/`kurs-pan` po ligi sezone) — ne hardkodiraj
 `page=`. Stari slugovi `kurs-season-setup` / `kurs-matches` / `kurs-roster` (i `kurs-seasons&action=edit`)
 samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
@@ -147,5 +150,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.30.0` vs
-  `DB_VERSION=1.15`; tema `KURSKC_VERSION=1.0.62` vs `style.css` 1.0.0.
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.33.2` vs
+  `DB_VERSION=1.16`; tema `KURSKC_VERSION=1.0.63` vs `style.css` 1.0.0.

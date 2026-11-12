@@ -610,6 +610,11 @@ class Kurs_Admin {
 		if ( $id && $name ) {
 			wp_update_post( [ 'ID' => $id, 'post_title' => $name ] );
 			update_post_meta( $id, '_kurs_team_color', self::sanitize_team_color( $_POST['team_color'] ?? '' ) );
+			if ( ! empty( $_POST['team_color2_on'] ) && preg_match( '/^#[0-9a-fA-F]{6}$/', (string) ( $_POST['team_color2'] ?? '' ) ) ) {
+				update_post_meta( $id, '_kurs_team_color2', strtolower( (string) $_POST['team_color2'] ) ); // dvobojni dres (1.32.0)
+			} else {
+				delete_post_meta( $id, '_kurs_team_color2' );
+			}
 			update_post_meta( $id, '_kurs_team_coach',       sanitize_text_field( $_POST['coach_name']  ?? '' ) );
 			update_post_meta( $id, '_kurs_team_coach_phone', sanitize_text_field( $_POST['coach_phone'] ?? '' ) );
 			update_post_meta( $id, '_kurs_team_rep',         sanitize_text_field( $_POST['rep_name']    ?? '' ) );

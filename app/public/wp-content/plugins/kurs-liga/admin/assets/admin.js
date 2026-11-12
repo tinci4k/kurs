@@ -1409,6 +1409,26 @@ jQuery( function ( $ ) {
 			} );
 		} );
 
+		// Kapetan (1.33.0): jedan izbornik po ekipi; „— nije odabran —" makne kapetana
+		$( document ).on( 'change', '.kurs-cap-select', function () {
+			const $sel    = $( this );
+			const team_id = parseInt( $sel.data( 'team-id' ) );
+			const pid     = parseInt( $sel.val() ) || 0;
+			$sel.prop( 'disabled', true );
+			$.post( url, { action: 'kurs_record_set_captain', nonce, match_id: MATCH_ID, team_id, player_id: pid } ).done( res => {
+				if ( res.success ) {
+					const $tbl = $( '.kurs-squad-table[data-team-id="' + team_id + '"]' );
+					$tbl.find( '.kurs-sq-badge--cap' ).attr( 'hidden', 'hidden' );
+					if ( pid ) $tbl.find( '.kurs-sq-row[data-player-id="' + pid + '"] .kurs-sq-badge--cap' ).removeAttr( 'hidden' );
+					rebuildSquadFromTable( team_id );
+					$sel.closest( '.kurs-sq-capsel' ).addClass( 'is-saved' );
+					setTimeout( () => $sel.closest( '.kurs-sq-capsel' ).removeClass( 'is-saved' ), 1200 );
+				} else {
+					alert( ( res.data && res.data.message ) || res.data || 'Greška.' );
+				}
+			} ).always( () => $sel.prop( 'disabled', false ) );
+		} );
+
 		$( document ).on( 'click', '.kurs-sq-absent', function () {
 			const $row       = $( this ).closest( '.kurs-sq-row' );
 			const team_id    = parseInt( $row.data( 'team-id' ) );
@@ -1417,6 +1437,8 @@ jQuery( function ( $ ) {
 			$.post( url, { action: 'kurs_record_set_absent', nonce, match_id: MATCH_ID, team_id, player_id: pid, absent: willAbsent ? 1 : 0 } ).done( res => {
 				if ( res.success ) {
 					$row.toggleClass( 'is-absent', willAbsent );
+					$row.find( '.kurs-sq-tick' ).attr( 'title', willAbsent ? 'Nije došao — klikni da ga vratiš u postavu' : 'U postavi — klikni ako nije došao' );
+					$( '.kurs-cap-select[data-team-id="' + team_id + '"] option[value="' + pid + '"]' ).prop( 'disabled', willAbsent );
 					rebuildSquadFromTable( team_id );
 				}
 			} );

@@ -1,0 +1,119 @@
+/* KURS — /portal-ekipe/ (Kurs_Portal). Nadograđuje presjek.css (kp-*). */
+
+.kpt-bar__logo { height: 26px; width: auto; display: block; }
+.kpt .kp-section { margin-top: 18px; }
+.kpt-card { background: var(--kp-white); border: 1px solid var(--kp-border); border-radius: 14px; padding: 20px 22px; scroll-margin-top: 70px; }
+.kpt-card .kp-h2 { font-size: 22px; }
+
+/* Zaglavlje ekipe */
+.kpt-hero { display: flex; gap: 22px; align-items: center; background: var(--kp-dark); color: #fff; border-radius: 16px; padding: 22px 24px;
+	border-bottom: 5px solid var(--tc, var(--kp-red)); }
+.kpt-hero .kp-h1 { color: #fff; margin-bottom: 8px; }
+.kpt-hero .kp-eyebrow { color: var(--kp-gold); }
+.kpt-hero .kp-lead { color: #e2e2dc; font-size: 16px; margin: 0 0 8px; }
+.kpt-hero .kpt-private { color: #a9a9a2; font-size: 13.5px; margin: 0; }
+.kpt-hero__logo { flex: none; width: 108px; height: 108px; border-radius: 16px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.kpt-hero__logo img { width: 100%; height: 100%; object-fit: contain; padding: 8px; }
+.kpt-hero__logo span { font-family: var(--font-cond); font-weight: 800; font-style: italic; font-size: 40px; color: var(--tc, var(--kp-dark)); }
+
+.kpt-who { display: flex; justify-content: flex-end; margin: 14px 0 0; }
+.kpt-who label { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; flex-wrap: wrap; }
+.kpt-who input { width: 260px; max-width: 100%; padding: 9px 11px; border: 1px solid #c9c9c0; border-radius: 8px; background: #fff; }
+.kpt-warn { margin: 14px 0 0; padding: 10px 14px; border-radius: 10px; background: var(--kp-amber-bg); color: var(--kp-amber); font-weight: 600; }
+.kpt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.kpt-count { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--kp-muted); text-transform: none; }
+.kpt-empty { color: var(--kp-muted); padding: 8px 0; list-style: none; }
+
+/* Roster */
+.kpt-roster { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; }
+.kpt-pl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 4px; border-bottom: 1px solid #efefe8; }
+.kpt-pl__no { flex: none; width: 34px; height: 30px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; background: var(--kp-dark); color: #fff;
+	font-family: var(--font-cond); font-weight: 800; font-size: 16px; }
+.kpt-pl__name { flex: 1; min-width: 0; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.kpt-gk { font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: #ececE4; color: #55585f; }
+.kpt-pl__act { display: flex; gap: 10px; }
+.kpt-pl--new .kpt-pl__no { background: var(--kp-green); }
+.kpt-pend { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--kp-amber-bg); color: var(--kp-amber); }
+.kpt-link { border: 0; background: none; padding: 2px 0; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--kp-blue); text-decoration: underline; text-underline-offset: 2px; }
+.kpt-link--red { color: var(--kp-red); }
+.kpt-edit { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 0 4px 44px; }
+.kpt-edit input[type=text] { flex: 1 1 200px; }
+.kpt-edit input[type=number] { width: 80px; }
+.kpt-edit input, .kpt-form input[type=text], .kpt-form input[type=url], .kpt-form input[type=tel], .kpt-form input[type=number], .kpt-form textarea {
+	padding: 9px 11px; border: 1px solid #c9c9c0; border-radius: 8px; background: #fff; width: 100%; }
+.kpt-edit .kp-btn { padding: 8px 14px; }
+
+/* Obrasci */
+.kpt-form { display: grid; gap: 12px; padding: 14px; border-radius: 12px; background: #f6f6f1; }
+.kpt-form__h { margin: 0; font-weight: 800; font-family: var(--font-cond); font-size: 17px; text-transform: uppercase; grid-column: 1 / -1; }
+.kpt-form--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpt-form--2 .kp-row { grid-column: 1 / -1; }
+.kpt-form--row { grid-template-columns: minmax(0, 1fr) 110px auto; align-items: end; }
+.kpt-form--row .kp-row { grid-column: 1 / -1; }
+.kpt-check { display: flex; align-items: center; gap: 6px; font-weight: 600; padding-bottom: 10px; }
+.kpt-check input { width: 18px; height: 18px; }
+
+/* Sponzori */
+.kpt-spons { list-style: none; margin: 0 0 14px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.kpt-sp { display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid var(--kp-border); border-radius: 10px; }
+.kpt-sp img { flex: none; width: 96px; height: 48px; object-fit: contain; background: #fff; border-radius: 6px; }
+.kpt-sp__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.kpt-sp__txt small { color: var(--kp-muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpt-sp__txt .kpt-pend { align-self: flex-start; }
+.kpt-sp--new { border-style: dashed; }
+
+/* Zahtjevi */
+.kpt-reqs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.kpt-rq { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: #fafaf6; border: 1px solid #efefe8; }
+.kpt-rq__st { flex: none; font-size: 12px; font-weight: 800; padding: 3px 9px; border-radius: 10px; white-space: nowrap; background: var(--kp-amber-bg); color: var(--kp-amber); }
+.kpt-rq--approved .kpt-rq__st { background: var(--kp-green-bg); color: var(--kp-green); }
+.kpt-rq--rejected .kpt-rq__st { background: #fde6e7; color: var(--kp-red); }
+.kpt-rq--cancelled .kpt-rq__st { background: #ececE4; color: #6f6f69; }
+.kpt-rq__body { flex: 1; min-width: 0; font-size: 15px; display: flex; flex-direction: column; gap: 2px; }
+.kpt-rq__body small { color: var(--kp-muted); font-size: 12.5px; }
+.kpt-rq__note { font-style: normal; font-size: 13.5px; color: #3d3d39; background: #fff; border-left: 3px solid var(--kp-dark); padding: 2px 8px; }
+.kpt-rq--cancelled { opacity: .6; }
+
+@media (max-width: 760px) {
+	.kpt-hero { flex-direction: column; align-items: flex-start; padding: 18px; }
+	.kpt-hero__logo { width: 84px; height: 84px; }
+	.kpt-grid, .kpt-roster, .kpt-spons, .kpt-form--2 { grid-template-columns: minmax(0, 1fr); }
+	.kpt-form--row { grid-template-columns: minmax(0, 1fr) 90px; }
+	.kpt-form--row .kpt-check { grid-column: 1 / -1; padding: 0; }
+	.kpt-card { padding: 16px; }
+	.kpt-who { justify-content: stretch; }
+	.kpt-who label, .kpt-who input { width: 100%; }
+	.kp-bar__nav { gap: 12px; font-size: 13px; }
+	.kp-bar__app { display: none; }
+}
+@media (max-width: 760px) {
+	.kpt-pl__act { flex-basis: 100%; padding-left: 44px; margin-top: -4px; }
+	.kpt-pl__name { font-size: 16px; }
+}
+
+/* 1.32.0 — jedan logo, boje dresa, sponzori bez razine */
+.kpt-solo { display: block; }
+.kpt-logo-now { display: flex; align-items: center; gap: 14px; margin: 0 0 12px; }
+.kpt-logo-now__img { flex: none; width: 76px; height: 76px; border-radius: 12px; border: 1px solid var(--kp-border); background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.kpt-logo-now__img img { width: 100%; height: 100%; object-fit: contain; padding: 6px; }
+.kpt-logo-now__img em { font-style: normal; font-size: 12px; color: var(--kp-muted); }
+.kpt-logo-now__txt { font-size: 14px; color: #3d3d39; line-height: 1.5; }
+.kpt-logo-now__new { width: 40px; height: 40px; object-fit: contain; vertical-align: middle; border: 1px dashed #c9c9c0; border-radius: 6px; background: #fff; }
+.kpt-kit { grid-template-columns: 170px minmax(0, 1fr); align-items: start; }
+.kpt-kit__preview { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px; background: #fff; border-radius: 12px; border: 1px solid var(--kp-border); }
+.kpt-kit__preview small { font-size: 12.5px; color: var(--kp-muted); }
+.kpt-kit__pick { display: grid; gap: 12px; }
+.kpt-sw { display: flex; flex-wrap: wrap; gap: 6px; }
+.kpt-sw__b, .kpt-sw__own { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #c9c9c0; cursor: pointer; padding: 0; position: relative; }
+.kpt-sw__b.is-on, .kpt-sw__own.is-on { box-shadow: 0 0 0 3px var(--kp-dark); }
+.kpt-sw__none { width: auto; border-radius: 16px; padding: 0 10px; background: #fff; font-size: 12.5px; font-weight: 700; color: var(--kp-dark); }
+.kpt-sw__own { display: inline-flex; align-items: center; justify-content: center; background: conic-gradient(#DA0F1E, #FDE206, #1F7A43, #0ea5e9, #7c3aed, #DA0F1E); overflow: hidden; }
+.kpt-sw__own input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.kpt-sw__own span { font-weight: 800; color: #fff; text-shadow: 0 0 3px rgba(0,0,0,.6); pointer-events: none; }
+.kpt-sw__own.is-on span { display: none; }
+@media (max-width: 760px) { .kpt-kit { grid-template-columns: minmax(0, 1fr); } }
+
+/* 1.33.0 — broj dresa: svijetla pločica (prije crna s „–” — nije bilo jasno što je) */
+.kpt-pl__no { background: #f0f0ea; color: var(--kp-dark); width: 40px; }
+.kpt-pl__no.is-empty { background: none; border: 1px dashed #c9c9c0; color: #9a9a92; font-family: var(--font-body); font-weight: 600; font-size: 10px; }
+.kpt-pl--new .kpt-pl__no { background: var(--kp-green); color: #fff; }

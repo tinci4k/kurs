@@ -10,6 +10,23 @@ function kurs_team_color( int $team_id ): string {
 	return ( $color && preg_match( '/^#[0-9a-fA-F]{3,6}$/', $color ) ) ? $color : '#1a3a6b';
 }
 
+/** Druga (sekundarna) boja dresa ili '' za jednobojni dres (1.32.0, postmeta _kurs_team_color2). */
+function kurs_team_color2( int $team_id ): string {
+	$c = (string) get_post_meta( $team_id, '_kurs_team_color2', true );
+	return preg_match( '/^#[0-9a-fA-F]{6}$/', $c ) ? $c : '';
+}
+
+/** Mali dres u bojama ekipe (SVG): tijelo = glavna boja, rukavi i ovratnik = druga (ili glavna). */
+function kurs_kit_svg( string $c1, string $c2 = '', int $size = 28 ): string {
+	$c2 = $c2 ?: $c1;
+	$h  = (int) round( $size * 110 / 120 );
+	return '<svg class="kurs-kit" width="' . $size . '" height="' . $h . '" viewBox="0 0 120 110" aria-hidden="true">'
+		. '<path d="M38 8 L24 14 L28 42 L28 104 L92 104 L92 42 L96 14 L82 8 Q60 22 38 8 Z" fill="' . esc_attr( $c1 ) . '"/>'
+		. '<path d="M24 14 L4 30 L16 50 L28 42 Z M96 14 L116 30 L104 50 L92 42 Z M38 8 Q60 22 82 8 L78 5 Q60 17 42 5 Z" fill="' . esc_attr( $c2 ) . '"/>'
+		. '<path d="M38 8 L24 14 L4 30 L16 50 L28 42 L28 104 L92 104 L92 42 L104 50 L116 30 L96 14 L82 8 Q60 22 38 8 Z" fill="none" stroke="#111317" stroke-opacity=".28" stroke-width="3" stroke-linejoin="round"/>'
+		. '</svg>';
+}
+
 /**
  * Vraća boju teksta (bijelu ili crnu) koja je čitljiva na danoj pozadini.
  */
@@ -52,6 +69,8 @@ function kurs_team_badge_html( int $team_id, int $size = 32, string $img_size = 
 
 	$font  = max( 9, intval( $size * 0.35 ) );
 	$ring  = $text !== '#fff' && $text !== '#ffffff' ? 'box-shadow:inset 0 0 0 1px rgba(17,19,23,.14);' : ''; // svijetla boja ekipe — tanki obrub da se vidi
+	$c2    = kurs_team_color2( $team_id );
+	if ( $c2 ) $color = "linear-gradient(135deg, {$color} 0 50%, {$c2} 50% 100%)"; // dvobojni dres (1.32.0)
 	return "<div class=\"kurs-tbadge\" style=\"{$base}background:{$color};color:{$text};{$ring}font-family:'Barlow Semi Condensed',sans-serif;font-weight:800;font-style:italic;font-size:{$font}px;{$extra_css}\">" . esc_html( $abbr ) . "</div>";
 }
 

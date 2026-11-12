@@ -276,3 +276,25 @@ body.kp-body {
 	.kp-callout { padding: 18px 16px; }
 	.kp-field input[type=text], .kp-field input[type=url] { font-size: 16px; }
 }
+
+/* ── Sponzori lige (1.30.1) — šalje KURS ─────────────────────────────────── */
+.kp-sl { background:#fff; border:1px solid var(--kp-border); border-top:5px solid var(--kp-gold); border-radius:14px; padding:22px 24px; scroll-margin-top:70px; }
+.kp-sl__lead { margin:0 0 14px; max-width:820px; }
+.kp-sl__h { font-family:var(--font-cond); font-weight:800; font-size:18px; margin:18px 0 10px; }
+.kp-sl__h small { font-family:var(--font-body); font-size:13px; font-weight:700; color:var(--kp-green); margin-left:6px; }
+.kp-sl__web { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
+.kp-ws { padding:12px; }
+.kp-ws__top { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.kp-ws__logo { flex:none; width:84px; height:44px; object-fit:contain; background:#fff; border:1px solid var(--kp-border); border-radius:6px; padding:3px; }
+.kp-ws__txt { display:flex; flex-direction:column; min-width:0; line-height:1.25; }
+.kp-ws__txt b { font-size:16px; }
+.kp-ws__txt span { font-size:12.5px; color:var(--kp-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kp-ws .kp-q__state { margin-left:auto; flex:none; }
+.kp-ws .kp-opts { gap:5px; }
+.kp-ws .kp-opt { font-size:13px; padding:6px 10px; }
+.kp-spons--lg { border-top:0; margin-top:0; padding-top:0; }
+.kp-field small { font-weight:400; font-size:12.5px; }
+@media (max-width:860px) { .kp-sl__web { grid-template-columns:minmax(0, 1fr); } .kp-sl { padding:18px 16px; } }
+
+/* Crveni gumbi: bijela slova (1.33.0) — `.kp-body button { color:inherit }` je bio jači od `.kp-btn` */
+.kp-body .kp-btn, .kp-body .kp-btn:hover, .kp-body .kp-btn:focus { color: #fff; }

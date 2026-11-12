@@ -247,7 +247,6 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 		<?php if ( ! $is_finished && ! $season_locked ) : ?>
 		<div class="kurs-record-section kurs-rc no-print" id="kurs-rc">
 			<div class="kurs-rc-half" role="group" aria-label="Poluvrijeme">
-				<span class="kurs-rc-half__lbl">Poluvrijeme</span>
 				<button type="button" class="kurs-rc-half__opt<?php echo $cur_half === 1 ? ' is-active' : ''; ?>" data-half="1">1. poluvrijeme</button>
 				<button type="button" class="kurs-rc-half__opt<?php echo $cur_half === 2 ? ' is-active' : ''; ?>" data-half="2">2. poluvrijeme</button>
 			</div>
@@ -339,8 +338,8 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					<button class="kurs-edit-event no-print" title="Uredi"
 					        data-event-id="<?php echo (int) $ev->id; ?>" data-type="<?php echo esc_attr( $ev->event_type ); ?>"
 					        data-team-id="<?php echo (int) $ev->team_id; ?>" data-player-id="<?php echo (int) $ev->player_id; ?>"
-					        data-minute="<?php echo (int) $ev->minute; ?>" data-half="<?php echo $hh; ?>">&#9998;</button>
-					<button class="kurs-del-event no-print" data-event-id="<?php echo (int) $ev->id; ?>" title="Obriši">&times;</button>
+					        data-minute="<?php echo (int) $ev->minute; ?>" data-half="<?php echo $hh; ?>"><span aria-hidden="true">&#9998;</span> Uredi</button>
+					<button class="kurs-del-event no-print" data-event-id="<?php echo (int) $ev->id; ?>" title="Obriši"><span aria-hidden="true">&times;</span> Obriši</button>
 					<?php endif; ?>
 				</div>
 						<?php endforeach; ?>
@@ -368,7 +367,21 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<?php if ( empty( $home_squad ) ) : ?>
 				<p class="kurs-muted">Nema prijavljenih igrača.</p>
 				<?php else : ?>
+				<?php if ( ! $is_finished ) : $cap_now = $home_captain; ?>
+				<div class="kurs-sq-tools no-print">
+					<label class="kurs-sq-capsel"><span class="kurs-sq-capsel__c" aria-hidden="true">C</span> Kapetan
+						<select class="kurs-cap-select" data-team-id="<?php echo (int) $match->home_team_id; ?>">
+							<option value="0">— nije odabran —</option>
+							<?php foreach ( $home_squad as $sq ) : ?>
+							<option value="<?php echo (int) $sq->player_id; ?>"<?php selected( (int) $sq->player_id, $cap_now ); ?><?php disabled( in_array( (int) $sq->player_id, $absent_ids, true ) ); ?>><?php echo esc_html( ( $sq->jersey_no ? (int) $sq->jersey_no . ' · ' : '' ) . $sq->player_name ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+					<span class="kurs-sq-legend"><i>&#10003;</i> svi su u postavi · klik na kvačicu = igrač nije došao (&#8634; vraća)</span>
+				</div>
+				<?php endif; ?>
 				<table class="kurs-squad-table" data-team-id="<?php echo (int) $match->home_team_id; ?>">
+					<thead class="no-print"><tr><?php if ( ! $is_finished ) : ?><th class="kurs-sq-th">Igrao</th><?php endif; ?><th class="kurs-sq-th">Br.</th><th class="kurs-sq-th kurs-sq-th--name">Igrač</th></tr></thead>
 					<?php foreach ( $home_squad as $sq ) :
 						$pid = (int) $sq->player_id;
 						$gk  = kurs_player_type( $pid ) === 'goalkeeper';
@@ -379,19 +392,14 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					    data-player-id="<?php echo $pid; ?>" data-team-id="<?php echo (int) $match->home_team_id; ?>"
 					    data-jersey="<?php echo (int) $sq->jersey_no; ?>" data-name="<?php echo esc_attr( $sq->player_name ); ?>" data-gk="<?php echo $gk ? 1 : 0; ?>">
 						<?php if ( ! $is_finished ) : ?>
-						<td class="kurs-sq-check no-print"><button type="button" class="kurs-sq-absent kurs-sq-tick" title="Igrao / nije došao" aria-label="Igrao">&#10003;</button></td>
+						<td class="kurs-sq-check no-print"><button type="button" class="kurs-sq-absent kurs-sq-tick" title="Igrao — klikni ako nije došao" aria-label="Igrao">&#10003;</button></td>
 						<?php endif; ?>
-						<td class="kurs-sq-jersey"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></td>
+						<td class="kurs-sq-jersey<?php echo $sq->jersey_no ? '' : ' is-empty'; ?>" title="Broj dresa"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : ''; ?></td>
 						<td class="kurs-sq-name">
 							<?php echo esc_html( $sq->player_name ); ?>
 							<?php if ( $gk ) : ?><span class="kurs-sq-badge kurs-sq-badge--gk" title="Golman">G</span><?php endif; ?>
 							<span class="kurs-sq-badge kurs-sq-badge--cap" title="Kapetan"<?php echo $cap ? '' : ' hidden'; ?>>C</span>
 						</td>
-						<?php if ( ! $is_finished ) : ?>
-						<td class="kurs-sq-actions no-print">
-							<button type="button" class="kurs-sq-cap" title="Postavi kao kapetana">&#9733; Kapetan</button>
-						</td>
-						<?php endif; ?>
 					</tr>
 					<?php endforeach; ?>
 				</table>
@@ -413,7 +421,21 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<?php if ( empty( $away_squad ) ) : ?>
 				<p class="kurs-muted">Nema prijavljenih igrača.</p>
 				<?php else : ?>
+				<?php if ( ! $is_finished ) : $cap_now = $away_captain; ?>
+				<div class="kurs-sq-tools no-print">
+					<label class="kurs-sq-capsel"><span class="kurs-sq-capsel__c" aria-hidden="true">C</span> Kapetan
+						<select class="kurs-cap-select" data-team-id="<?php echo (int) $match->away_team_id; ?>">
+							<option value="0">— nije odabran —</option>
+							<?php foreach ( $away_squad as $sq ) : ?>
+							<option value="<?php echo (int) $sq->player_id; ?>"<?php selected( (int) $sq->player_id, $cap_now ); ?><?php disabled( in_array( (int) $sq->player_id, $absent_ids, true ) ); ?>><?php echo esc_html( ( $sq->jersey_no ? (int) $sq->jersey_no . ' · ' : '' ) . $sq->player_name ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</label>
+					<span class="kurs-sq-legend"><i>&#10003;</i> svi su u postavi · klik na kvačicu = igrač nije došao (&#8634; vraća)</span>
+				</div>
+				<?php endif; ?>
 				<table class="kurs-squad-table" data-team-id="<?php echo (int) $match->away_team_id; ?>">
+					<thead class="no-print"><tr><?php if ( ! $is_finished ) : ?><th class="kurs-sq-th">Igrao</th><?php endif; ?><th class="kurs-sq-th">Br.</th><th class="kurs-sq-th kurs-sq-th--name">Igrač</th></tr></thead>
 					<?php foreach ( $away_squad as $sq ) :
 						$pid = (int) $sq->player_id;
 						$gk  = kurs_player_type( $pid ) === 'goalkeeper';
@@ -424,19 +446,14 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					    data-player-id="<?php echo $pid; ?>" data-team-id="<?php echo (int) $match->away_team_id; ?>"
 					    data-jersey="<?php echo (int) $sq->jersey_no; ?>" data-name="<?php echo esc_attr( $sq->player_name ); ?>" data-gk="<?php echo $gk ? 1 : 0; ?>">
 						<?php if ( ! $is_finished ) : ?>
-						<td class="kurs-sq-check no-print"><button type="button" class="kurs-sq-absent kurs-sq-tick" title="Igrao / nije došao" aria-label="Igrao">&#10003;</button></td>
+						<td class="kurs-sq-check no-print"><button type="button" class="kurs-sq-absent kurs-sq-tick" title="Igrao — klikni ako nije došao" aria-label="Igrao">&#10003;</button></td>
 						<?php endif; ?>
-						<td class="kurs-sq-jersey"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></td>
+						<td class="kurs-sq-jersey<?php echo $sq->jersey_no ? '' : ' is-empty'; ?>" title="Broj dresa"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : ''; ?></td>
 						<td class="kurs-sq-name">
 							<?php echo esc_html( $sq->player_name ); ?>
 							<?php if ( $gk ) : ?><span class="kurs-sq-badge kurs-sq-badge--gk" title="Golman">G</span><?php endif; ?>
 							<span class="kurs-sq-badge kurs-sq-badge--cap" title="Kapetan"<?php echo $cap ? '' : ' hidden'; ?>>C</span>
 						</td>
-						<?php if ( ! $is_finished ) : ?>
-						<td class="kurs-sq-actions no-print">
-							<button type="button" class="kurs-sq-cap" title="Postavi kao kapetana">&#9733; Kapetan</button>
-						</td>
-						<?php endif; ?>
 					</tr>
 					<?php endforeach; ?>
 				</table>

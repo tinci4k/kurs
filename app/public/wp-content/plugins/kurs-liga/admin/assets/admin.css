@@ -2836,3 +2836,82 @@ a.kurs-league-tag:hover { filter: brightness(.95); }
 	.kurs-record-hero__score-sep { font-size: 30px !important; }
 	.kurs-record-hero__meta { justify-content: center; }
 }
+
+/* ── Zapisnik 1.33.0: jasni gumbi Uredi/Obriši + postava (igrao · broj · ime, kapetan u izborniku) ── */
+.kurs-edit-event, .kurs-del-event {
+	width: auto !important; height: 34px !important; padding: 0 12px !important; gap: 5px; margin-left: 6px;
+	border: 1.5px solid var(--ka-border) !important; border-radius: 7px !important; background: #fff !important;
+	font-family: var(--font-body); font-size: 13px !important; font-weight: 700; color: var(--ka-dark) !important;
+}
+.kurs-edit-event span, .kurs-del-event span { font-size: 15px; line-height: 1; }
+.kurs-edit-event:hover { border-color: var(--ka-dark) !important; background: #f6f6f1 !important; }
+.kurs-del-event { color: var(--ka-red) !important; }
+.kurs-del-event:hover { border-color: var(--ka-red) !important; background: #fdf0f0 !important; }
+@media (max-width: 600px) { .kurs-edit-event, .kurs-del-event { height: 38px !important; padding: 0 10px !important; } }
+
+.kurs-sq-tools { display: flex; align-items: center; justify-content: space-between; gap: 10px 14px; flex-wrap: wrap; margin: 4px 0 10px; padding: 10px 12px; border-radius: 10px; background: #f6f6f1; }
+.kurs-sq-capsel { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; transition: box-shadow .2s; border-radius: 8px; }
+.kurs-sq-capsel.is-saved { box-shadow: 0 0 0 3px rgba(31,122,67,.35); }
+.kurs-sq-capsel__c { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 6px; background: var(--ka-dark); color: #fff; font-family: var(--font-cond); font-weight: 800; font-size: 13px; }
+.kurs-sq-capsel select { height: 38px; min-width: 210px; max-width: 100%; border: 1.5px solid var(--ka-border); border-radius: 7px; padding: 0 30px 0 10px; font-size: 14px; background-color: #fff; }
+.kurs-sq-legend { font-size: 12.5px; color: var(--ka-muted); }
+.kurs-sq-legend i { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: var(--ka-green); color: #fff; font-size: 11px; margin-right: 3px; }
+.kurs-squad-table thead th.kurs-sq-th { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ka-muted); font-weight: 400; text-align: left; padding: 0 8px 6px; border-bottom: 1px solid #e8e8e0; }
+.kurs-squad-table td { vertical-align: middle; }
+.kurs-sq-name { font-size: 15px; font-weight: 600; }
+.kurs-squad-table td.kurs-sq-jersey { width: 44px; background: none !important; color: var(--ka-dark); text-align: center; padding: 0 4px; }
+.kurs-squad-table td.kurs-sq-jersey { font-family: var(--font-cond); font-weight: 800; font-size: 17px; }
+.kurs-squad-table td.kurs-sq-jersey.is-empty::before { content: '·'; color: #c9c9c0; }
+.kurs-squad-table tr:hover .kurs-sq-jersey { background: none !important; }
+.kurs-sq-tick { width: 38px !important; height: 34px !important; }
+.kurs-sq-row.is-absent .kurs-sq-tick { background: #fff !important; border: 1.5px dashed #c9c9c0 !important; color: #b3b3ab !important; }
+.kurs-sq-row.is-absent .kurs-sq-tick::after { content: 'nije'; font-size: 10.5px; font-weight: 700; }
+.kurs-sq-row.is-absent .kurs-sq-tick { font-size: 0 !important; }
+.kurs-sq-badge { min-width: 20px; height: 20px; font-size: 11.5px; border-radius: 4px; }
+@media print { .kurs-squad-table td.kurs-sq-jersey { background: #000 !important; color: #fff !important; } }
+
+/* Postava (1.33.1): ime je obična ćelija tablice (flex na <td> je razbijao poravnanje s kvačicom i obrube) */
+.kurs-squad-table td.kurs-sq-name { display: table-cell; }
+.kurs-squad-table td.kurs-sq-name .kurs-sq-badge { margin-left: 6px; vertical-align: 2px; }
+.kurs-squad-table td { height: 48px; padding-top: 6px; padding-bottom: 6px; border-bottom: 1px solid #f0f0ea; vertical-align: middle; }
+.kurs-squad-table td.kurs-sq-check { padding-left: 0; padding-right: 8px !important; }
+.kurs-squad-table .kurs-sq-tick { vertical-align: middle; }
+
+/* Postava (1.33.2): „igrao” je tih zadani prikaz (mala svijetla kvačica), izostanak je jasno istaknut */
+.kurs-squad-table .kurs-sq-tick {
+	width: 26px !important; height: 26px !important; border-radius: 50% !important; font-size: 13px !important;
+	background: #e6f3ea !important; color: var(--ka-green) !important; border: 0 !important; transition: background .12s, color .12s;
+}
+.kurs-squad-table .kurs-sq-tick:hover { background: #fde6e7 !important; color: var(--ka-red) !important; }
+.kurs-squad-table .kurs-sq-tick:hover::before { content: '×'; font-size: 17px; font-weight: 800; }
+.kurs-squad-table .kurs-sq-row:not(.is-absent) .kurs-sq-tick:hover { font-size: 0 !important; }
+.kurs-sq-row.is-absent td { opacity: 1 !important; background: #fdf3f3; }
+.kurs-sq-row.is-absent .kurs-sq-name { color: #9a9a92; text-decoration: line-through; }
+.kurs-sq-row.is-absent .kurs-sq-name::after { content: 'nije došao'; display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 10px; background: var(--ka-red); color: #fff; font-size: 11px; font-weight: 700; text-decoration: none; vertical-align: 2px; }
+.kurs-squad-table .kurs-sq-row.is-absent .kurs-sq-tick { background: #fff !important; border: 1.5px solid #e2c4c4 !important; color: var(--ka-red) !important; font-size: 0 !important; }
+.kurs-squad-table .kurs-sq-row.is-absent .kurs-sq-tick::after { content: '↺'; font-size: 15px; font-weight: 800; }
+.kurs-squad-table .kurs-sq-row.is-absent .kurs-sq-tick:hover { background: #e6f3ea !important; color: var(--ka-green) !important; border-color: #b9dcc6 !important; }
+.kurs-squad-table .kurs-sq-row.is-absent .kurs-sq-tick:hover::before { content: none; }
+.kurs-sq-row.is-absent .kurs-sq-jersey { color: #c9c9c0 !important; }
+.kurs-sq-legend i { width: 16px; height: 16px; border-radius: 50%; background: #e6f3ea; color: var(--ka-green); }
+.kurs-squad-table .kurs-sq-row.is-absent td.kurs-sq-jersey { background: #fdf3f3 !important; }
+.kurs-sq-tools { min-width: 0; }
+.kurs-sq-capsel { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+.kurs-sq-capsel select { min-width: 0; flex: 1 1 180px; }
+.kurs-sq-legend { white-space: normal; min-width: 0; }
+@media (max-width: 600px) { .kurs-record-squad { min-width: 0; } .kurs-record-squads { grid-template-columns: minmax(0, 1fr) !important; } }
+
+/* Aktivno poluvrijeme (1.33.2): obrub u bojama KURS-a koji se polagano vrti + blagi sjaj */
+@property --kh-a { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.kurs-rc-half__opt.is-active {
+	border: 3px solid transparent !important;
+	background:
+		linear-gradient(var(--ka-dark), var(--ka-dark)) padding-box,
+		conic-gradient(from var(--kh-a), #DA0F1E, #F47B16, #FDE206, #F47B16, #DA0F1E) border-box !important;
+	box-shadow: 0 0 0 4px rgba(244,123,22,.16), 0 4px 14px rgba(218,15,30,.22);
+	animation: kurs-half-spin 3.2s linear infinite;
+}
+.kurs-rc-half__opt.is-active::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #FDE206; margin-right: 8px; vertical-align: 1px; animation: kurs-half-dot 1.6s ease-in-out infinite; }
+@keyframes kurs-half-spin { to { --kh-a: 360deg; } }
+@keyframes kurs-half-dot { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .kurs-rc-half__opt.is-active, .kurs-rc-half__opt.is-active::before { animation: none; } }

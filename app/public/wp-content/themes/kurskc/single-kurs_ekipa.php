@@ -250,15 +250,20 @@ function ekipa_sezona( int $n ): string {
 <div class="team-profile">
 
 	<!-- ── HERO ─────────────────────────────────────────────── -->
-	<?php $team_color = kurs_team_color( $team_id ); ?>
-	<div class="team-hero" style="border-bottom:4px solid <?php echo esc_attr( $team_color ); ?>;<?php if ( $thumb_l ) echo 'background-image:url(' . esc_url( $thumb_l ) . ');'; ?>">
+	<?php
+	$team_color = kurs_team_color( $team_id );
+	$team_c2    = function_exists( 'kurs_team_color2' ) ? kurs_team_color2( $team_id ) : '';
+	// donji rub zaglavlja u bojama dresa (dvobojni = pola-pola, 1.0.63)
+	$hero_edge  = $team_c2 ? 'border-bottom:5px solid;border-image:linear-gradient(90deg,' . $team_color . ' 0 50%,' . $team_c2 . ' 50% 100%) 1;' : 'border-bottom:4px solid ' . $team_color . ';';
+	?>
+	<div class="team-hero" style="<?php echo esc_attr( $hero_edge ); ?><?php if ( $thumb_l ) echo 'background-image:url(' . esc_url( $thumb_l ) . ');'; ?>">
 		<div class="team-hero__overlay"></div>
 		<div class="container team-hero__inner">
 			<div class="team-hero__badge">
 				<?php if ( $thumb_s ) : ?>
 				<img src="<?php echo esc_url( $thumb_s ); ?>" alt="">
 				<?php else : ?>
-				<span style="background:<?php echo esc_attr( $team_color ); ?>;color:<?php echo esc_attr( kurs_team_text_color( $team_color ) ); ?>;"><?php echo esc_html( mb_strtoupper( mb_substr( $team->post_title, 0, 2 ) ) ); ?></span>
+				<span style="background:<?php echo esc_attr( $team_c2 ? "linear-gradient(135deg,{$team_color} 0 50%,{$team_c2} 50% 100%)" : $team_color ); ?>;color:<?php echo esc_attr( kurs_team_text_color( $team_color ) ); ?>;"><?php echo esc_html( mb_strtoupper( mb_substr( $team->post_title, 0, 2 ) ) ); ?></span>
 				<?php endif; ?>
 			</div>
 			<div>
@@ -281,9 +286,26 @@ function ekipa_sezona( int $n ): string {
 						<span><?php echo esc_html( ekipa_sezona( count( $cp['seasons'] ) ) . ( $years ? ' · od ' . min( $years ) . '.' : '' ) ); ?></span>
 					</span>
 					<?php endforeach; ?>
+					<?php if ( function_exists( 'kurs_kit_svg' ) ) : ?>
+					<span class="team-hero__comp team-hero__kit" style="--cc:<?php echo esc_attr( $team_color ); ?>" title="<?php echo esc_attr( $team_c2 ? 'Dvobojni dres' : 'Boja dresa' ); ?>"><?php echo kurs_kit_svg( $team_color, $team_c2, 22 ); ?><b>Dres</b></span>
+					<?php endif; ?>
 				</div>
 				<h1 class="team-hero__name"><?php echo esc_html( $team->post_title ); ?></h1>
 			</div>
+			<?php
+			/* Sponzori ekipe u zaglavlju (1.0.63) — 1–3 logotipa/banera, odmah vidljivi (prije: baneri na dnu stranice) */
+			$team_banners = kurs_team_banners( $team_id, 'medium_large' );
+			if ( $team_banners ) : ?>
+			<div class="team-hero__spons">
+				<span class="team-hero__spons-lbl"><?php echo count( $team_banners ) > 1 ? 'Sponzori ekipe' : 'Sponzor ekipe'; ?></span>
+				<div class="team-hero__spons-row">
+				<?php foreach ( array_slice( $team_banners, 0, 3 ) as $bn ) :
+					$alt = trim( (string) get_post_field( 'post_title', $bn['id'] ) ); ?>
+					<<?php echo $bn['link'] ? 'a href="' . esc_url( $bn['link'] ) . '" target="_blank" rel="noopener nofollow sponsored"' : 'span'; ?> class="team-hero__sp"><img src="<?php echo esc_url( $bn['url'] ); ?>" alt="<?php echo esc_attr( $alt ?: $team->post_title . ' — sponzor' ); ?>"></<?php echo $bn['link'] ? 'a' : 'span'; ?>>
+				<?php endforeach; ?>
+				</div>
+			</div>
+			<?php endif; ?>
 		</div>
 	</div>
 
@@ -620,25 +642,6 @@ function ekipa_sezona( int $n ): string {
 
 		</div><!-- /.team-body -->
 	</div>
-
-	<!-- ── Sponzorski baneri (može ih biti više) ─────────────── -->
-	<?php $team_banners = kurs_team_banners( $team_id, 'large' ); ?>
-	<?php if ( $team_banners ) : ?>
-	<div class="container team-banner-wrap">
-		<div class="team-banner__label"><?php echo count( $team_banners ) > 1 ? 'Sponzori ekipe' : 'Sponzor ekipe'; ?></div>
-		<?php foreach ( $team_banners as $bn ) : ?>
-			<?php if ( $bn['link'] ) : ?>
-			<a href="<?php echo esc_url( $bn['link'] ); ?>" target="_blank" rel="noopener nofollow sponsored" class="team-banner">
-				<img src="<?php echo esc_url( $bn['url'] ); ?>" alt="<?php echo esc_attr( $team->post_title ); ?> — sponzor">
-			</a>
-			<?php else : ?>
-			<div class="team-banner">
-				<img src="<?php echo esc_url( $bn['url'] ); ?>" alt="<?php echo esc_attr( $team->post_title ); ?> — sponzor">
-			</div>
-			<?php endif; ?>
-		<?php endforeach; ?>
-	</div>
-	<?php endif; ?>
 
 </div><!-- /.team-profile -->
 
