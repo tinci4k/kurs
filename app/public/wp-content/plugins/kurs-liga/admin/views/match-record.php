@@ -66,14 +66,24 @@ if ( isset( $_GET['format'] ) && $_GET['format'] === 'pdf' ) {
 	exit;
 }
 
-$back_url = Kurs_Admin::hub_url( $season_id, 'utakmice', $is_playoff
+// /zapisnik/ (Kurs_Zapisnik): isti zapisnik izvan wp-admina — povratak na popis utakmica, bez admin linkova.
+$kurs_front = ! empty( $GLOBALS['kurs_record_front'] );
+$can_edit_match = current_user_can( KURS_CAP ); // datum/sat/kolo mijenja samo administracija lige
+
+$back_url = $kurs_front ? Kurs_Zapisnik::url() : Kurs_Admin::hub_url( $season_id, 'utakmice', $is_playoff
 	? [ 'playoff_div' => $division_id ]
 	: [ 'group_id' => (int) $match->group_id ] );
 $back_season = $season_id ? Kurs_Season::get( $season_id ) : null;
-$pdf_url  = admin_url( "admin.php?page=kurs-match-record&match_id={$match_id}&format=pdf" );
+$pdf_url  = $kurs_front
+	? Kurs_Zapisnik::url( $match_id, [ 'format' => 'pdf' ] )
+	: admin_url( "admin.php?page=kurs-match-record&match_id={$match_id}&format=pdf" );
 $date_val = $match->match_date ? date( 'd.m.Y H:i', strtotime( $match->match_date ) ) : '';
 
 $home_color = kurs_team_color( (int) $match->home_team_id );
+// Dugi nazivi („AL Nemčić/Klesarstvo Habek”) lome se iza kose crte, ne usred riječi.
+$wbr_name = fn( string $n ): string => str_replace( '/', '/<wbr>', esc_html( $n ) );
+// Boja ekipe za traku/oznake; preblijeda (bijela) bi se izgubila na bijelom → siva.
+$rc_tone = fn( string $c ): string => kurs_team_text_color( $c ) === '#ffffff' ? $c : '#c9c9c0';
 $away_color = kurs_team_color( (int) $match->away_team_id );
 // $is_finished / $disp_home / $disp_away su izračunati ranije (prije PDF includea).
 
@@ -116,7 +126,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 
 	<!-- Gornja traka -->
 	<div class="kurs-record-topbar no-print">
-		<a href="<?php echo esc_url( $back_url ); ?>" class="kurs-back">&larr; <?php echo esc_html( $back_season ? $back_season->name . ' · Utakmice' : 'Utakmice' ); ?></a>
+		<a href="<?php echo esc_url( $back_url ); ?>" class="kurs-back">&larr; <?php echo esc_html( $kurs_front ? 'Sve utakmice' : ( $back_season ? $back_season->name . ' · Utakmice' : 'Utakmice' ) ); ?></a>
 		<div class="kurs-record-topbar__actions">
 			<button class="kurs-btn kurs-btn--outline kurs-btn--sm" onclick="window.print()">
 				&#128424; Ispiši
@@ -128,7 +138,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 	</div>
 
 	<?php if ( $season_locked ) : ?>
-	<div class="kurs-hub-locked no-print">&#128274; Sezona je <strong>zaključana</strong> — zapisnik je konačan i ne može se mijenjati. Otključati je možeš u <a href="<?php echo esc_url( Kurs_Admin::hub_url( $season_id, 'postavke' ) ); ?>">Postavkama natjecanja</a>.</div>
+	<div class="kurs-hub-locked no-print">&#128274; Sezona je <strong>zaključana</strong> — zapisnik je konačan i ne može se mijenjati.<?php if ( ! $kurs_front ) : ?> Otključati je možeš u <a href="<?php echo esc_url( Kurs_Admin::hub_url( $season_id, 'postavke' ) ); ?>">Postavkama natjecanja</a>.<?php endif; ?></div>
 	<?php endif; ?>
 	<?php if ( ( $_GET['pm_error'] ?? '' ) === 'draw' ) : ?>
 	<div class="kurs-notice kurs-notice--err no-print">Utakmica nije zaključena: neriješeno je, a u playoffu mora biti pobjednik — upiši i rezultat penala.</div>
@@ -171,7 +181,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<!-- Domaćin -->
 				<div class="kurs-record-hero__team kurs-record-hero__team--home">
 					<?php echo kurs_team_badge_html( (int) $match->home_team_id, 72 ); ?>
-					<div class="kurs-record-hero__team-name"><?php echo esc_html( $match->home_name ); ?></div>
+					<div class="kurs-record-hero__team-name"><?php echo $wbr_name( $match->home_name ); ?></div>
 					<div class="kurs-record-hero__team-role">Domaćin</div>
 				</div>
 
@@ -205,14 +215,14 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<!-- Gost -->
 				<div class="kurs-record-hero__team kurs-record-hero__team--away">
 					<?php echo kurs_team_badge_html( (int) $match->away_team_id, 72 ); ?>
-					<div class="kurs-record-hero__team-name"><?php echo esc_html( $match->away_name ); ?></div>
+					<div class="kurs-record-hero__team-name"><?php echo $wbr_name( $match->away_name ); ?></div>
 					<div class="kurs-record-hero__team-role">Gost</div>
 				</div>
 			</div>
 		</div>
 
 		<!-- Uredi podatke utakmice -->
-		<?php if ( ! $season_locked ) : ?>
+		<?php if ( ! $season_locked && $can_edit_match ) : ?>
 		<details class="kurs-record-edit-details no-print">
 			<summary>&#9998; Uredi datum, sat<?php echo $is_playoff ? '' : ' i kolo'; ?></summary>
 			<div class="kurs-record-edit-form">
@@ -233,27 +243,42 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 		</details>
 		<?php endif; ?>
 
-		<!-- ── Zapisničareve akcije: GOL / KARTON / PREKRŠAJ ─────────────────── -->
-		<div class="kurs-record-section kurs-record-actions">
-
-			<?php if ( ! $is_finished ) : ?>
-			<div class="kurs-action-btns no-print">
-				<button type="button" class="kurs-action-btn kurs-action-btn--gol" data-modal="gol">
-					<span class="kurs-action-btn__ico">&#10753;</span>
-					<span class="kurs-action-btn__lbl">GOL</span>
-				</button>
-				<button type="button" class="kurs-action-btn kurs-action-btn--karton" data-modal="karton">
-					<span class="kurs-action-btn__ico">&#9646;</span>
-					<span class="kurs-action-btn__lbl">KARTON</span>
-				</button>
-				<button type="button" class="kurs-action-btn kurs-action-btn--prekrsaj" data-modal="prekrsaj">
-					<span class="kurs-action-btn__ico">&#9995;</span>
-					<span class="kurs-action-btn__lbl">PREKRŠAJ</span>
-				</button>
+		<!-- ── Unos: svaka ekipa svoja strana (1.25.0) ───────────────────────── -->
+		<?php if ( ! $is_finished && ! $season_locked ) : ?>
+		<div class="kurs-record-section kurs-rc no-print" id="kurs-rc">
+			<div class="kurs-rc-half" role="group" aria-label="Poluvrijeme">
+				<span class="kurs-rc-half__lbl">Poluvrijeme</span>
+				<button type="button" class="kurs-rc-half__opt<?php echo $cur_half === 1 ? ' is-active' : ''; ?>" data-half="1">1. poluvrijeme</button>
+				<button type="button" class="kurs-rc-half__opt<?php echo $cur_half === 2 ? ' is-active' : ''; ?>" data-half="2">2. poluvrijeme</button>
 			</div>
-			<?php endif; ?>
+			<div class="kurs-rc-teams">
+				<?php foreach ( [ 'home' => [ (int) $match->home_team_id, $match->home_name, $home_color, 'Domaćin' ], 'away' => [ (int) $match->away_team_id, $match->away_name, $away_color, 'Gost' ] ] as $who => [ $tid, $tname, $tcolor, $trole ] ) : ?>
+				<div class="kurs-rc-team" data-who="<?php echo $who; ?>" data-team="<?php echo $tid; ?>" style="--tc:<?php echo esc_attr( $rc_tone( $tcolor ) ); ?>">
+					<div class="kurs-rc-team__hd">
+						<?php echo kurs_team_badge_html( $tid, 30 ); ?>
+						<span class="kurs-rc-team__name"><?php echo $wbr_name( $tname ); ?></span>
+						<span class="kurs-rc-team__role"><?php echo $trole; ?></span>
+					</div>
+					<button type="button" class="kurs-rc-btn kurs-rc-btn--goal" data-act="goal"><span class="kurs-rc-btn__ico">&#9917;</span>Gol</button>
+					<div class="kurs-rc-team__cards">
+						<button type="button" class="kurs-rc-btn kurs-rc-btn--yellow" data-act="yellow"><span class="kurs-rc-card kurs-rc-card--y"></span>Žuti</button>
+						<button type="button" class="kurs-rc-btn kurs-rc-btn--red" data-act="red"><span class="kurs-rc-card kurs-rc-card--r"></span>Crveni</button>
+					</div>
+					<div class="kurs-rc-foul">
+						<button type="button" class="kurs-rc-btn kurs-rc-btn--foul" data-act="foul">&#9995; Prekršaj</button>
+						<span class="kurs-rc-foul__n" title="Akumulirani prekršaji u ovom poluvremenu"><b>0</b><small>/ <?php echo (int) $max_fouls; ?></small></span>
+						<button type="button" class="kurs-rc-foul__minus" data-act="foul-minus" title="Ukloni zadnji prekršaj">&minus;</button>
+					</div>
+					<p class="kurs-rc-foul__hint" hidden></p>
+				</div>
+				<?php endforeach; ?>
+			</div>
+			<p class="kurs-rc-help">Klikni <b>Gol</b>, <b>Žuti</b> ili <b>Crveni</b> na strani ekipe pa igrača — sprema se odmah. Pogrešan unos ispravi s „Poništi” ili u popisu ispod (&#9998; / &times;).</p>
+		</div>
+		<?php endif; ?>
 
-			<!-- Akumulirani prekršaji (live brojač) -->
+		<!-- Akumulirani prekršaji po poluvremenima (pregled završene utakmice + ispis) -->
+		<div class="kurs-record-section kurs-record-actions<?php echo $is_finished ? '' : ' kurs-fouls-printonly'; ?>">
 			<div class="kurs-fouls" id="kurs-fouls" data-max="<?php echo (int) $max_fouls; ?>">
 				<div class="kurs-fouls__hd">
 					<span class="kurs-fouls__title">Akumulirani prekršaji <span class="kurs-fouls__max">limit <?php echo (int) $max_fouls; ?> / poluvr.</span></span>
@@ -278,7 +303,6 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<p class="kurs-fouls__legend">Do <?php echo (int) $max_fouls; ?>. prekršaja igra se sa zidom; <?php echo (int) $max_fouls + 1; ?>. i svaki sljedeći = akumulirani penal (10 m). Brojač se resetira na poluvremenu.</p>
 			</div>
 		</div>
-
 		<!-- ── Tijek utakmice (golovi i kartoni) ────────────────────────────── -->
 		<div class="kurs-record-section">
 			<h3 class="kurs-record-section__title">Golovi i kartoni</h3>
@@ -354,6 +378,9 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					<tr class="kurs-sq-row<?php echo $abs ? ' is-absent' : ''; ?>"
 					    data-player-id="<?php echo $pid; ?>" data-team-id="<?php echo (int) $match->home_team_id; ?>"
 					    data-jersey="<?php echo (int) $sq->jersey_no; ?>" data-name="<?php echo esc_attr( $sq->player_name ); ?>" data-gk="<?php echo $gk ? 1 : 0; ?>">
+						<?php if ( ! $is_finished ) : ?>
+						<td class="kurs-sq-check no-print"><button type="button" class="kurs-sq-absent kurs-sq-tick" title="Igrao / nije došao" aria-label="Igrao">&#10003;</button></td>
+						<?php endif; ?>
 						<td class="kurs-sq-jersey"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></td>
 						<td class="kurs-sq-name">
 							<?php echo esc_html( $sq->player_name ); ?>
@@ -362,8 +389,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 						</td>
 						<?php if ( ! $is_finished ) : ?>
 						<td class="kurs-sq-actions no-print">
-							<button type="button" class="kurs-sq-cap" title="Postavi kao kapetana">&#9733;</button>
-							<button type="button" class="kurs-sq-absent" title="Označi da (ni)je igrao">&times;</button>
+							<button type="button" class="kurs-sq-cap" title="Postavi kao kapetana">&#9733; Kapetan</button>
 						</td>
 						<?php endif; ?>
 					</tr>
@@ -397,6 +423,9 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 					<tr class="kurs-sq-row<?php echo $abs ? ' is-absent' : ''; ?>"
 					    data-player-id="<?php echo $pid; ?>" data-team-id="<?php echo (int) $match->away_team_id; ?>"
 					    data-jersey="<?php echo (int) $sq->jersey_no; ?>" data-name="<?php echo esc_attr( $sq->player_name ); ?>" data-gk="<?php echo $gk ? 1 : 0; ?>">
+						<?php if ( ! $is_finished ) : ?>
+						<td class="kurs-sq-check no-print"><button type="button" class="kurs-sq-absent kurs-sq-tick" title="Igrao / nije došao" aria-label="Igrao">&#10003;</button></td>
+						<?php endif; ?>
 						<td class="kurs-sq-jersey"><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></td>
 						<td class="kurs-sq-name">
 							<?php echo esc_html( $sq->player_name ); ?>
@@ -405,8 +434,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 						</td>
 						<?php if ( ! $is_finished ) : ?>
 						<td class="kurs-sq-actions no-print">
-							<button type="button" class="kurs-sq-cap" title="Postavi kao kapetana">&#9733;</button>
-							<button type="button" class="kurs-sq-absent" title="Označi da (ni)je igrao">&times;</button>
+							<button type="button" class="kurs-sq-cap" title="Postavi kao kapetana">&#9733; Kapetan</button>
 						</td>
 						<?php endif; ?>
 					</tr>
@@ -453,6 +481,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				<input type="hidden" name="match_id"    value="<?php echo $match_id; ?>">
 				<input type="hidden" name="season_id"   value="<?php echo $season_id; ?>">
 				<input type="hidden" name="from_record"  value="1">
+				<?php if ( $kurs_front ) : ?><input type="hidden" name="kurs_front" value="1"><?php endif; ?>
 				<div class="kurs-finish-row">
 					<span class="kurs-finish-row__home"><?php echo esc_html( $match->home_name ); ?></span>
 					<div class="kurs-finish-score">
@@ -508,6 +537,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 				      onsubmit="return confirm('Otvoriti utakmicu za ispravak? Dok je otvorena, ne računa se u ljestvicu — nakon ispravka je ponovno završi.');">
 					<?php wp_nonce_field( 'kurs_reopen_match' ); ?>
 					<input type="hidden" name="kurs_action" value="reopen_match">
+					<?php if ( $kurs_front ) : ?><input type="hidden" name="kurs_front" value="1"><?php endif; ?>
 					<input type="hidden" name="match_id"    value="<?php echo $match_id; ?>">
 					<button type="submit" class="kurs-btn kurs-btn--ghost kurs-btn--sm">
 						&#9998; Otvori za ispravak
@@ -533,7 +563,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 <div class="kurs-rec-modal" id="kurs-modal-gol" hidden>
 	<div class="kurs-modal-backdrop" data-close></div>
 	<div class="kurs-modal-box">
-		<h3 class="kurs-modal-title">&#10753; Dodaj gol</h3>
+		<h3 class="kurs-modal-title">&#9998; Uredi gol</h3>
 		<div class="kurs-modal-field">
 			<label>Momčad</label>
 			<div class="kurs-team-toggle">
@@ -563,13 +593,13 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 			</div>
 			<div class="kurs-modal-field kurs-modal-field--min">
 				<label>Minuta</label>
-				<input type="number" id="gol-minute" min="0" max="120" placeholder="Min.">
+				<input type="number" id="gol-minute" min="0" max="120" placeholder="—">
 			</div>
 		</div>
 		<p class="kurs-modal-err" id="gol-err" hidden></p>
 		<div class="kurs-modal-actions">
 			<button type="button" class="kurs-btn kurs-btn--ghost" data-close>Odustani</button>
-			<button type="button" class="kurs-btn kurs-btn--red" id="gol-submit">Spremi gol</button>
+			<button type="button" class="kurs-btn kurs-btn--red" id="gol-submit">Spremi</button>
 		</div>
 	</div>
 </div>
@@ -577,7 +607,7 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 <div class="kurs-rec-modal" id="kurs-modal-karton" hidden>
 	<div class="kurs-modal-backdrop" data-close></div>
 	<div class="kurs-modal-box">
-		<h3 class="kurs-modal-title">&#9646; Dodaj karton</h3>
+		<h3 class="kurs-modal-title">&#9998; Uredi karton</h3>
 		<div class="kurs-modal-field">
 			<label>Momčad</label>
 			<div class="kurs-team-toggle">
@@ -607,50 +637,44 @@ $timeline_events = array_values( array_filter( $events, fn( $e ) => ! in_array( 
 			</div>
 			<div class="kurs-modal-field kurs-modal-field--min">
 				<label>Minuta</label>
-				<input type="number" id="karton-minute" min="0" max="120" placeholder="Min.">
+				<input type="number" id="karton-minute" min="0" max="120" placeholder="—">
 			</div>
 		</div>
 		<p class="kurs-modal-err" id="karton-err" hidden></p>
 		<div class="kurs-modal-actions">
 			<button type="button" class="kurs-btn kurs-btn--ghost" data-close>Odustani</button>
-			<button type="button" class="kurs-btn kurs-btn--dark" id="karton-submit">Spremi karton</button>
+			<button type="button" class="kurs-btn kurs-btn--dark" id="karton-submit">Spremi</button>
 		</div>
 	</div>
 </div>
 
-<div class="kurs-rec-modal" id="kurs-modal-prekrsaj" hidden>
+<!-- Izbor igrača: GOL / ŽUTI / CRVENI jedne ekipe (#kurs-rc) — klik na igrača odmah sprema -->
+<div class="kurs-rec-modal kurs-pick" id="kurs-pick" hidden>
 	<div class="kurs-modal-backdrop" data-close></div>
-	<div class="kurs-modal-box">
-		<h3 class="kurs-modal-title">&#9995; Akumulirani prekršaj</h3>
-		<div class="kurs-modal-field">
-			<label>Poluvrijeme</label>
-			<div class="kurs-half-toggle-modal" id="prekrsaj-half">
-				<button type="button" class="kurs-half-opt is-active" data-half="1">1. poluvrijeme</button>
-				<button type="button" class="kurs-half-opt" data-half="2">2. poluvrijeme</button>
-			</div>
+	<div class="kurs-modal-box kurs-pick__box" role="dialog" aria-modal="true" aria-labelledby="kurs-pick-title">
+		<div class="kurs-pick__hd">
+			<h3 class="kurs-pick__title" id="kurs-pick-title"></h3>
+			<button type="button" class="kurs-pick__x" data-close aria-label="Zatvori">&times;</button>
 		</div>
-		<p class="kurs-modal-sub">Klikni momčad koja je napravila prekršaj. Gumb &minus; uklanja zadnji upisani.</p>
-		<div class="kurs-prekrsaj-teams">
-			<div class="kurs-prekrsaj-col">
-				<button type="button" class="kurs-prekrsaj-team" data-team="home">
-					<span class="kurs-prekrsaj-team__name"><?php echo esc_html( $match->home_name ); ?></span>
-					<span class="kurs-prekrsaj-team__cnt" id="prekrsaj-cnt-home">0</span>
-				</button>
-				<button type="button" class="kurs-prekrsaj-minus" data-team="home" title="Ukloni zadnji prekršaj">&minus;</button>
-			</div>
-			<div class="kurs-prekrsaj-col">
-				<button type="button" class="kurs-prekrsaj-team" data-team="away">
-					<span class="kurs-prekrsaj-team__name"><?php echo esc_html( $match->away_name ); ?></span>
-					<span class="kurs-prekrsaj-team__cnt" id="prekrsaj-cnt-away">0</span>
-				</button>
-				<button type="button" class="kurs-prekrsaj-minus" data-team="away" title="Ukloni zadnji prekršaj">&minus;</button>
-			</div>
+		<div class="kurs-pick__opts">
+			<label class="kurs-pick__min">Minuta <input type="number" id="kurs-pick-min" min="0" max="120" inputmode="numeric" placeholder="—"></label>
+			<span class="kurs-pick__half" id="kurs-pick-half"></span>
+			<button type="button" class="kurs-pick__chip" id="kurs-pick-pen" aria-pressed="false">Penal</button>
 		</div>
-		<p class="kurs-modal-err" id="prekrsaj-err" hidden></p>
-		<div class="kurs-modal-actions">
-			<button type="button" class="kurs-btn kurs-btn--ghost" data-close>Zatvori</button>
+		<p class="kurs-pick__sub" id="kurs-pick-sub"></p>
+		<div class="kurs-pick__grid" id="kurs-pick-grid"></div>
+		<div class="kurs-pick__extra">
+			<button type="button" class="kurs-pick__chip" id="kurs-pick-og">Autogol protivnika</button>
+			<button type="button" class="kurs-pick__chip" id="kurs-pick-back" hidden>&larr; Natrag na igrače</button>
 		</div>
+		<p class="kurs-modal-err" id="kurs-pick-err" hidden></p>
 	</div>
+</div>
+
+<div class="kurs-undo" id="kurs-rc-undo" hidden role="status" aria-live="polite">
+	<span class="kurs-undo__msg"></span>
+	<button type="button" class="kurs-undo__btn">Poništi</button>
+	<button type="button" class="kurs-undo__x" aria-label="Zatvori">&times;</button>
 </div>
 <?php endif; ?>
 

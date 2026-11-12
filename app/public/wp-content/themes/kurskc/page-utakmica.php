@@ -64,7 +64,9 @@ if ( $match->status === 'finished' ) {
 	$status_class = 'semafor__status--done';
 } else {
 	$score = '– : –';
-	$status_label = $match->match_date ? date_i18n( 'j.n.Y., H:i', strtotime( $match->match_date ) ) : 'Zakazano';
+	// Datum i sat kao dva dijela — na mobitelu idu jedan ispod drugog (ne preklapaju dugi naziv ekipe)
+	$status_label = $match->match_date ? date_i18n( 'j.n.Y.', strtotime( $match->match_date ) ) . "
+" . date_i18n( 'H:i', strtotime( $match->match_date ) ) : 'Zakazano';
 	$status_class = 'semafor__status--sched';
 }
 
@@ -98,7 +100,7 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 				   class="semafor__badge" style="text-decoration:none;">
 					<?php echo $home_badge; ?>
 				</a>
-				<div class="semafor__name"><?php echo esc_html( $match->home_name ); ?></div>
+				<div class="semafor__name"><?php echo str_replace( '/', '/<wbr>', esc_html( $match->home_name ) ); // dugi naziv se lomi iza „/” ?></div>
 			</div>
 
 			<div class="semafor__center">
@@ -106,7 +108,8 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 				<?php if ( $po_match && ( $pen = Kurs_Playoff::pen_label( $po_match ) ) ) : ?>
 				<div class="semafor__pen"><?php echo esc_html( $pen ); ?></div>
 				<?php endif; ?>
-				<div class="semafor__status <?php echo $status_class; ?>"><?php echo esc_html( $status_label ); ?></div>
+				<div class="semafor__status <?php echo $status_class; ?>"><?php echo implode( '<span class="semafor__status-sep">, </span>', array_map( fn( $part ) => '<span>' . esc_html( $part ) . '</span>', explode( "
+", $status_label ) ) ); ?></div>
 				<?php if ( $match->match_date && $match->status === 'finished' ) : ?>
 				<div class="semafor__date"><?php echo esc_html( date_i18n( 'j.n.Y.', strtotime( $match->match_date ) ) ); ?></div>
 				<?php endif; ?>
@@ -117,7 +120,7 @@ $po_names = [ 'qf' => 'Četvrtfinale', 'sf' => 'Polufinale', 'final' => 'Finale'
 				   class="semafor__badge" style="text-decoration:none;">
 					<?php echo $away_badge; ?>
 				</a>
-				<div class="semafor__name"><?php echo esc_html( $match->away_name ); ?></div>
+				<div class="semafor__name"><?php echo str_replace( '/', '/<wbr>', esc_html( $match->away_name ) ); ?></div>
 			</div>
 		</div>
 	</div>

@@ -228,6 +228,14 @@ class Kurs_Admin {
 		}
 		if ( strpos( $hook, 'kurs-' ) === false ) return;
 		wp_enqueue_media(); // Potrebno za Media Library modal
+		self::enqueue_ui();
+	}
+
+	/** Fontovi KURS sučelja (Barlow, Barlow Semi Condensed, Space Mono). */
+	public const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Space+Mono:wght@400;700&display=swap';
+
+	/** CSS/JS KURS sučelja (flatpickr, fontovi, admin.css/js + KursAjax) — admin stranice i /zapisnik/. */
+	public static function enqueue_ui(): void {
 		wp_enqueue_style( 'flatpickr',
 			'https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css',
 			[], '4.6.13'
@@ -240,10 +248,7 @@ class Kurs_Admin {
 			'https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/hr.js',
 			[ 'flatpickr' ], '4.6.13', true
 		);
-		wp_enqueue_style( 'kurs-admin-fonts',
-			'https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&family=Space+Mono:wght@400;700&display=swap',
-			[], null
-		);
+		wp_enqueue_style( 'kurs-admin-fonts', self::FONTS_URL, [], null );
 		wp_enqueue_style(  'kurs-admin', KURS_URL . 'admin/assets/admin.css', [ 'kurs-admin-fonts', 'flatpickr' ], KURS_VERSION );
 		wp_enqueue_script( 'kurs-admin', KURS_URL . 'admin/assets/admin.js',  [ 'jquery', 'flatpickr', 'flatpickr-hr' ], KURS_VERSION, true );
 		wp_localize_script( 'kurs-admin', 'KursAjax', [
@@ -273,6 +278,7 @@ class Kurs_Admin {
 	// ── Form handlers ─────────────────────────────────────────────────────────
 
 	public function handle_forms(): void {
+		self::handle_record_forms();
 		if ( ! current_user_can( KURS_CAP ) ) return;
 		if ( empty( $_POST['kurs_action'] ) ) return;
 
@@ -286,8 +292,6 @@ class Kurs_Admin {
 			'save_base_standings' => $this->do_save_base_standings(),
 			'generate_season_fixtures' => $this->do_generate_season_fixtures(),
 			'add_match'     => $this->do_add_match(),
-			'finish_match'        => $this->do_finish_match(),
-			'reopen_match'        => $this->do_reopen_match(),
 			'generate_playoff'    => $this->do_generate_playoff(),
 			'reset_playoff'       => $this->do_reset_playoff(),
 			'finish_playoff_match'=> $this->do_finish_playoff_match(),
@@ -452,23 +456,42 @@ class Kurs_Admin {
 		exit;
 	}
 
-	private function do_reopen_match(): void {
+	/**
+	 * Forme zapisnika — „Završi i spremi rezultat" i „Otvori za ispravak". Dovoljna je ovlast
+	 * zapisničara (KURS_RECORD_CAP). Poziva se iz handle_forms (wp-admin) i iz Kurs_Zapisnik
+	 * (/zapisnik/, forma šalje `kurs_front`, pa se vraća tamo).
+	 */
+	public static function handle_record_forms(): void {
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) return;
+		match ( sanitize_key( $_POST['kurs_action'] ?? '' ) ) {
+			'finish_match' => self::do_finish_match(),
+			'reopen_match' => self::do_reopen_match(),
+			default        => null,
+		};
+	}
+
+	/** Povratak na zapisnik nakon forme: /zapisnik/ ako je poslana odande, inače admin zapisnik. */
+	private static function record_return( int $match_id ): string {
+		return empty( $_POST['kurs_front'] ) ? self::record_url( $match_id ) : Kurs_Zapisnik::url( $match_id );
+	}
+
+	private static function do_reopen_match(): void {
 		check_admin_referer( 'kurs_reopen_match' );
 		$mid = absint( $_POST['match_id'] );
-		self::guard_unlocked( self::season_of_match( $mid ), admin_url( "admin.php?page=kurs-match-record&match_id={$mid}" ) );
+		self::guard_unlocked( self::season_of_match( $mid ), self::record_return( $mid ) );
 		Kurs_Match::reopen( $mid );
 		// Sinkroniziraj s playoff_matches ako je ovaj meč dio playoffa
 		$pm = Kurs_Playoff::find_by_match_id( $mid );
 		if ( $pm ) Kurs_Playoff::reopen_match( (int) $pm->id );
-		wp_safe_redirect( admin_url( "admin.php?page=kurs-match-record&match_id={$mid}" ) );
+		wp_safe_redirect( self::record_return( $mid ) );
 		exit;
 	}
 
-	private function do_finish_match(): void {
+	private static function do_finish_match(): void {
 		check_admin_referer( 'kurs_finish_match' );
 		$mid    = absint( $_POST['match_id'] );
 		$sid    = absint( $_POST['season_id'] ?? 0 ) ?: self::season_of_match( $mid );
-		$record = admin_url( "admin.php?page=kurs-match-record&match_id={$mid}" );
+		$record = self::record_return( $mid );
 		self::guard_unlocked( $sid, $record );
 		$home = absint( $_POST['home_score'] );
 		$away = absint( $_POST['away_score'] );
@@ -476,7 +499,7 @@ class Kurs_Admin {
 		$pm  = Kurs_Playoff::find_by_match_id( $mid );
 		$res = $pm ? Kurs_Playoff::finish_match( (int) $pm->id, $home, $away, ...self::post_pens() ) : Kurs_Match::finish( $mid, $home, $away );
 		$err = is_wp_error( $res ) ? [ 'pm_error' => 'draw' ] : [];
-		if ( ! empty( $_POST['from_record'] ) ) {
+		if ( ! empty( $_POST['from_record'] ) || ! current_user_can( KURS_CAP ) ) {
 			wp_safe_redirect( add_query_arg( $err, $record ) );
 		} else {
 			$m = Kurs_Match::get( $mid );
@@ -1103,7 +1126,7 @@ class Kurs_Admin {
 
 	public function ajax_record_add_event(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 
 		$match_id  = absint( $_POST['match_id'] );
 		$team_id   = absint( $_POST['team_id'] );
@@ -1135,7 +1158,7 @@ class Kurs_Admin {
 				'player_id'   => $player_id,
 				'player_name' => $player_name,
 				'event_type'  => $type,
-				'minute'      => $minute ?: 0,
+				'minute'      => $minute, // null = bez minute (nije obavezna)
 				'half'        => $half,
 			],
 		], $this->record_state( $match_id ) ) );
@@ -1145,7 +1168,7 @@ class Kurs_Admin {
 
 	public function ajax_record_del_event(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 
 		$event_id = absint( $_POST['event_id'] );
 		if ( ! $event_id ) wp_send_json_error( 'Nevažeći event_id.' );
@@ -1167,7 +1190,7 @@ class Kurs_Admin {
 
 	public function ajax_record_del_foul(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 
 		$match_id = absint( $_POST['match_id'] );
 		$team_id  = absint( $_POST['team_id'] );
@@ -1184,7 +1207,7 @@ class Kurs_Admin {
 
 	public function ajax_record_update_event(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 
 		$event_id = absint( $_POST['event_id'] );
 		$match_id = absint( $_POST['match_id'] );
@@ -1217,7 +1240,7 @@ class Kurs_Admin {
 
 	public function ajax_record_set_captain(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] );
 		$team_id  = absint( $_POST['team_id'] );
 		$player   = absint( $_POST['player_id'] ?? 0 );
@@ -1229,7 +1252,7 @@ class Kurs_Admin {
 
 	public function ajax_record_set_absent(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] );
 		$team_id  = absint( $_POST['team_id'] );
 		$player   = absint( $_POST['player_id'] ?? 0 );
@@ -1243,7 +1266,7 @@ class Kurs_Admin {
 	/** Utakmica otvorena za ispravak: igrač iz rostera ekipe dodaje se u spremljenu postavu. */
 	public function ajax_record_add_lineup(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] ?? 0 );
 		$team_id  = absint( $_POST['team_id'] ?? 0 );
 		$player   = absint( $_POST['player_id'] ?? 0 );
@@ -1260,7 +1283,7 @@ class Kurs_Admin {
 
 	public function ajax_record_set_referees(): void {
 		check_ajax_referer( 'kurs_ajax', 'nonce' );
-		if ( ! current_user_can( KURS_CAP ) ) wp_die( '', 403 );
+		if ( ! current_user_can( KURS_RECORD_CAP ) ) wp_die( '', 403 );
 		$match_id = absint( $_POST['match_id'] );
 		if ( ! $match_id ) wp_send_json_error( 'Nevažeći podaci.' );
 		self::guard_unlocked( self::season_of_match( $match_id ) );

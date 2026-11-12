@@ -1118,7 +1118,6 @@ jQuery( function ( $ ) {
 				fillModalPlayers( id, activeWho( $m ) );
 				setModalHalf( $m, CUR_HALF );
 			}
-			if ( id === 'prekrsaj' ) { setModalHalf( $m, CUR_HALF ); refreshPrekrsajModal(); }
 			$m.removeAttr( 'hidden' );
 		}
 		function closeModal( $m ) { $m.attr( 'hidden', 'hidden' ); }
@@ -1145,7 +1144,6 @@ jQuery( function ( $ ) {
 			const $opt = $( this );
 			$opt.closest( '.kurs-half-toggle-modal' ).find( '.kurs-half-opt' ).removeClass( 'is-active' );
 			$opt.addClass( 'is-active' );
-			if ( $opt.closest( '#kurs-modal-prekrsaj' ).length ) refreshPrekrsajModal();
 		} );
 
 		// ── Dodaj event ──────────────────────────────────────────────────────
@@ -1163,18 +1161,17 @@ jQuery( function ( $ ) {
 			const $err = $( '#' + prefix + '-err' );
 
 			if ( prefix === 'gol' && ! player_id ) { $err.text( 'Odaberi strijelca — igrač je obavezan za gol.' ).removeAttr( 'hidden' ); $btn.prop( 'disabled', false ); return; }
-			if ( ! minute ) { $err.text( 'Unesi minutu.' ).removeAttr( 'hidden' ); $btn.prop( 'disabled', false ); return; }
 			$err.attr( 'hidden', 'hidden' );
 
 			const editId = $modal.data( 'edit-event-id' ) || 0;
 			const data   = { action: editId ? 'kurs_record_update_event' : 'kurs_record_add_event',
-				nonce, match_id: MATCH_ID, team_id, player_id, event_type, minute, half: modalHalf( $modal ) };
+				nonce, match_id: MATCH_ID, team_id, player_id, event_type, half: modalHalf( $modal ) };
+			if ( minute ) data.minute = minute; // minuta nije obavezna
 			if ( editId ) data.event_id = editId;
 
 			$.post( url, data )
 				.done( res => {
 					if ( res.success ) {
-						CUR_HALF = modalHalf( $modal ); // zapamti zadnje korišteno poluvrijeme
 						if ( editId ) updateMatchEventRow( res.data.event );
 						else appendMatchEvent( res.data.event );
 						applyState( res.data );
@@ -1189,24 +1186,170 @@ jQuery( function ( $ ) {
 				} ).always( () => $btn.prop( 'disabled', false ) );
 		}
 
-		// Akumulirani prekršaj — klik na momčad logira faul u trenutno poluvrijeme
-		$( document ).on( 'click', '.kurs-prekrsaj-team', function () {
-			const $modal  = $( '#kurs-modal-prekrsaj' );
-			const team_id = teamIdFor( $( this ).data( 'team' ) );
-			const half    = modalHalf( $modal );
-			CUR_HALF = half; // zapamti zadnje korišteno poluvrijeme
-			$.post( url, { action: 'kurs_record_add_event', nonce, match_id: MATCH_ID, team_id, event_type: 'foul', half } )
-				.done( res => { if ( res.success ) { applyState( res.data ); refreshPrekrsajModal(); } } );
+		// ── Unos po ekipama (#kurs-rc, 1.25.0): svaka ekipa svoja strana ─────────
+		// Gol / Žuti / Crveni → izbor igrača te ekipe (klik = spremljeno), Prekršaj = jedan klik.
+		// Poluvrijeme se bira jednom gore; nakon svakog unosa traka s „Poništi”.
+		const $rc = $( '#kurs-rc' );
+		let PICK  = null; // { act: goal|yellow|red, who: home|away, og: bool }
+
+		function otherWho( who ) { return who === 'home' ? 'away' : 'home'; }
+		function nameFor( who )  { return who === 'away' ? AWAY_NAME : HOME_NAME; }
+		function foulCount( teamId, half ) {
+			const c  = window.KursFoulCounts || {};
+			const tc = c[ teamId ] || c[ String( teamId ) ] || {};
+			return parseInt( tc[ half ] || tc[ String( half ) ] || 0 );
+		}
+		function yellowsOf( pid ) {
+			return $( '#kurs-events-list .kurs-edit-event[data-type="yellow_card"][data-player-id="' + pid + '"]' ).length;
+		}
+
+		function setHalf( half ) {
+			CUR_HALF = parseInt( half ) === 2 ? 2 : 1;
+			$( '.kurs-rc-half__opt' ).each( function () { $( this ).toggleClass( 'is-active', parseInt( $( this ).data( 'half' ) ) === CUR_HALF ); } );
+			refreshRcFouls();
+		}
+		$( document ).on( 'click', '.kurs-rc-half__opt', function () { setHalf( $( this ).data( 'half' ) ); } );
+
+		function refreshRcFouls() {
+			$( '.kurs-rc-team' ).each( function () {
+				const n   = foulCount( parseInt( $( this ).data( 'team' ) ), CUR_HALF );
+				const $b  = $( this ).find( '.kurs-rc-foul__n' ).toggleClass( 'is-warn', n === MAX_FOULS ).toggleClass( 'is-penal', n > MAX_FOULS );
+				$b.find( 'b' ).text( n );
+				$( this ).find( '.kurs-rc-foul__minus' ).prop( 'disabled', n === 0 );
+				const hint = n > MAX_FOULS ? 'Akumulirani prekršaj — penal s 10 m!' : ( n === MAX_FOULS ? 'Sljedeći prekršaj = penal s 10 m.' : '' );
+				$( this ).find( '.kurs-rc-foul__hint' ).text( hint ).prop( 'hidden', ! hint ).toggleClass( 'is-penal', n > MAX_FOULS );
+			} );
+		}
+
+		// Traka nakon unosa: „⚽ Gol — Ivan Horvat (Petgrad) 1:0  [Poništi]”
+		let rcTimer = 0, rcUndo = null;
+		function rcNote( html, undo, isError ) {
+			const $n = $( '#kurs-rc-undo' );
+			clearTimeout( rcTimer );
+			rcUndo = undo || null;
+			$n.toggleClass( 'is-error', !! isError ).find( '.kurs-undo__msg' ).html( html );
+			$n.find( '.kurs-undo__btn' ).prop( 'hidden', ! rcUndo ).prop( 'disabled', false );
+			$n.removeAttr( 'hidden' );
+			rcTimer = setTimeout( () => $n.attr( 'hidden', 'hidden' ), rcUndo ? 12000 : 6000 );
+		}
+		$( document ).on( 'click', '#kurs-rc-undo .kurs-undo__btn', function () {
+			if ( ! rcUndo ) return;
+			$( this ).prop( 'disabled', true );
+			const fn = rcUndo; rcUndo = null; fn();
+		} );
+		$( document ).on( 'click', '#kurs-rc-undo .kurs-undo__x', function () { clearTimeout( rcTimer ); $( '#kurs-rc-undo' ).attr( 'hidden', 'hidden' ); } );
+
+		function removeEventRow( id ) {
+			$( '#event-' + id ).remove();
+			$( '.kurs-half-group' ).each( function () { if ( ! $( this ).find( '.kurs-event-row' ).length ) $( this ).attr( 'hidden', 'hidden' ); } );
+			if ( ! $( '#kurs-events-list .kurs-event-row' ).length ) $( '#no-events-msg' ).show();
+		}
+		function undoEvent( id ) {
+			$.post( url, { action: 'kurs_record_del_event', nonce, event_id: id } ).done( res => {
+				if ( res.success ) { removeEventRow( id ); applyState( res.data ); rcNote( 'Poništeno.' ); }
+				else rcNote( h( res.data && res.data.message ? res.data.message : ( res.data || 'Greška — nije poništeno.' ) ), null, true );
+			} ).fail( () => rcNote( 'Nema veze sa serverom — pokušaj ponovno.', null, true ) );
+		}
+
+		function renderPick() {
+			const who   = PICK.og ? otherWho( PICK.who ) : PICK.who;
+			const color = $( '.kurs-rc-team[data-who="' + PICK.who + '"]' ).css( '--tc' ) || '';
+			const titles = { goal: '⚽ Gol', yellow: '🟨 Žuti karton', red: '🟥 Crveni karton' };
+			$( '#kurs-pick-title' ).html( ( PICK.og ? '⚽ Autogol' : titles[ PICK.act ] ) + ' · <span class="kurs-pick__team"><i style="background:' + h( color.trim() ) + '"></i>' + h( nameFor( PICK.who ) ) + '</span>' );
+			$( '#kurs-pick-sub' ).html( PICK.og
+				? 'Igrač <b>' + h( nameFor( who ) ) + '</b> koji je zabio u svoj gol — gol se piše ekipi ' + h( nameFor( PICK.who ) ) + '.'
+				: ( PICK.act === 'goal' ? 'Tko je zabio?' : 'Kome je pokazan karton?' ) );
+			$( '#kurs-pick-half' ).text( CUR_HALF + '. poluvrijeme' );
+			$( '#kurs-pick-pen' ).prop( 'hidden', PICK.act !== 'goal' || PICK.og );
+			$( '#kurs-pick-og' ).prop( 'hidden', PICK.act !== 'goal' || PICK.og );
+			$( '#kurs-pick-back' ).prop( 'hidden', ! PICK.og );
+			$( '#kurs-pick-err' ).attr( 'hidden', 'hidden' );
+
+			const players = squadFor( who ).filter( p => SENT_OFF.indexOf( parseInt( p.id ) ) === -1 );
+			const $g = $( '#kurs-pick-grid' ).empty();
+			if ( ! players.length ) {
+				$g.append( '<p class="kurs-pick__none">Nema igrača u postavi ove ekipe. Igrače dodaje KURS u roster ekipe (ili ih označi da su igrali u Postavama ispod).</p>' );
+				return;
+			}
+			players.forEach( p => {
+				const y   = PICK.act === 'yellow' && yellowsOf( p.id ) > 0;
+				const num = p.jersey ? `<span class="kurs-pick__num">${p.jersey}</span>` : '';
+				$g.append(
+					`<button type="button" class="kurs-pick__p${y ? ' has-yellow' : ''}${p.jersey ? '' : ' no-num'}" data-id="${p.id}" data-name="${h( p.name )}">` +
+					num + `<span class="kurs-pick__name">${h( p.name )}</span>` +
+					( p.gk ? '<span class="kurs-pick__tag">GK</span>' : '' ) +
+					( y ? '<span class="kurs-pick__y">2. žuti → crveni</span>' : '' ) +
+					`</button>`
+				);
+			} );
+		}
+
+		function openPick( act, who ) {
+			PICK = { act, who, og: false };
+			$( '#kurs-pick-min' ).val( '' );
+			$( '#kurs-pick-pen' ).attr( 'aria-pressed', 'false' ).removeClass( 'is-on' );
+			renderPick();
+			$( '#kurs-pick' ).removeAttr( 'hidden' );
+		}
+		$( document ).on( 'click', '#kurs-pick-og', function () { PICK.og = true; renderPick(); } );
+		$( document ).on( 'click', '#kurs-pick-back', function () { PICK.og = false; renderPick(); } );
+		$( document ).on( 'click', '#kurs-pick-pen', function () {
+			const on = $( this ).attr( 'aria-pressed' ) !== 'true';
+			$( this ).attr( 'aria-pressed', on ? 'true' : 'false' ).toggleClass( 'is-on', on );
 		} );
 
-		// Ukloni zadnji prekršaj (undo misklika)
-		$( document ).on( 'click', '.kurs-prekrsaj-minus', function () {
-			const $modal  = $( '#kurs-modal-prekrsaj' );
-			const team_id = teamIdFor( $( this ).data( 'team' ) );
-			const half    = modalHalf( $modal );
-			$.post( url, { action: 'kurs_record_del_foul', nonce, match_id: MATCH_ID, team_id, half } )
-				.done( res => { if ( res.success ) { applyState( res.data ); refreshPrekrsajModal(); } } );
+		$( document ).on( 'click', '.kurs-pick__p', function () {
+			if ( ! PICK ) return;
+			const $p   = $( this ), pid = parseInt( $p.data( 'id' ) );
+			const who  = PICK.og ? otherWho( PICK.who ) : PICK.who; // autogol: igrač i ekipa koja ga je zabila sebi
+			let type   = 'goal';
+			if ( PICK.act === 'goal' )   type = PICK.og ? 'own_goal' : ( $( '#kurs-pick-pen' ).attr( 'aria-pressed' ) === 'true' ? 'penalty' : 'goal' );
+			if ( PICK.act === 'yellow' ) type = yellowsOf( pid ) > 0 ? 'second_yellow' : 'yellow_card';
+			if ( PICK.act === 'red' )    type = 'red_card';
+			const data = { action: 'kurs_record_add_event', nonce, match_id: MATCH_ID, team_id: teamIdFor( who ), player_id: pid, event_type: type, half: CUR_HALF };
+			const min  = parseInt( $( '#kurs-pick-min' ).val() );
+			if ( min >= 0 ) data.minute = min;
+
+			$( '.kurs-pick__p' ).prop( 'disabled', true );
+			$.post( url, data ).done( res => {
+				if ( ! res.success ) {
+					$( '#kurs-pick-err' ).text( res.data && res.data.message ? res.data.message : ( res.data || 'Greška.' ) ).removeAttr( 'hidden' );
+					return;
+				}
+				const ev = res.data.event;
+				appendMatchEvent( ev );
+				applyState( res.data );
+				closeModal( $( '#kurs-pick' ) );
+				const labels = { goal: '⚽ Gol', penalty: '⚽ Gol (penal)', own_goal: '⚽ Autogol', yellow_card: '🟨 Žuti', second_yellow: '🟨🟥 Drugi žuti — isključen', red_card: '🟥 Crveni' };
+				const score  = ( type === 'goal' || type === 'penalty' || type === 'own_goal' ) ? ' · ' + res.data.home_score + ':' + res.data.away_score : '';
+				rcNote( `<b>${labels[ type ]}</b> — ${h( $p.data( 'name' ) )} (${h( nameFor( who ) )})${score}`, () => undoEvent( ev.id ) );
+			} ).fail( () => {
+				$( '#kurs-pick-err' ).text( 'Nema veze sa serverom — ništa nije spremljeno. Pokušaj ponovno.' ).removeAttr( 'hidden' );
+			} ).always( () => $( '.kurs-pick__p' ).prop( 'disabled', false ) );
 		} );
+
+		function postFoul( who, add ) {
+			const team_id = teamIdFor( who ), half = CUR_HALF;
+			const data = add
+				? { action: 'kurs_record_add_event', nonce, match_id: MATCH_ID, team_id, event_type: 'foul', half }
+				: { action: 'kurs_record_del_foul', nonce, match_id: MATCH_ID, team_id, half };
+			return $.post( url, data ).done( res => {
+				if ( ! res.success ) { rcNote( h( res.data && res.data.message ? res.data.message : ( res.data || 'Greška.' ) ), null, true ); return; }
+				applyState( res.data );
+				const n = foulCount( team_id, half );
+				if ( add ) rcNote( `<b>✋ Prekršaj</b> — ${h( nameFor( who ) )} (${n}. u ${half}. pol.)` + ( n > MAX_FOULS ? ' · <b>penal s 10 m</b>' : '' ), () => postFoul( who, false ) );
+				else rcNote( `Uklonjen prekršaj — ${h( nameFor( who ) )} (sada ${n} u ${half}. pol.)` );
+			} ).fail( () => rcNote( 'Nema veze sa serverom — ništa nije spremljeno.', null, true ) );
+		}
+
+		$( document ).on( 'click', '.kurs-rc-btn, .kurs-rc-foul__minus', function () {
+			const act = $( this ).data( 'act' ), who = $( this ).closest( '.kurs-rc-team' ).data( 'who' );
+			if ( act === 'foul' )       postFoul( who, true );
+			else if ( act === 'foul-minus' ) postFoul( who, false );
+			else openPick( act, who );
+		} );
+
+		if ( $rc.length ) refreshRcFouls();
 
 		// ── Uredi postojeći događaj (otvori modal popunjen) ───────────────────
 		function updateMatchEventRow( ev ) {
@@ -1323,7 +1466,7 @@ jQuery( function ( $ ) {
 				$( '#live-away' ).text( data.away_score );
 				syncFinishScore( data.home_score, data.away_score );
 			}
-			if ( data.foul_counts ) updateFoulsUI( data.foul_counts );
+			if ( data.foul_counts ) { updateFoulsUI( data.foul_counts ); refreshRcFouls(); }
 			if ( data.sent_off ) { SENT_OFF = data.sent_off.map( Number ); refreshOpenModalPlayers(); }
 		}
 
@@ -1343,18 +1486,9 @@ jQuery( function ( $ ) {
 			} );
 		}
 
-		function refreshPrekrsajModal() {
-			const half   = modalHalf( $( '#kurs-modal-prekrsaj' ) );
-			const counts = window.KursFoulCounts || {};
-			[ 'home', 'away' ].forEach( who => {
-				const tid = teamIdFor( who );
-				const tc  = counts[ tid ] || counts[ String( tid ) ] || { 1: 0, 2: 0 };
-				$( '#prekrsaj-cnt-' + who ).text( parseInt( tc[ half ] || tc[ String( half ) ] || 0 ) );
-			} );
-		}
-
 		function refreshOpenModalPlayers() {
-			$( '.kurs-rec-modal:not([hidden])' ).each( function () {
+			if ( PICK && ! $( '#kurs-pick' ).prop( 'hidden' ) ) renderPick();
+			$( '.kurs-rec-modal:not([hidden]):not(#kurs-pick)' ).each( function () {
 				const prefix = $( this ).attr( 'id' ).replace( 'kurs-modal-', '' );
 				if ( prefix === 'gol' || prefix === 'karton' ) fillModalPlayers( prefix, activeWho( $( this ) ) );
 			} );
@@ -1469,11 +1603,11 @@ jQuery( function ( $ ) {
 
 			const html =
 				`<div class="kurs-event-row ${css}" id="event-${ev.id}" data-event-id="${ev.id}" data-half="${half}">` +
-				`<span class="kurs-event__min">${ev.minute}'</span>` +
+				`<span class="kurs-event__min">${ev.minute !== null && ev.minute !== undefined && ev.minute !== '' ? parseInt( ev.minute ) + "'" : '–'}</span>` +
 				`<span class="kurs-event__icon">${icon}</span>` +
 				`<span class="kurs-event__name">${h( ev.player_name || '—' )}${tag}</span>` +
 				`<span class="kurs-event__team">${h( tname )}</span>` +
-				`<button class="kurs-edit-event no-print" title="Uredi" data-event-id="${ev.id}" data-type="${ev.event_type}" data-team-id="${ev.team_id}" data-player-id="${ev.player_id || ''}" data-minute="${ev.minute || ''}" data-half="${half}">&#9998;</button>` +
+				`<button class="kurs-edit-event no-print" title="Uredi" data-event-id="${ev.id}" data-type="${ev.event_type}" data-team-id="${ev.team_id}" data-player-id="${ev.player_id || ''}" data-minute="${ev.minute === null ? '' : ev.minute}" data-half="${half}">&#9998;</button>` +
 				`<button class="kurs-del-event no-print" data-event-id="${ev.id}" title="Obriši">&times;</button>` +
 				`</div>`;
 
@@ -1483,7 +1617,7 @@ jQuery( function ( $ ) {
 			let inserted = false;
 			$container.find( '.kurs-event-row' ).each( function () {
 				const m = parseInt( $( this ).find( '.kurs-event__min' ).text() );
-				if ( ev.minute < m ) { $( this ).before( html ); inserted = true; return false; }
+				if ( ev.minute !== null && ( isNaN( m ) || parseInt( ev.minute ) < m ) ) { $( this ).before( html ); inserted = true; return false; }
 			} );
 			if ( ! inserted ) $container.append( html );
 			$( '#no-events-msg' ).hide();

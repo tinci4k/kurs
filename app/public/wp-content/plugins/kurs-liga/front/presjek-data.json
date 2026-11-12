@@ -1,0 +1,968 @@
+{
+ "as_of": "12. 11. 2026.",
+ "season": "KC liga 2026/2027",
+ "changes": [
+  [
+   "CB Beertija odustala",
+   "KC Liga igra s 9 ekipa."
+  ],
+  [
+   "Gudsport → Knjigovodstveni obrt Doroteja",
+   "Nova ekipa u KC Ligi, roster Gudsporta prenesen i dopunjen."
+  ],
+  [
+   "KURS → ENDURA fit",
+   "Nova ekipa u Ligi bez briga, roster prenesen."
+  ],
+  [
+   "HEP → HEP-ODS",
+   "Ista ekipa, dopunjen naziv."
+  ],
+  [
+   "Raspored",
+   "Službeni raspored: 9 kola subotom, od 14. 11. 2026. do 13. 2. 2027. (72 utakmice)."
+  ]
+ ],
+ "done": [
+  [
+   "Raspored sezone",
+   "Unesen službeni raspored po kolima i satnicama — vidljiv na webu u ligi (Raspored / Po kolima)."
+  ],
+  [
+   "Zapisnik za zapisničare",
+   "Posebna adresa /zapisnik/ i uloga Zapisničar: prijava, popis današnjih i nadolazećih utakmica i zapisnik — bez ulaska u administraciju."
+  ],
+  [
+   "Jednostavniji unos",
+   "Svaka ekipa ima svoju stranu: Gol · Žuti · Crveni · Prekršaj → klik na igrača i odmah je spremljeno; „Poništi” za grešku."
+  ],
+  [
+   "Rezultat odmah na webu",
+   "Kad zapisničar završi utakmicu, rezultat, strijelci i ljestvica odmah su na webu."
+  ],
+  [
+   "PDF zapisnik",
+   "Službeni obrazac na jednoj A4 stranici (i kod puno golova), te prazni obrazac s popisom igrača za ispis."
+  ],
+  [
+   "Profili igrača",
+   "Igrači upisani samo prezimenom dobili su puna imena; stari linkovi i dalje rade."
+  ]
+ ],
+ "teams": [
+  {
+   "id": 22,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "ETM Elektroinstalacije",
+   "prev": "",
+   "status": "updated",
+   "updated": "9. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Mihael Bogčev",
+    "Ivan Brckan",
+    "Davor Cvetanović",
+    "Dinko Job",
+    "Jurica Kolarec",
+    "Matej Loinjak",
+    "Matija Lončar",
+    "Ivan Plahinek",
+    "Vedran Plahinek",
+    "Alan Sminderovac",
+    "Ivan Čolak",
+    "Davor Šamonik",
+    "Ivan Štefanec",
+    "Matija Ščetarić"
+   ],
+   "renamed": [
+    [
+     "Sminderovac",
+     "Alan Sminderovac"
+    ],
+    [
+     "Šamonik",
+     "Davor Šamonik"
+    ],
+    [
+     "Brckan",
+     "Ivan Brckan"
+    ],
+    [
+     "Čolak",
+     "Ivan Čolak"
+    ],
+    [
+     "M. Lončar",
+     "Matija Lončar"
+    ]
+   ],
+   "from": [
+    [
+     "Dinko Job",
+     "Inducta ++"
+    ],
+    [
+     "Matej Loinjak",
+     "CB Beertija"
+    ]
+   ],
+   "new": [
+    "Mihael Bogčev",
+    "Davor Cvetanović",
+    "Jurica Kolarec",
+    "Ivan Plahinek",
+    "Vedran Plahinek",
+    "Ivan Štefanec",
+    "Matija Ščetarić"
+   ],
+   "gone": [
+    "Brcković",
+    "Halusek",
+    "P. Lončar",
+    "Prvčić"
+   ],
+   "moved": [],
+   "note": "Popis ekipe bez brojeva dresova. Halusek, P. Lončar, Brcković i Prvčić nisu na popisu."
+  },
+  {
+   "id": 309,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "Inducta ++",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "Davor Međimorec",
+   "coach": "",
+   "roster": [
+    "Vjekoslav Belobrk",
+    "Petar Belvanović",
+    "Josip Ferlindeš",
+    "Renato Lončarić",
+    "Danijel Marić",
+    "Siniša Muhtić",
+    "Miha Petrović",
+    "Goran Posavec",
+    "Mario Rac",
+    "Ivan Ranilović",
+    "Zlatko Trubarac",
+    "Ivan Šestak"
+   ],
+   "renamed": [
+    [
+     "Marić",
+     "Danijel Marić"
+    ],
+    [
+     "Ranilović",
+     "Ivan Ranilović"
+    ],
+    [
+     "Rac",
+     "Mario Rac"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Vjekoslav Belobrk",
+    "Petar Belvanović",
+    "Josip Ferlindeš",
+    "Renato Lončarić",
+    "Siniša Muhtić",
+    "Miha Petrović",
+    "Goran Posavec",
+    "Zlatko Trubarac",
+    "Ivan Šestak"
+   ],
+   "gone": [
+    "Popijač"
+   ],
+   "moved": [
+    [
+     "Dinko Job",
+     "ETM Elektroinstalacije"
+    ]
+   ],
+   "note": "Ažurirani popis: Petar Belvanović umjesto Dinka Joba (Job igra za ETM). Popijač nije na novom popisu."
+  },
+  {
+   "id": 458,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "Knjigovodstveni obrt Doroteja",
+   "prev": "Gudsport",
+   "status": "updated",
+   "updated": "9. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Igor Balent",
+    "Marko Cvitić",
+    "Ilija Evačić",
+    "Rade Križanović",
+    "Nikola Martinaga",
+    "Zoran Matijaković",
+    "Jano Nichele",
+    "Spomenko Rajić",
+    "Bruno Ritoša",
+    "Nikola Sabolić",
+    "Nikola Srbiš",
+    "Igor Topalović",
+    "Ivan Varga",
+    "Filip Vegh",
+    "Nikola Zvonar"
+   ],
+   "renamed": [
+    [
+     "Ritoša",
+     "Bruno Ritoša"
+    ],
+    [
+     "Varga",
+     "Ivan Varga"
+    ],
+    [
+     "Nichele",
+     "Jano Nichele"
+    ],
+    [
+     "Martinaga",
+     "Nikola Martinaga"
+    ],
+    [
+     "Zvonar",
+     "Nikola Zvonar"
+    ],
+    [
+     "Rajić",
+     "Spomenko Rajić"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Igor Balent",
+    "Ilija Evačić",
+    "Zoran Matijaković",
+    "Nikola Srbiš",
+    "Filip Vegh"
+   ],
+   "gone": [],
+   "moved": [],
+   "note": "Nova ekipa umjesto Gudsporta (prvak 2025/26 ostaje u povijesti pod svojim imenom). Roster Gudsporta prenesen i dopunjen prema popisu; brojevi dresova naknadno."
+  },
+  {
+   "id": 306,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "Robin Marketi",
+   "prev": "",
+   "status": "updated",
+   "updated": "9. 11.",
+   "rep": "Branko Bešenić",
+   "coach": "",
+   "roster": [
+    "Marko Bebek",
+    "Mario Borštnar",
+    "Dinko Držaić",
+    "Matija Furdić",
+    "Nikola Grabar",
+    "Ivan Grgec",
+    "Vedran Harmadi",
+    "Mihael Jagarinec",
+    "Goran Jalšavec",
+    "Marko Matijašec",
+    "Bojan Osman",
+    "Zvonimir Perko",
+    "Ante Slavić"
+   ],
+   "renamed": [
+    [
+     "Držaić",
+     "Dinko Držaić"
+    ],
+    [
+     "Borštnar",
+     "Mario Borštnar"
+    ],
+    [
+     "Grabar",
+     "Nikola Grabar"
+    ],
+    [
+     "Harmadi",
+     "Vedran Harmadi"
+    ],
+    [
+     "Perko",
+     "Zvonimir Perko"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Marko Bebek",
+    "Matija Furdić",
+    "Ivan Grgec",
+    "Mihael Jagarinec",
+    "Goran Jalšavec",
+    "Bojan Osman",
+    "Ante Slavić"
+   ],
+   "gone": [
+    "Hlevnjak"
+   ],
+   "moved": [],
+   "note": "Branko Bešenić upisan kao voditelj ekipe, ne kao igrač. Hlevnjak nije na novom popisu."
+  },
+  {
+   "id": 308,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "ZIP Drnje",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Stjepan Begić",
+    "Dražen Dlaka",
+    "Ivan Fonjak",
+    "Dražen Fusić",
+    "Matijas Ilić",
+    "Željko Kašić",
+    "Alen Kesteli",
+    "Mario Kiridžija",
+    "Mihael Mikšić",
+    "Tomislav Mraz",
+    "Nino Vlah",
+    "Marko Šimunić"
+   ],
+   "renamed": [
+    [
+     "Kesteli",
+     "Alen Kesteli"
+    ],
+    [
+     "Fusić",
+     "Dražen Fusić"
+    ],
+    [
+     "Kiridžija",
+     "Mario Kiridžija"
+    ],
+    [
+     "Šimunić",
+     "Marko Šimunić"
+    ],
+    [
+     "Begić",
+     "Stjepan Begić"
+    ],
+    [
+     "Kašić",
+     "Željko Kašić"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Dražen Dlaka",
+    "Ivan Fonjak",
+    "Matijas Ilić",
+    "Mihael Mikšić",
+    "Tomislav Mraz",
+    "Nino Vlah"
+   ],
+   "gone": [],
+   "moved": [],
+   "note": "Svih šest igrača iz prošle sezone ostaje, dobili su puna imena."
+  },
+  {
+   "id": 14,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "Active Commerce",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Ivandija",
+    "Goran Jagić",
+    "Maronić",
+    "Mesarić",
+    "Mihalec",
+    "S. Mraz",
+    "Zoran Ogrizović",
+    "Radiček",
+    "Topolčić",
+    "Tušek",
+    "Željeznjak"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 307,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "AL Nemčić/Klesarstvo Habek",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Dodik",
+    "Habek",
+    "Kokša",
+    "Dan. Nemčić",
+    "Dr. Nemčić",
+    "Polak"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 9,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "Klikaj.hr / Zona tri",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "Zvonimir Markač",
+   "coach": "Zvonimir Markač",
+   "roster": [
+    "Dukarić",
+    "Fulir",
+    "Gregurić",
+    "M. Kovaček",
+    "T. Kovaček",
+    "Sertić",
+    "Čiković",
+    "Matija Đeno"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 19,
+   "league": "KC Liga",
+   "lg": "kc",
+   "name": "Petgrad",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Blažeković",
+    "Tomislav Celiščak",
+    "Karlo Galinec",
+    "Hrenić",
+    "Kovačić",
+    "Labaš",
+    "Petrović",
+    "Šimunić"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 319,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "193",
+   "prev": "",
+   "status": "updated",
+   "updated": "9. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Marin Balija",
+    "Darko Bečeić",
+    "Luka Brunec",
+    "Tomislav Gregurek",
+    "Mihael Jedvaj",
+    "Ivan Koščak",
+    "Dino Kucukler",
+    "Tin Marijan",
+    "Igor Međimorec",
+    "Alen Panić",
+    "Josip Požgaj",
+    "Erik Setinšek",
+    "Kristijan Sočev",
+    "Marko Sršek",
+    "Petar Vargantolić"
+   ],
+   "renamed": [
+    [
+     "Panić",
+     "Alen Panić"
+    ],
+    [
+     "Bečeić",
+     "Darko Bečeić"
+    ],
+    [
+     "Sočev",
+     "Kristijan Sočev"
+    ],
+    [
+     "Gregurek",
+     "Tomislav Gregurek"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Marin Balija",
+    "Luka Brunec",
+    "Mihael Jedvaj",
+    "Ivan Koščak",
+    "Dino Kucukler",
+    "Tin Marijan",
+    "Igor Međimorec",
+    "Josip Požgaj",
+    "Erik Setinšek",
+    "Marko Sršek",
+    "Petar Vargantolić"
+   ],
+   "gone": [],
+   "moved": [],
+   "note": "Četvorica iz prošle sezone dobila su puna imena, 11 igrača je novo."
+  },
+  {
+   "id": 314,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Profesori OBSKC",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Damir Bebek",
+    "Hrvoje Blažek",
+    "Danijel Džambo",
+    "Mario Kiš",
+    "Tihomir Korošec",
+    "Mario Kovaček",
+    "Zlatko Martić",
+    "Marko Mihaldinec",
+    "Saša Seretin",
+    "Igor Sraček",
+    "Ivan Varga",
+    "Mario Šelek",
+    "Filip Šokec",
+    "Mislav Štrkalj"
+   ],
+   "renamed": [
+    [
+     "Bebek",
+     "Damir Bebek"
+    ],
+    [
+     "Šelek",
+     "Mario Šelek"
+    ],
+    [
+     "Mihaldinec",
+     "Marko Mihaldinec"
+    ],
+    [
+     "Korošec",
+     "Tihomir Korošec"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Hrvoje Blažek",
+    "Danijel Džambo",
+    "Mario Kiš",
+    "Mario Kovaček",
+    "Zlatko Martić",
+    "Saša Seretin",
+    "Igor Sraček",
+    "Ivan Varga",
+    "Filip Šokec",
+    "Mislav Štrkalj"
+   ],
+   "gone": [
+    "Bolteković-Tkalec",
+    "Sedlanić"
+   ],
+   "moved": [],
+   "note": "Bolteković-Tkalec i Sedlanić nisu na novom popisu."
+  },
+  {
+   "id": 318,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Čekićari",
+   "prev": "",
+   "status": "updated",
+   "updated": "12. 11.",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Boris Arko",
+    "Tomislav Barčanec",
+    "Ivan Beg",
+    "Siniša Bošnjak",
+    "Nenad Farkaš",
+    "Dejan Halusek",
+    "Tihomir Henezi",
+    "Marko Kukec",
+    "Dado Lončarek",
+    "Dejan Mihalec",
+    "Ivan Ostriž",
+    "Mario Perković",
+    "Mario Sabol"
+   ],
+   "renamed": [
+    [
+     "Halusek",
+     "Dejan Halusek"
+    ],
+    [
+     "Mihalec",
+     "Dejan Mihalec"
+    ],
+    [
+     "Beg",
+     "Ivan Beg"
+    ],
+    [
+     "Farkaš",
+     "Nenad Farkaš"
+    ],
+    [
+     "Barčanec",
+     "Tomislav Barčanec"
+    ]
+   ],
+   "from": [],
+   "new": [
+    "Boris Arko",
+    "Siniša Bošnjak",
+    "Tihomir Henezi",
+    "Marko Kukec",
+    "Dado Lončarek",
+    "Ivan Ostriž",
+    "Mario Perković",
+    "Mario Sabol"
+   ],
+   "gone": [
+    "Sitar",
+    "Strbat"
+   ],
+   "moved": [],
+   "note": "Popis je stigao bez naziva ekipe — prema igračima prošle sezone to su Čekićari. Sitar i Strbat nisu na novom popisu."
+  },
+  {
+   "id": 312,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Bimbo",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Bebek",
+    "Ištvan",
+    "Kuhar",
+    "G. Ogrizović",
+    "Krešo Škvorc"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 311,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "coARt",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Kolman",
+    "Lovreković",
+    "Martan",
+    "Pakasin",
+    "Puhač",
+    "Suvalj",
+    "Vegh"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 464,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "ENDURA fit",
+   "prev": "KURS",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Barać",
+    "Lukač",
+    "Petak",
+    "G. Petrić",
+    "Žužul"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": "KURS u Ligi bez briga sada nastupa kao ENDURA fit. Roster prenesen iz prošle sezone (KURS) — čekamo popis."
+  },
+  {
+   "id": 317,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Forma Legalis",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Evačić",
+    "Horvat",
+    "Kucel",
+    "Kunštić",
+    "Kurcinak",
+    "Sinjeri",
+    "Zagorščak",
+    "Šimek"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  },
+  {
+   "id": 315,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "HEP-ODS",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Dukarić",
+    "Matišić",
+    "Seretin",
+    "Vencl",
+    "Šimota",
+    "Šurić"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": "Ista ekipa, naziv dopunjen u HEP-ODS (i u povijesti)."
+  },
+  {
+   "id": 313,
+   "league": "Liga bez briga",
+   "lg": "lbb",
+   "name": "Romantičari",
+   "prev": "",
+   "status": "carried",
+   "updated": "",
+   "rep": "",
+   "coach": "",
+   "roster": [
+    "Baruškin",
+    "Gaži",
+    "Kovačević",
+    "Lončarek",
+    "Pintar",
+    "Slivar",
+    "Dejan Vranković"
+   ],
+   "renamed": [],
+   "from": [],
+   "new": [],
+   "gone": [],
+   "moved": [],
+   "note": ""
+  }
+ ],
+ "questions": [
+  {
+   "id": "cek-trener",
+   "team": 318,
+   "q": "Kako se zove trener / selektor Čekićara koji je poslao popis?",
+   "why": "Upisat ćemo ga kao trenera ekipe.",
+   "opts": [],
+   "text": "Ime i prezime",
+   "team_name": "Čekićari"
+  },
+  {
+   "id": "cek-loncarek",
+   "team": 318,
+   "q": "Je li Dado Lončarek isti Lončarek koji je prošle sezone igrao za Romantičare?",
+   "why": "Ako jest, prelazi iz Romantičara u Čekićare (u istoj ligi može biti samo u jednoj ekipi).",
+   "opts": [
+    "Da, prelazi u Čekićare",
+    "Ne, to je druga osoba"
+   ],
+   "team_name": "Čekićari"
+  },
+  {
+   "id": "zip-ilic",
+   "team": 308,
+   "q": "Kako se točno zove Ilić iz ZIP Drnja?",
+   "why": "Na popisu piše „Ilić Matijas”.",
+   "opts": [
+    "Matija Ilić",
+    "Matijas Ilić"
+   ],
+   "team_name": "ZIP Drnje"
+  },
+  {
+   "id": "prof-seretin",
+   "team": 314,
+   "q": "Je li Saša Seretin isti Seretin koji je prošle sezone igrao za HEP-ODS?",
+   "why": "Ako jest, prelazi iz HEP-ODS-a u Profesore.",
+   "opts": [
+    "Da, prelazi u Profesore",
+    "Ne, to je druga osoba"
+   ],
+   "team_name": "Profesori OBSKC"
+  },
+  {
+   "id": "prof-kovacek",
+   "team": 314,
+   "q": "Je li Mario Kovaček (Profesori) isti M. Kovaček koji igra u KC Ligi za Klikaj.hr / Zona tri?",
+   "why": "Za sada su upisani kao dvije osobe.",
+   "opts": [
+    "Da, ista osoba",
+    "Ne, druga osoba"
+   ],
+   "team_name": "Profesori OBSKC"
+  },
+  {
+   "id": "prof-varga",
+   "team": 314,
+   "q": "Je li Ivan Varga (Profesori) isti Ivan Varga koji igra u KC Ligi za Knjigovodstveni obrt Doroteja?",
+   "why": "Za sada su upisani kao dvije osobe.",
+   "opts": [
+    "Da, ista osoba",
+    "Ne, druga osoba"
+   ],
+   "team_name": "Profesori OBSKC"
+  },
+  {
+   "id": "pravilo-dvije-lige",
+   "team": 0,
+   "q": "Smije li isti igrač igrati i u KC Ligi i u Ligi bez briga?",
+   "why": "Sustav to dopušta; pitamo zbog Kovačeka, Varge i Bebeka.",
+   "opts": [
+    "Da, smije",
+    "Ne, samo u jednoj ligi"
+   ],
+   "team_name": "Općenito"
+  },
+  {
+   "id": "prof-bebek-rep",
+   "team": 314,
+   "q": "Upisati li Damira Bebeka kao voditelja (predstavnika) Profesora?",
+   "why": "On je poslao popis.",
+   "opts": [
+    "Da",
+    "Ne, voditelj je netko drugi"
+   ],
+   "text": "Ako netko drugi — ime i prezime",
+   "team_name": "Profesori OBSKC"
+  },
+  {
+   "id": "robin-bebek",
+   "team": 306,
+   "q": "Je li Marko Bebek (Robin Marketi) isti Bebek koji igra za Bimbo u Ligi bez briga?",
+   "why": "Za sada je upisan kao nova osoba.",
+   "opts": [
+    "Da, ista osoba",
+    "Ne, druga osoba"
+   ],
+   "team_name": "Robin Marketi"
+  },
+  {
+   "id": "etm-loinjak",
+   "team": 22,
+   "q": "Je li Matej Loinjak (ETM) isti Loinjak koji je prošle sezone igrao za CB Beertiju?",
+   "why": "Upisan je kao isti igrač — potvrdite ili ispravite.",
+   "opts": [
+    "Da, isti",
+    "Ne, druga osoba"
+   ],
+   "team_name": "ETM Elektroinstalacije"
+  },
+  {
+   "id": "dor-matijakovic",
+   "team": 458,
+   "q": "Igra li Zoran Matijaković sigurno za Knjigovodstveni obrt Doroteja?",
+   "why": "Na popisu je bio „90 %”.",
+   "opts": [
+    "Da, igra",
+    "Ne, maknuti ga"
+   ],
+   "team_name": "Knjigovodstveni obrt Doroteja"
+  },
+  {
+   "id": "ind-popijac",
+   "team": 309,
+   "q": "Popijač je prošle sezone igrao za Inductu, a nije na novom popisu. Ne igra ove sezone?",
+   "why": "Maknut je iz ovosezonskog rostera; u povijesti ostaje.",
+   "opts": [
+    "Točno, ne igra",
+    "Igra, vratite ga"
+   ],
+   "team_name": "Inducta ++"
+  }
+ ]
+}

@@ -2107,31 +2107,8 @@ input.kurs-datepicker {
 input.kurs-datepicker:focus { border-color: var(--ka-red) !important; }
 
 
-/* ══ Zapisnik: akcijski gumbi (GOL / KARTON / PREKRŠAJ) ═════════════════════ */
+/* ══ Zapisnik: akumulirani prekršaji (pregled po poluvremenima) ═════════════ */
 .kurs-record-actions { padding-top: 18px; }
-.kurs-action-btns {
-	display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px;
-}
-.kurs-action-btn {
-	display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
-	min-height: 96px; padding: 16px 10px; border: none; border-radius: 12px; cursor: pointer;
-	font-family: var(--font-cond); transition: transform .08s ease, filter .15s ease;
-}
-.kurs-action-btn:hover  { filter: brightness(1.08); }
-.kurs-action-btn:active { transform: translateY(1px) scale(.99); }
-.kurs-action-btn__ico {
-	display: flex; align-items: center; justify-content: center;
-	width: 36px; height: 36px; border-radius: 50%; font-size: 19px; line-height: 1;
-}
-.kurs-action-btn__lbl {
-	font-weight: 900; font-style: italic; font-size: 18px; letter-spacing: .04em; text-transform: uppercase;
-}
-.kurs-action-btn--gol { background: #DA0F1E; color: #fff; }
-.kurs-action-btn--gol .kurs-action-btn__ico { background: rgba(255,255,255,.22); }
-.kurs-action-btn--karton { background: #111317; color: #fff; border-bottom: 4px solid #FDE206; }
-.kurs-action-btn--karton .kurs-action-btn__ico { background: #FDE206; color: #111317; }
-.kurs-action-btn--prekrsaj { background: #111317; color: #fff; border-bottom: 4px solid #F47B16; }
-.kurs-action-btn--prekrsaj .kurs-action-btn__ico { background: rgba(244,123,22,.22); color: #F47B16; }
 
 /* ── Akumulirani prekršaji (live brojač) ──────────────────────────────────── */
 .kurs-fouls { border: 1.5px solid var(--ka-border); border-radius: 10px; padding: 14px 16px; background: var(--ka-white); }
@@ -2720,4 +2697,142 @@ a.kurs-league-tag:hover { filter: brightness(.95); }
 	.kurs-team-row { grid-template-columns: 40px 1fr auto; }
 	.kurs-team-row__players { display: none; }
 	.kurs-comp-cards { grid-template-columns: 1fr; }
+}
+
+/* ══ Zapisnik — unos po ekipama (#kurs-rc, 1.25.0) ═════════════════════════
+   Svaka ekipa ima svoju stranu: GOL · Žuti · Crveni · Prekršaj. Klik → izbor igrača (#kurs-pick) → spremljeno. */
+.kurs-rc { padding-top: 20px !important; }
+.kurs-rc-half {
+	display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin: 0 0 16px;
+}
+.kurs-rc-half__lbl { font-family: var(--font-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ka-muted); margin-right: 6px; }
+.kurs-rc-half__opt {
+	min-height: 44px; padding: 0 18px; border: 1.5px solid var(--ka-border); border-radius: 22px; background: var(--ka-white); cursor: pointer;
+	font-family: var(--font-cond); font-weight: 800; font-size: 15px; text-transform: uppercase; color: var(--ka-muted);
+}
+.kurs-rc-half__opt.is-active { background: var(--ka-dark); border-color: var(--ka-dark); color: #fff; }
+
+.kurs-rc-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.kurs-rc-team {
+	display: flex; flex-direction: column; gap: 8px; min-width: 0;
+	padding: 12px; border: 1.5px solid var(--ka-border); border-top: 5px solid var(--tc, var(--ka-dark)); border-radius: 12px; background: #fbfbf8;
+}
+.kurs-rc-team__hd { display: flex; align-items: center; gap: 8px; min-width: 0; margin-bottom: 2px; }
+.kurs-rc-team__hd > :first-child { flex: none; }
+.kurs-rc-team__name { font-family: var(--font-cond); font-weight: 800; font-size: 17px; line-height: 1.15; text-transform: uppercase; min-width: 0; overflow-wrap: break-word; }
+.kurs-rc-team__role { margin-left: auto; flex: none; font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; color: var(--ka-muted); }
+
+.kurs-rc-btn {
+	display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+	min-height: 52px; padding: 8px 10px; border: 0; border-radius: 10px; cursor: pointer;
+	font-family: var(--font-cond); font-weight: 900; font-style: italic; font-size: 18px; text-transform: uppercase; letter-spacing: .02em;
+	transition: transform .08s ease, filter .15s ease; -webkit-tap-highlight-color: transparent;
+}
+.kurs-rc-btn:hover { filter: brightness(1.06); }
+.kurs-rc-btn:active { transform: scale(.98); }
+.kurs-rc-btn--goal { min-height: 76px; font-size: 26px; background: var(--ka-green); color: #fff; box-shadow: 0 3px 0 #145a30; }
+.kurs-rc-btn__ico { font-style: normal; font-size: 26px; }
+.kurs-rc-team__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kurs-rc-btn--yellow { background: #fff6b8; color: #5e4a00; border: 1.5px solid #ecd84a; }
+.kurs-rc-btn--red    { background: #fde7e8; color: #a50c17; border: 1.5px solid #f3b4b8; }
+.kurs-rc-card { display: inline-block; width: 13px; height: 18px; border-radius: 2px; transform: rotate(8deg); }
+.kurs-rc-card--y { background: var(--ka-gold); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); }
+.kurs-rc-card--r { background: var(--ka-red); }
+
+.kurs-rc-foul { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; }
+.kurs-rc-btn--foul { min-height: 46px; font-size: 16px; background: var(--ka-dark); color: #fff; box-shadow: inset 0 -3px 0 var(--ka-orange); font-style: normal; }
+.kurs-rc-foul__n {
+	display: flex; align-items: baseline; gap: 2px; min-width: 52px; justify-content: center;
+	padding: 6px 8px; border-radius: 8px; background: #efefe9; font-family: var(--font-cond);
+}
+.kurs-rc-foul__n b { font-size: 22px; font-weight: 900; line-height: 1; }
+.kurs-rc-foul__n small { font-size: 12px; color: var(--ka-muted); }
+.kurs-rc-foul__n.is-warn  { background: #FFF3CD; color: #8a6800; }
+.kurs-rc-foul__n.is-penal { background: var(--ka-red); color: #fff; }
+.kurs-rc-foul__n.is-penal small { color: rgba(255,255,255,.8); }
+.kurs-rc-foul__minus {
+	width: 40px; height: 40px; border: 1.5px solid var(--ka-border); border-radius: 8px; background: var(--ka-white);
+	font-size: 22px; line-height: 1; color: var(--ka-dark); cursor: pointer;
+}
+.kurs-rc-foul__minus:disabled { opacity: .35; cursor: default; }
+.kurs-rc-foul__hint { margin: 0; font-size: 12.5px; font-weight: 600; color: #8a6800; }
+.kurs-rc-foul__hint.is-penal { color: var(--ka-red); }
+.kurs-rc-help { margin: 14px 0 0; font-size: 12.5px; color: var(--ka-muted); text-align: center; }
+
+/* Pregled prekršaja po poluvremenima: u tijeku utakmice samo na ispisu (brojači su na stranama ekipa) */
+@media screen { .kurs-fouls-printonly { display: none; } }
+
+/* Izbor igrača */
+.kurs-pick .kurs-pick__box { width: min(720px, calc(100vw - 24px)); max-width: none; max-height: calc(100vh - 32px); overflow: auto; padding: 18px 20px 20px; }
+.kurs-pick__hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.kurs-pick__title { margin: 0; font-family: var(--font-cond); font-weight: 800; font-size: 21px; text-transform: uppercase; }
+.kurs-pick__team { display: inline-flex; align-items: center; gap: 7px; }
+.kurs-pick__team i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+.kurs-pick__x { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #efefe9; font-size: 24px; line-height: 1; cursor: pointer; }
+.kurs-pick__opts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.kurs-pick__min { display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--ka-muted); }
+.kurs-pick__min input { width: 72px !important; min-height: 40px; padding: 6px 8px; border: 1.5px solid var(--ka-border); border-radius: 8px; font-size: 18px; font-weight: 700; text-align: center; }
+.kurs-pick__half { padding: 6px 10px; border-radius: 14px; background: var(--ka-dark); color: #fff; font-family: var(--font-cond); font-weight: 700; font-size: 13px; text-transform: uppercase; }
+.kurs-pick__chip {
+	min-height: 40px; padding: 0 14px; border: 1.5px solid var(--ka-border); border-radius: 20px; background: var(--ka-white); cursor: pointer;
+	font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--ka-dark);
+}
+.kurs-pick__chip.is-on { background: var(--ka-dark); border-color: var(--ka-dark); color: #fff; }
+.kurs-pick__chip[hidden] { display: none; }
+.kurs-pick__sub { margin: 4px 0 10px; font-size: 13.5px; color: #55575e; }
+.kurs-pick__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 8px; }
+.kurs-pick__p {
+	position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+	min-height: 70px; padding: 10px 8px; border: 1.5px solid var(--ka-border); border-radius: 10px; background: var(--ka-white); cursor: pointer;
+	font-family: var(--font-body); text-align: center; -webkit-tap-highlight-color: transparent;
+}
+.kurs-pick__p:hover { border-color: var(--ka-dark); }
+.kurs-pick__p:active { transform: scale(.97); }
+.kurs-pick__p:disabled { opacity: .5; }
+.kurs-pick__num { font-family: var(--font-cond); font-weight: 900; font-size: 26px; line-height: 1; }
+.kurs-pick__name { font-weight: 600; font-size: 14px; line-height: 1.2; overflow-wrap: anywhere; }
+.kurs-pick__p.no-num .kurs-pick__name { font-size: 15.5px; font-weight: 700; }
+.kurs-pick__tag { position: absolute; top: 4px; left: 6px; font-family: var(--font-mono); font-size: 9px; font-weight: 700; color: #1F7A43; }
+.kurs-pick__p.has-yellow { border-color: #ecd84a; background: #fffbe0; }
+.kurs-pick__y { font-size: 10.5px; font-weight: 700; color: #a50c17; }
+.kurs-pick__none { grid-column: 1 / -1; margin: 6px 0; padding: 14px; border: 1px dashed var(--ka-border); border-radius: 10px; color: var(--ka-muted); font-size: 13.5px; }
+.kurs-pick__extra { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Postava: kvačica „igrao” (klik = nije došao / ipak je igrao) */
+.kurs-sq-check { width: 1%; padding-right: 0 !important; }
+.kurs-sq-tick {
+	display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; margin: 0 !important;
+	border: 0 !important; border-radius: 8px !important; background: var(--ka-green) !important; color: #fff !important;
+	font-size: 17px !important; font-weight: 800; padding: 0 !important; cursor: pointer;
+}
+.kurs-sq-row.is-absent .kurs-sq-tick { background: #e4e4de !important; color: transparent !important; opacity: 1; }
+.kurs-sq-row.is-absent td.kurs-sq-check { opacity: 1; }
+.kurs-sq-cap { white-space: nowrap; }
+
+@media (max-width: 600px) {
+	.kurs-rc-teams { gap: 8px; }
+	.kurs-rc-team { padding: 10px 8px; gap: 7px; }
+	.kurs-rc-team__hd > :first-child { display: none !important; } /* badge: ime ekipe ima prednost */
+	.kurs-rc-team__name { font-size: 14.5px; }
+	.kurs-rc-team__role { display: none; }
+	.kurs-rc-btn--goal { min-height: 68px; font-size: 22px; }
+	.kurs-rc-team__cards { grid-template-columns: 1fr; gap: 7px; }
+	.kurs-rc-btn { min-height: 48px; font-size: 16px; }
+	.kurs-rc-foul { grid-template-columns: 1fr auto; }
+	.kurs-rc-btn--foul { grid-column: 1 / -1; font-size: 15px; }
+	.kurs-rc-foul__n { justify-content: center; }
+	.kurs-rc-half__lbl { width: 100%; text-align: center; margin: 0; }
+	.kurs-rc-half__opt { flex: 1; padding: 0 8px; font-size: 14px; }
+	.kurs-pick .kurs-pick__box { padding: 14px 12px 16px; }
+	.kurs-pick__grid { grid-template-columns: repeat(2, 1fr); }
+	/* Semafor u jednom retku (manje skrolanja do gumbi) */
+	.kurs-record-hero__body { flex-direction: row !important; align-items: flex-start !important; gap: 6px !important; padding: 14px 10px 16px !important; }
+	.kurs-record-hero__team { flex: 1 1 0 !important; min-width: 0; }
+	.kurs-record-hero__team > div:first-child { width: 40px !important; height: 40px !important; font-size: 14px !important; }
+	.kurs-record-hero__team-name { font-size: 13px !important; overflow-wrap: break-word; }
+	.kurs-record-hero__team-role { display: none; }
+	.kurs-record-hero__score { flex: none; }
+	.kurs-record-hero__score-num { font-size: 42px !important; min-width: 28px !important; }
+	.kurs-record-hero__score-sep { font-size: 30px !important; }
+	.kurs-record-hero__meta { justify-content: center; }
 }

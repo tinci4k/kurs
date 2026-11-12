@@ -15,6 +15,10 @@
  *
  * Stranice (Kontakt, O nama, liga stranice) koriste `page` ovlasti i ostaju
  * isključivo administratorske.
+ *
+ * Zapisničar (uloga `kurs_zapisnicar`, 1.24.0) ima samo `read` + `KURS_RECORD_CAP`:
+ * vodi zapisnike na /zapisnik/ (Kurs_Zapisnik) i ne ulazi u wp-admin. Tu ovlast imaju
+ * i administrator i urednik, pa i oni mogu koristiti /zapisnik/.
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -22,7 +26,10 @@ defined( 'ABSPATH' ) || exit;
 class Kurs_Roles {
 
 	/** Verzija sheme ovlasti — povećaj da se grant ponovno primijeni. */
-	const CAPS_VER = 1;
+	const CAPS_VER = 2;
+
+	/** Uloga zapisničara (samo /zapisnik/). */
+	const RECORDER_ROLE = 'kurs_zapisnicar';
 
 	public static function init(): void {
 		add_action( 'init', [ __CLASS__, 'maybe_sync_caps' ] );
@@ -40,17 +47,23 @@ class Kurs_Roles {
 	public static function grant_caps(): void {
 		// Administrator MORA dobiti KURS_CAP — plugin više ne gleda manage_options.
 		$admin = get_role( 'administrator' );
-		if ( $admin && ! $admin->has_cap( KURS_CAP ) ) {
-			$admin->add_cap( KURS_CAP );
+		if ( $admin ) {
+			foreach ( [ KURS_CAP, KURS_RECORD_CAP ] as $cap ) {
+				if ( ! $admin->has_cap( $cap ) ) $admin->add_cap( $cap );
+			}
 		}
 
 		// Urednik = uloga „Author".
 		$author = get_role( 'author' );
 		if ( $author ) {
-			foreach ( [ KURS_CAP, 'edit_others_posts', 'delete_others_posts' ] as $cap ) {
+			foreach ( [ KURS_CAP, KURS_RECORD_CAP, 'edit_others_posts', 'delete_others_posts' ] as $cap ) {
 				$author->add_cap( $cap );
 			}
 		}
+
+		// Zapisničar: samo prijava + zapisnik (bez wp-admina, vijesti i medija).
+		$rec = get_role( self::RECORDER_ROLE ) ?: add_role( self::RECORDER_ROLE, 'Zapisničar', [ 'read' => true ] );
+		if ( $rec && ! $rec->has_cap( KURS_RECORD_CAP ) ) $rec->add_cap( KURS_RECORD_CAP );
 	}
 
 	/**

@@ -63,6 +63,8 @@ Stupci `*_team_id` / `*_player_id` su `wp_posts.ID` CPT-ova `kurs_ekipa`/`kurs_i
 | `utakmica` | `page-utakmica.php` | Detalj utakmice (`?match_id=X`; radi i za playoff mečeve) |
 | `za-medije` | `page-za-medije.php` | Paket rezultata kola za druge portale (HTML/tekst/PNG); `?liga=kc\|pan&season_id=&kolo=` |
 | `o-kurs-u` | `page-o-nama.php` | Statična stranica o udruzi |
+| `zapisnik` | **plugin** `front/zapisnik.php` (`Kurs_Zapisnik`, rewrite, nije WP stranica) | Zapisnik za **zapisničare** (1.24.0): prijava → popis utakmica (čeka rezultat / nadolazeće / nedavno završene) → isti zapisnik kao u adminu (`?match_id=`), bez wp-admina i teme |
+| `presjek` | **plugin** `front/presjek.php` (`Kurs_Presjek`, rewrite, `?k=` ključ ovisan o solima — link iz admin → KURS Liga → Presjek ekipa) | Presjek ekipa i rostera nove sezone za KURS (1.27.0; snimka `front/presjek-data.json`, ne baza) + odgovori na otvorena pitanja u opciji `kurs_presjek_odgovori` — **migracija baze ih pregazi** |
 
 ## Admin (wp-admin → KURS Liga; plugin `admin/class-admin.php` + `admin/views/`)
 Organiziran **po natjecanjima** (od `KURS_VERSION` 1.16.0), sve iza `KURS_CAP`:
@@ -76,7 +78,7 @@ Organiziran **po natjecanjima** (od `KURS_VERSION` 1.16.0), sve iza `KURS_CAP`:
 | `kurs-seasons` | **Sve sezone** — arhiva po natjecanju + „Nova sezona" |
 | `kurs-settings` | **Postavke** — ticker izvan sezone (suci se vode po sezoni: stranica natjecanja → Postavke) |
 
-Skriven je `kurs-match-record` (zapisnik). Linkove/redirecte na stranicu natjecanja gradi
+Skriven je `kurs-match-record` (zapisnik). **Uloga Zapisničar** (`kurs_zapisnicar`, samo `KURS_RECORD_CAP = 'kurs_zapisnik'`) vodi zapisnik na `/zapisnik/` i ne ulazi u wp-admin; AJAX `kurs_record_*` i forme završi/otvori za ispravak traže `KURS_RECORD_CAP` (imaju je i admin i urednik), promjena datuma/kola ostaje na `KURS_CAP`. Unos u zapisniku je **po ekipama** (1.25.0, `#kurs-rc`: svaka ekipa Gol · Žuti · Crveni · Prekršaj, klik na igrača odmah sprema, minuta neobavezna, „Poništi”). PDF zapisnika (`match-record-pdf.php`, 1.26.0) je službeni obrazac na **jednoj A4** (sam se smanji ako ne stane; `&prazni=1` = prazni obrazac s popisom igrača). Linkove/redirecte na stranicu natjecanja gradi
 **`Kurs_Admin::hub_url($season_id, $tab, $args)`** (bira `kurs-kc`/`kurs-pan` po ligi sezone) — ne hardkodiraj
 `page=`. Stari slugovi `kurs-season-setup` / `kurs-matches` / `kurs-roster` (i `kurs-seasons&action=edit`)
 samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
@@ -126,8 +128,8 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
   (bez `PHPRC` CLI ne nađe MySQL port 10011). Demo podaci su **obrisani** (2026-11-02); lokalno su
   **stvarni podaci Pan Ljetne lige 2026** (iz službenih izvještaja; kolo = natjecateljski dan; zaključana), **KC liga 2025/2026**
   (svih 9 kola kao stvarne utakmice — izvještaji s FB stranice KC lige; dio golova 2./3. kola kao preneseni golovi igrača;
-  arhivirana i zaključana) i **početna KC 2026/2027** (ekipe i rosteri prošle sezone — po FB najavi jedna KC ekipa odustaje, LBB 8 ili 9 ekipa; start 14. 11. 2026.,
-  bez rasporeda) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
+  arhivirana i zaključana) i **početna KC 2026/2027** (ekipe i rosteri prošle sezone; Gudsport u KC Ligi zamijenjen novom ekipom „Knjigovodstveni obrt Doroteja” s rosterom bez brojeva, KURS u LBB novom „ENDURA fit”, CB Beertija odustala → KC Liga 9, LBB 9 ekipa; HEP preimenovan u HEP-ODS; start 14. 11. 2026.,
+  službeni raspored 9 kola do 13. 2. 2027. unesen 2026-11-12; rosteri prema popisima ekipa za 8 ekipa — ETM, Inducta, Doroteja, Robin Marketi, ZIP Drnje, 193, Čekićari, Profesori — ostalih 10 preneseno, pregled na `/presjek/`) — demo skriptu ne pokretati jer briše najnoviju KC sezonu.
 - **Local gotcha**: nginx round-robin na **dva php-cgi workera** (10008/10009,
   `fastcgi_read_timeout 1200s`) — ako jedan zapne, **svaki drugi zahtjev visi** → restartaj site u Localu.
 
@@ -141,5 +143,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.23.0` vs
-  `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.44` vs `style.css` 1.0.0.
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.27.0` vs
+  `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.45` vs `style.css` 1.0.0.

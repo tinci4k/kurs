@@ -967,9 +967,10 @@ div.sched-match:hover { box-shadow: none; } /* playoff par bez zapisnika — nij
 }
 .semafor__inner {
   position: relative; padding: 34px;
-  display: flex; align-items: center; justify-content: center; gap: 40px;
+  /* tri stupca: ekipe iste širine, rezultat uvijek u sredini — dugi naziv se lomi u svom stupcu */
+  display: grid; grid-template-columns: minmax(0, 200px) auto minmax(0, 200px); justify-content: center; align-items: start; gap: 40px;
 }
-.semafor__team { text-align: center; width: 200px; }
+.semafor__team { text-align: center; min-width: 0; }
 .semafor__badge {
   width: 76px; height: 76px; border-radius: 8px;
   background: #3a3c42; color: #fff;
@@ -980,9 +981,9 @@ div.sched-match:hover { box-shadow: none; } /* playoff par bez zapisnika — nij
 .semafor__badge img { width: 100%; height: 100%; object-fit: cover; }
 .semafor__name {
   font-family: var(--font-cond); font-weight: 800; font-style: italic;
-  color: #fff; font-size: 22px; text-transform: uppercase;
+  color: #fff; font-size: 22px; line-height: 1.1; text-transform: uppercase; overflow-wrap: break-word;
 }
-.semafor__center { text-align: center; }
+.semafor__center { text-align: center; padding-top: 6px; } /* rezultat u visini grba */
 .semafor__score {
   font-family: var(--font-cond); font-weight: 800; color: #fff;
   font-size: 66px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: 2px;
@@ -1578,10 +1579,14 @@ a.team-banner:hover { box-shadow: 0 6px 20px rgba(0,0,0,.12); }
   .site-nav.is-open .nav-dd a { font-size: 15px; }
   .news-grid { grid-template-columns: 1fr; }
   .kurs-hero__side, .hero__side { flex-direction: column; }
-  .semafor__team { width: 80px; }
-  .semafor__badge { width: 44px; height: 44px; font-size: 16px; }
+  .semafor__inner { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; }
+  .semafor__badge { width: 44px; height: 44px; font-size: 16px; margin-bottom: 8px; }
   .semafor__score { font-size: 36px; }
-  .semafor__name { font-size: 14px; }
+  .semafor__name { font-size: 13.5px; }
+  .semafor__center { padding-top: 2px; }
+  .semafor__status { letter-spacing: 1px; padding: 4px 7px; line-height: 1.5; }
+  .semafor__status > span { display: block; }
+  .semafor__status-sep { display: none !important; }
   .roster-grid { grid-template-columns: 1fr; }
   .hub-tabs { gap: 10px; }
   .player-hero__name { font-size: 30px; }

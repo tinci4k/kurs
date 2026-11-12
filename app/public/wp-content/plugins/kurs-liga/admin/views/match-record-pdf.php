@@ -1,543 +1,391 @@
 <?php
-/* Standalone PDF view — rendered when ?format=pdf */
+/**
+ * Zapisnik za ispis / PDF — uvijek JEDNA A4 stranica (1.26.0). Otvara se s ?format=pdf
+ * (admin: kurs-match-record, /zapisnik/); &prazni=1 = prazan zapisnik s popisom igrača za ručno pisanje.
+ *
+ * Raspored po uzoru na službeni zapisnik: zaglavlje · rezultat (+ poluvrijeme) · dvije tablice ekipa
+ * (br., ime, igrao, golovi, Ž, C) s prekršajima po poluvremenu i voditeljem · kretanje rezultata ·
+ * opomene i isključenja · suci, zapisničar, napomene. Tablice imaju rezervne retke, a ako sadržaj ipak
+ * prijeđe stranicu (npr. 16 igrača i 25 golova), skripta ga razmjerno smanji da stane na A4.
+ *
+ * Iz match-record.php: $match, $match_id, $info, $events, $home_squad, $away_squad, $is_finished,
+ * $disp_home, $disp_away, $is_playoff, $playoff_m, $season_id.
+ */
 defined( 'ABSPATH' ) || exit;
 
-// $match, $match_id, $info, $events, $ev_home, $ev_away,
-// $home_squad, $away_squad, $is_finished, $disp_home, $disp_away
-// are available from parent scope (match-record.php)
+if ( ! function_exists( 'kurs_pdf_surname' ) ) {
+	/** Ime za ćeliju kretanja rezultata: puno ime ako je kratko, inače inicijal + prezime. */
+	function kurs_pdf_surname( string $name ): string {
+		$name = trim( $name );
+		if ( mb_strlen( $name ) <= 14 || ! str_contains( $name, ' ' ) ) return $name;
+		$parts = explode( ' ', $name );
+		return mb_substr( $parts[0], 0, 1 ) . '. ' . implode( ' ', array_slice( $parts, 1 ) );
+	}
+}
 
+$blank   = ! empty( $_GET['prazni'] );
+$home_id = (int) $match->home_team_id;
+$away_id = (int) $match->away_team_id;
 $ts      = $match->match_date ? strtotime( $match->match_date ) : 0;
-$date_hr = $ts ? date( 'j.n.Y', $ts ) : '';
-$time_hr = $ts ? date( 'H:i', $ts )   : '';
 
-$home_badge_html = kurs_team_badge_html( (int) $match->home_team_id, 80 );
-$away_badge_html = kurs_team_badge_html( (int) $match->away_team_id, 80 );
-$home_color      = kurs_team_color( (int) $match->home_team_id );
-$away_color      = kurs_team_color( (int) $match->away_team_id );
+$pdf_season = $season_id ? Kurs_Season::get( $season_id ) : null;
+$max_fouls  = $pdf_season ? max( 1, (int) ( $pdf_season->max_fouls_per_half ?? 5 ) ) : 5;
+$absent     = $blank ? [] : array_map( 'intval', Kurs_Match::get_absent( $match_id ) );
+$fouls      = $blank ? [] : Kurs_Match::get_foul_counts( $match_id );
+$captains   = $blank ? [] : [ $home_id => Kurs_Match::get_match_captain( $match_id, $home_id ), $away_id => Kurs_Match::get_match_captain( $match_id, $away_id ) ];
+$ev_list    = $blank ? [] : $events;
 
-$font_url = 'https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,400;0,700;1,800;1,900&family=Space+Mono&display=swap';
+// Po igraču: golovi (gol + penal), žuti, crveni (drugi žuti = Ž + C)
+$pstat = [];
+foreach ( $ev_list as $e ) {
+	$pid = (int) $e->player_id;
+	if ( ! $pid ) continue;
+	$pstat[ $pid ] ??= [ 'g' => 0, 'y' => 0, 'r' => 0 ];
+	match ( $e->event_type ) {
+		'goal', 'penalty' => $pstat[ $pid ]['g']++,
+		'yellow_card'     => $pstat[ $pid ]['y']++,
+		'second_yellow'   => [ $pstat[ $pid ]['y']++, $pstat[ $pid ]['r']++ ],
+		'red_card'        => $pstat[ $pid ]['r']++,
+		default           => null,
+	};
+}
+
+// Kretanje rezultata (poluvrijeme → minuta → redoslijed unosa) i rezultat na poluvremenu
+$goals = array_values( array_filter( $ev_list, fn( $e ) => in_array( $e->event_type, [ 'goal', 'penalty', 'own_goal' ], true ) ) );
+usort( $goals, fn( $a, $b ) => [ (int) $a->half ?: 1, $a->minute === null ? 999 : (int) $a->minute, (int) $a->id ] <=> [ (int) $b->half ?: 1, $b->minute === null ? 999 : (int) $b->minute, (int) $b->id ] );
+$prog = []; $h = 0; $a = 0; $ht = [ 0, 0 ];
+foreach ( $goals as $g ) {
+	$for_home = ( (int) $g->team_id === $home_id ) !== ( $g->event_type === 'own_goal' );
+	$for_home ? $h++ : $a++;
+	if ( (int) $g->half !== 2 ) $ht = [ $h, $a ];
+	$jersey = '';
+	foreach ( (int) $g->team_id === $home_id ? $home_squad : $away_squad as $sq ) {
+		if ( (int) $sq->player_id === (int) $g->player_id && $sq->jersey_no ) { $jersey = '#' . (int) $sq->jersey_no . ' '; break; }
+	}
+	$prog[] = [
+		'score' => "$h:$a",
+		'who'   => ( $g->minute !== null ? (int) $g->minute . "' " : '' ) . $jersey . kurs_pdf_surname( (string) $g->player_name )
+		           . ( $g->event_type === 'penalty' ? ' (P)' : ( $g->event_type === 'own_goal' ? ' (AG)' : '' ) ),
+	];
+}
+$prog_cells = max( $blank ? 20 : 10, (int) ceil( count( $prog ) / 10 ) * 10 ); // prazni: 2 reda za ručno
+
+// Opomene i isključenja
+$cards = array_values( array_filter( $ev_list, fn( $e ) => in_array( $e->event_type, [ 'yellow_card', 'second_yellow', 'red_card' ], true ) ) );
+usort( $cards, fn( $a, $b ) => [ (int) $a->half ?: 1, $a->minute === null ? 999 : (int) $a->minute, (int) $a->id ] <=> [ (int) $b->half ?: 1, $b->minute === null ? 999 : (int) $b->minute, (int) $b->id ] );
+$card_rows  = max( $blank ? 5 : 3, count( $cards ) );
+$card_label = [ 'yellow_card' => 'Žuti', 'second_yellow' => '2. žuti → crveni', 'red_card' => 'Crveni' ];
+
+// Retci tablica ekipa: isti broj na obje strane, barem 12 (prazni retci za igrače koji nisu u rosteru)
+$squad_rows = max( 12, count( $home_squad ), count( $away_squad ) ) + ( $blank ? 2 : 0 );
+
+$stage = $is_playoff && $playoff_m ? kurs_round_label( null, (string) $playoff_m->round ) : 'Kolo ' . (int) $match->round;
+$comp  = $info ? $info->season_name : '';
+$sub   = $info ? trim( $info->div_name . ( $info->group_name && $info->group_name !== $info->div_name ? ' · ' . $info->group_name : '' ) ) : '';
+if ( ! $info && $is_playoff && $playoff_m ) {
+	global $wpdb;
+	$di   = $wpdb->get_row( $wpdb->prepare( "SELECT d.name AS div_name, s.name AS season_name FROM {$wpdb->prefix}kurs_divisions d JOIN {$wpdb->prefix}kurs_seasons s ON s.id = d.season_id WHERE d.id = %d", $playoff_m->division_id ) );
+	$comp = $di->season_name ?? '';
+	$sub  = $di->div_name ?? '';
+}
+$pens  = $is_playoff && $playoff_m && ! $blank ? Kurs_Playoff::pen_label( $playoff_m ) : '';
+$refs  = $blank ? [ '', '' ] : [ (string) ( $match->referee1 ?? '' ), (string) ( $match->referee2 ?? '' ) ];
+$blank_url = add_query_arg( 'prazni', 1 );
+$full_url  = remove_query_arg( 'prazni' );
+
+$team_block = function ( int $tid, string $name, array $squad, string $role ) use ( $squad_rows, $absent, $pstat, $captains, $fouls, $max_fouls, $blank ) {
+	$coach = kurs_team_coach( $tid );
+	$rep   = kurs_team_rep( $tid );
+	$lead  = $rep['name'] ?? ( $coach['name'] ?? '' );
+	?>
+	<div class="z-team">
+		<h2 class="z-team__h"><span class="z-dot" style="background:<?php echo esc_attr( kurs_team_color( $tid ) ); ?>"></span><?php echo esc_html( $role . ': ' . $name ); ?></h2>
+		<table class="z-tbl z-squad">
+			<thead><tr><th class="c-no">Br.</th><th>Prezime i ime</th><th class="c-ck">&#10003;</th><th class="c-n">Gol</th><th class="c-n">Ž</th><th class="c-n">C</th></tr></thead>
+			<tbody>
+			<?php for ( $i = 0; $i < $squad_rows; $i++ ) :
+				$sq  = $squad[ $i ] ?? null;
+				$pid = $sq ? (int) $sq->player_id : 0;
+				$st  = $pstat[ $pid ] ?? [ 'g' => 0, 'y' => 0, 'r' => 0 ];
+				$tags = [];
+				if ( $sq && kurs_player_type( $pid ) === 'goalkeeper' ) $tags[] = 'GK';
+				if ( $pid && ( $captains[ $tid ] ?? 0 ) === $pid ) $tags[] = 'K';
+			?>
+			<tr<?php echo $sq && ! $blank && in_array( $pid, $absent, true ) ? ' class="is-absent"' : ''; ?>>
+				<td class="c-no"><?php echo $sq && $sq->jersey_no ? (int) $sq->jersey_no : ''; ?></td>
+				<td class="c-name"><?php if ( $sq ) : ?><?php echo esc_html( $sq->player_name ); ?><?php if ( $tags ) : ?> <small>(<?php echo implode( ', ', $tags ); ?>)</small><?php endif; ?><?php endif; ?></td>
+				<td class="c-ck"><?php echo $sq && ! $blank && ! in_array( $pid, $absent, true ) ? '&#10003;' : ''; ?></td>
+				<td class="c-n"><?php echo $st['g'] ?: ''; ?></td>
+				<td class="c-n"><?php echo $st['y'] ? ( $st['y'] > 1 ? $st['y'] . 'Ž' : 'Ž' ) : ''; ?></td>
+				<td class="c-n"><?php echo $st['r'] ? 'C' : ''; ?></td>
+			</tr>
+			<?php endfor; ?>
+			</tbody>
+		</table>
+		<?php foreach ( [ 1, 2 ] as $hh ) :
+			$n = (int) ( $fouls[ $tid ][ $hh ] ?? 0 ); ?>
+		<div class="z-fouls">
+			<span class="z-fouls__l"><?php echo $hh; ?>. pol. – prekršaji</span>
+			<?php for ( $k = 1; $k <= $max_fouls; $k++ ) : ?><span class="z-box<?php echo $k <= $n ? ' is-on' : ''; ?>"><?php echo $k; ?></span><?php endfor; ?>
+			<span class="z-box z-box--pen<?php echo $n > $max_fouls ? ' is-on' : ''; ?>"><?php echo $n > $max_fouls ? '10 m × ' . ( $n - $max_fouls ) : '10 m'; ?></span>
+		</div>
+		<?php endforeach; ?>
+		<div class="z-lines">
+			<div class="z-line"><span>Voditelj ekipe:</span><b><?php echo esc_html( $lead ); ?></b></div>
+			<div class="z-line z-line--sig"><span>potpis</span></div>
+		</div>
+	</div>
+	<?php
+};
 
 header( 'Content-Type: text/html; charset=utf-8' );
 ?><!DOCTYPE html>
 <html lang="hr">
 <head>
 <meta charset="UTF-8">
-<title>Zapisnik — <?php echo esc_html( $match->home_name ); ?> vs <?php echo esc_html( $match->away_name ); ?></title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Zapisnik — <?php echo esc_html( $match->home_name . ' : ' . $match->away_name ); ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="<?php echo esc_url( $font_url ); ?>" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --ink: #111317; --line: #2b2d33; --soft: #e9e9e3; --muted: #6d6f75; --red: #DA0F1E; --orange: #F47B16; --gold: #FDE206; }
+html, body { background: #dcdcd4; }
+body { font-family: 'Barlow Semi Condensed', 'Arial Narrow', Arial, sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-:root {
-	--ka-red:    #DA0F1E;
-	--ka-orange: #F47B16;
-	--ka-yellow: #FDE206;
-	--ka-dark:   #111317;
-	--ka-mid:    #1e2229;
-	--ka-bg:     #F4F4EE;
-	--ka-border: #e0ddd6;
-	--font-cond: 'Barlow Semi Condensed', sans-serif;
-	--font-mono: 'Space Mono', monospace;
-}
+/* Traka s alatima (ne ispisuje se) */
+.z-bar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; background: var(--ink); color: #fff; }
+.z-bar button, .z-bar a { font: 700 13px/1 'Barlow Semi Condensed', sans-serif; text-transform: uppercase; letter-spacing: .04em; padding: 10px 16px; border-radius: 6px; border: 0; cursor: pointer; text-decoration: none; }
+.z-bar .is-primary { background: var(--red); color: #fff; }
+.z-bar .is-ghost { background: rgba(255,255,255,.1); color: #fff; }
+.z-bar__info { margin-left: auto; font-size: 12px; opacity: .65; }
 
-body {
-	background: var(--ka-bg);
-	font-family: var(--font-cond);
-	color: var(--ka-dark);
-	font-size: 13px;
-	-webkit-print-color-adjust: exact;
-	print-color-adjust: exact;
-}
+/* A4 list: 210 × 297 mm, margine 10 mm → sadržaj 190 × 277 mm */
+.z-sheet { width: 210mm; min-height: 297mm; margin: 16px auto 32px; padding: 10mm; background: #fff; box-shadow: 0 4px 24px rgba(0,0,0,.18); }
+#z-fit { width: 190mm; overflow: hidden; }
+#zapisnik-doc { width: 190mm; transform-origin: top left; }
 
-/* ── Stripes ── */
-.pdf-stripes {
-	display: flex;
-	height: 5px;
-}
-.pdf-stripes span { flex: 1; }
+/* Zaglavlje */
+.z-head { display: grid; grid-template-columns: 34mm 1fr 34mm; align-items: center; gap: 4mm; padding-bottom: 2.5mm; border-bottom: 2px solid var(--ink); }
+.z-logo { display: flex; align-items: center; gap: 2mm; }
+.z-logo__s { display: flex; gap: .8mm; }
+.z-logo__s i { display: block; width: 2mm; height: 8mm; transform: skewX(-14deg); }
+.z-logo b { font-weight: 800; font-style: italic; font-size: 20pt; letter-spacing: .02em; }
+.z-title { text-align: center; }
+.z-title__comp { font-weight: 800; font-size: 9pt; letter-spacing: .1em; text-transform: uppercase; color: var(--red); }
+.z-title h1 { font-weight: 800; font-size: 17pt; letter-spacing: .03em; text-transform: uppercase; line-height: 1.05; }
+.z-title__sub { font-weight: 600; font-size: 9.5pt; }
+.z-when { border: 1.5px solid var(--ink); border-radius: 2mm; padding: 1.5mm 2mm; text-align: center; line-height: 1.15; }
+.z-when small { display: block; font-size: 7.5pt; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.z-when b { display: block; font-size: 12pt; font-weight: 800; }
 
-/* ── Hero ── */
-.pdf-hero {
-	background: var(--ka-dark);
-	color: #fff;
-	padding: 32px 40px 28px;
-}
-.pdf-hero__league {
-	font-family: var(--font-mono);
-	font-size: 9px;
-	text-transform: uppercase;
-	letter-spacing: .12em;
-	color: rgba(255,255,255,.45);
-	text-align: center;
-	margin-bottom: 24px;
-}
-.pdf-hero__league-sep { margin: 0 8px; opacity: .4; }
+/* Rezultat */
+.z-score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 4mm; margin: 3mm 0 3.5mm; }
+.z-score__team { display: flex; align-items: center; gap: 2mm; font-weight: 800; font-size: 13pt; line-height: 1.1; }
+.z-score__team--home { justify-content: flex-end; text-align: right; }
+.z-score__box { min-width: 44mm; padding: 1mm 5mm 1.2mm; border: 2px solid var(--ink); border-radius: 2.5mm; text-align: center; }
+.z-score__nums { display: flex; align-items: center; justify-content: center; gap: 3mm; font-weight: 800; font-size: 24pt; line-height: 1.05; }
+.z-score__nums span:not(.z-score__sep) { min-width: 12mm; border-bottom: 1px solid var(--line); }
+.z-score__ht { font-size: 8pt; color: var(--muted); }
+.z-score__ht b { color: var(--ink); }
+.z-dot { display: inline-block; flex: none; width: 3.2mm; height: 3.2mm; border-radius: .8mm; box-shadow: inset 0 0 0 .3mm rgba(0,0,0,.25); margin-right: 1.5mm; vertical-align: -.3mm; }
 
-.pdf-hero__body {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 20px;
-}
-.pdf-hero__team {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 10px;
-	flex: 1;
-}
-.pdf-hero__team-name {
-	font-family: var(--font-cond);
-	font-size: 18px;
-	font-weight: 900;
-	font-style: italic;
-	text-transform: uppercase;
-	text-align: center;
-	line-height: 1.1;
-}
-.pdf-hero__team-role {
-	font-family: var(--font-mono);
-	font-size: 8px;
-	text-transform: uppercase;
-	letter-spacing: .1em;
-	color: rgba(255,255,255,.4);
-}
-.pdf-hero__score {
-	text-align: center;
-	flex: none;
-	width: 190px;   /* fiksna širina → rezultat uvijek horizontalno centriran */
-}
-.pdf-score-nums {
-	font-family: var(--font-cond);
-	font-size: 72px;
-	font-weight: 900;
-	font-style: italic;
-	line-height: 1;
-	display: grid;
-	grid-template-columns: 1fr auto 1fr;
-	align-items: center;
-}
-.pdf-score-nums > span:first-child { text-align: right; }
-.pdf-score-nums > span:last-child  { text-align: left; }
-.pdf-score-sep {
-	color: rgba(255,255,255,.3);
-	font-size: 56px;
-	padding: 0 10px;
-}
-.pdf-status {
-	display: inline-block;
-	margin-top: 8px;
-	padding: 3px 10px;
-	border-radius: 3px;
-	font-family: var(--font-mono);
-	font-size: 9px;
-	letter-spacing: .1em;
-	text-transform: uppercase;
-	font-weight: 700;
-}
-.pdf-status--finished { background: var(--ka-red); color: #fff; }
-.pdf-status--live     { background: var(--ka-orange); color: #fff; }
-.pdf-meta {
-	margin-top: 12px;
-	font-family: var(--font-mono);
-	font-size: 13px;
-	font-weight: 700;
-	color: rgba(255,255,255,.82);
-	text-align: center;
-	letter-spacing: .03em;
-	white-space: nowrap;
-}
-.pdf-meta span { margin: 0 6px; }
-.pdf-meta span.pdf-meta-sep { color: rgba(255,255,255,.35); font-weight: 400; }
+/* Ekipe */
+.z-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.z-team__h { display: flex; align-items: center; font-weight: 800; font-size: 10.5pt; text-transform: uppercase; letter-spacing: .02em; padding-bottom: .8mm; margin-bottom: 1mm; border-bottom: 1.5px solid var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.z-tbl th, .z-tbl td { border: .25mm solid var(--line); padding: 0 1.2mm; height: 5.1mm; font-size: 9.5pt; vertical-align: middle; }
+.z-tbl th { height: 4.4mm; background: var(--soft); font-weight: 700; font-size: 7.5pt; text-transform: uppercase; letter-spacing: .04em; text-align: center; }
+.z-squad .c-no { width: 8mm; text-align: center; font-weight: 800; }
+.z-squad .c-ck { width: 5.5mm; text-align: center; }
+.z-squad .c-n  { width: 7mm; text-align: center; font-weight: 800; }
+.z-squad .c-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-squad .c-name small { font-size: 7pt; color: var(--muted); }
+.z-squad tr.is-absent .c-name { color: #9a9ca2; text-decoration: line-through; }
+.z-fouls { display: flex; align-items: center; gap: .9mm; margin-top: 1.3mm; font-size: 8pt; }
+.z-fouls__l { width: 24mm; }
+.z-box { display: inline-flex; align-items: center; justify-content: center; min-width: 4.6mm; height: 4.6mm; padding: 0 .8mm; border: .25mm solid var(--line); font-size: 7pt; color: var(--muted); }
+.z-box.is-on { background: var(--ink); color: #fff; font-weight: 700; }
+.z-box--pen { min-width: 9mm; }
+.z-box--pen.is-on { background: var(--red); border-color: var(--red); }
+.z-lines { display: grid; grid-template-columns: 1fr 26mm; gap: 3mm; margin-top: 2mm; }
+.z-line { display: flex; align-items: flex-end; gap: 1.5mm; min-height: 5.5mm; border-bottom: .25mm solid var(--line); font-size: 8pt; }
+.z-line > span { flex: none; color: var(--muted); }
+.z-line > b { font-weight: 600; font-size: 9.5pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-line--sig { justify-content: flex-end; }
+.z-line--sig > span { font-size: 6.5pt; }
 
-/* ── Body ── */
-.pdf-body {
-	padding: 28px 40px;
-	display: flex;
-	flex-direction: column;
-	gap: 24px;
-}
-
-/* ── Section ── */
-.pdf-section__title {
-	font-family: var(--font-cond);
-	font-size: 10px;
-	font-weight: 700;
-	font-style: italic;
-	text-transform: uppercase;
-	letter-spacing: .1em;
-	color: var(--ka-red);
-	padding-bottom: 6px;
-	border-bottom: 2px solid var(--ka-red);
-	margin-bottom: 10px;
-}
-
-/* ── Events ── */
-.pdf-events { display: flex; flex-direction: column; gap: 3px; }
-.pdf-event {
-	display: grid;
-	grid-template-columns: 36px 24px 1fr 120px;
-	gap: 6px;
-	align-items: center;
-	padding: 5px 8px;
-	border-radius: 4px;
-	font-size: 12px;
-}
-.pdf-event--home { background: rgba(30,88,200,.08); border-left: 3px solid #1e58c8; }
-.pdf-event--away { background: rgba(218,15,30,.06); border-left: 3px solid var(--ka-red); }
-.pdf-event__min  { font-family: var(--font-mono); font-size: 10px; color: rgba(0,0,0,.4); }
-.pdf-event__name { font-weight: 700; font-style: italic; }
-.pdf-event__team { font-family: var(--font-mono); font-size: 9px; color: rgba(0,0,0,.4); text-align: right; }
-.pdf-event__og   { color: var(--ka-red); font-size: 9px; font-style: normal; }
-.pdf-half__title {
-	font-family: var(--font-mono);
-	font-size: 9px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: .08em;
-	color: rgba(0,0,0,.45);
-	margin: 12px 0 6px;
-}
-.pdf-half__title:first-child { margin-top: 0; }
-
-/* ── Squads ── */
-.pdf-squads { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.pdf-squad-table { width: 100%; border-collapse: collapse; }
-.pdf-squad-table tr { border-bottom: 1px solid var(--ka-border); }
-.pdf-squad-table td { padding: 5px 4px; font-size: 12px; }
-.pdf-squad-table td:first-child {
-	width: 32px;
-	font-family: var(--font-mono);
-	font-size: 10px;
-	font-weight: 700;
-	background: var(--ka-dark);
-	color: #fff;
-	text-align: center;
-	border-radius: 3px;
-}
-.pdf-squad__head {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 8px;
-}
-.pdf-squad__name {
-	font-size: 13px;
-	font-weight: 900;
-	font-style: italic;
-	text-transform: uppercase;
-}
-.pdf-squads > div { display: flex; flex-direction: column; }
-.pdf-officials {
-	order: 9;
-	font-family: var(--font-mono);
-	font-size: 9px;
-	color: rgba(0,0,0,.55);
-	line-height: 1.5;
-	margin: 8px 0 0;
-	padding-top: 7px;
-	border-top: 1px dashed var(--ka-border);
-}
-.pdf-officials strong { color: var(--ka-dark); font-weight: 700; }
-.pdf-refs { padding: 0 40px; margin: 0 0 14px; font-family: var(--font-mono); font-size: 11px; color: rgba(0,0,0,.6); }
-.pdf-refs__label { font-weight: 700; color: var(--ka-dark); }
-
-/* ── Signatures ── */
-.pdf-sigs {
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 20px;
-	margin-top: 12px;
-}
-.pdf-sig__label {
-	font-family: var(--font-mono);
-	font-size: 9px;
-	color: rgba(0,0,0,.4);
-	text-transform: uppercase;
-	letter-spacing: .08em;
-	margin-bottom: 28px;
-}
-.pdf-sig__line { border-bottom: 1.5px solid var(--ka-dark); }
-
-/* ── Footer ── */
-.pdf-footer {
-	border-top: 1px solid var(--ka-border);
-	padding: 10px 40px;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-.pdf-footer__brand {
-	font-family: var(--font-cond);
-	font-size: 11px;
-	font-weight: 900;
-	font-style: italic;
-	text-transform: uppercase;
-	color: var(--ka-dark);
-	letter-spacing: .05em;
-}
-.pdf-footer__note {
-	font-family: var(--font-mono);
-	font-size: 8px;
-	color: rgba(0,0,0,.35);
-}
-
-/* Alatna traka + A4 pretpregled na ekranu */
-.pdf-toolbar { position: sticky; top: 0; z-index: 10; display: flex; gap: 10px; align-items: center; justify-content: center; padding: 12px; background: #111317; }
-.pdf-toolbar button { font-family: var(--font-cond); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; padding: 9px 16px; border-radius: 6px; border: none; cursor: pointer; }
-.pdf-tb--primary { background: var(--ka-red); color: #fff; }
-.pdf-tb--ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.3); }
-.pdf-toolbar button[disabled] { opacity: .5; cursor: default; }
-#zapisnik-doc { width: 794px; max-width: 100%; margin: 24px auto; background: #fff; box-shadow: 0 6px 30px rgba(0,0,0,.18); }
-@media (max-width: 840px) { #zapisnik-doc { width: 100%; margin: 0; } }
+/* Sekcije */
+.z-sec { margin-top: 3.5mm; }
+.z-sec__h { font-weight: 800; font-size: 9.5pt; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 1mm; }
+.z-prog { display: grid; grid-template-columns: repeat(10, 1fr); border-top: .25mm solid var(--line); border-left: .25mm solid var(--line); }
+.z-prog > div { height: 9.5mm; padding: .6mm .5mm; border-right: .25mm solid var(--line); border-bottom: .25mm solid var(--line); text-align: center; overflow: hidden; }
+.z-prog b { display: block; font-size: 11pt; font-weight: 800; line-height: 1.1; }
+.z-prog small { display: block; font-size: 6.3pt; line-height: 1.1; color: #44464c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-cards .c-min { width: 11mm; text-align: center; }
+.z-cards .c-team { width: 44mm; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-cards .c-no { width: 9mm; text-align: center; font-weight: 800; }
+.z-cards .c-card { width: 32mm; text-align: center; font-weight: 700; }
+.z-cards td.c-pl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.z-officials { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5mm; margin-top: 3.5mm; }
+.z-notes { height: 13mm; border: .25mm solid var(--line); }
+.z-foot { margin-top: 2.5mm; padding-top: 1.2mm; border-top: .25mm solid #b9b9b2; font-size: 7pt; color: var(--muted); text-align: center; line-height: 1.3; }
 
 @media print {
-	body { background: white; }
-	@page { margin: 0; size: A4; }
-	.pdf-hero { background: var(--ka-dark) !important; -webkit-print-color-adjust: exact; }
-	.pdf-toolbar { display: none !important; }
-	#zapisnik-doc { width: auto; margin: 0; box-shadow: none; max-width: none; }
+	@page { size: A4 portrait; margin: 10mm; }
+	html, body { background: #fff; }
+	.z-bar { display: none !important; }
+	.z-sheet { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+}
+@media screen and (max-width: 820px) {
+	.z-sheet { margin: 0; transform-origin: top left; }
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script>
-window.addEventListener('load', function () {
-	var btn = document.getElementById('pdf-download');
-	if ( ! btn ) return;
-	btn.addEventListener('click', function () {
-		var el = document.getElementById('zapisnik-doc');
-		if ( ! el || typeof html2canvas === 'undefined' || ! window.jspdf ) {
-			alert('PDF biblioteka nije učitana (provjeri internet). Koristi „Ispiši" pa „Spremi kao PDF".');
-			return;
-		}
-		btn.disabled = true; var old = btn.textContent; btn.textContent = 'Generiram…';
-		html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true }).then(function (canvas) {
-			var img  = canvas.toDataURL('image/jpeg', 0.95);
-			var pdf  = new window.jspdf.jsPDF('p', 'mm', 'a4');
-			var pw   = pdf.internal.pageSize.getWidth();
-			var ph   = pdf.internal.pageSize.getHeight();
-			var imgH = canvas.height * pw / canvas.width;
-			var left = imgH, pos = 0;
-			pdf.addImage(img, 'JPEG', 0, pos, pw, imgH);
-			left -= ph;
-			while ( left > 0 ) { pos = left - imgH; pdf.addPage(); pdf.addImage(img, 'JPEG', 0, pos, pw, imgH); left -= ph; }
-			pdf.save('zapisnik-<?php echo (int) $match_id; ?>.pdf');
-			btn.disabled = false; btn.textContent = old;
-		}).catch(function () {
-			alert('Greška pri generiranju PDF-a. Koristi „Ispiši" kao zamjenu.');
-			btn.disabled = false; btn.textContent = old;
-		});
-	});
-});
-</script>
 </head>
 <body>
 
-<div class="pdf-toolbar no-print">
-	<button type="button" id="pdf-download" class="pdf-tb--primary">&#11015; Preuzmi PDF</button>
-	<button type="button" onclick="window.print()" class="pdf-tb--ghost">&#128424; Ispiši</button>
-	<button type="button" onclick="window.close()" class="pdf-tb--ghost">Zatvori</button>
+<div class="z-bar">
+	<button type="button" class="is-primary" onclick="window.print()">&#128424; Ispiši</button>
+	<button type="button" class="is-ghost" id="pdf-download">&#11015; Preuzmi PDF</button>
+	<?php if ( $blank ) : ?>
+	<a class="is-ghost" href="<?php echo esc_url( $full_url ); ?>">Popunjeni zapisnik</a>
+	<?php else : ?>
+	<a class="is-ghost" href="<?php echo esc_url( $blank_url ); ?>">Prazni zapisnik</a>
+	<?php endif; ?>
+	<span class="z-bar__info">A4 · uspravno · jedna stranica</span>
 </div>
 
+<div class="z-sheet" id="z-sheet">
+<div id="z-fit">
 <div id="zapisnik-doc">
 
-<!-- Stripes -->
-<div class="pdf-stripes">
-	<span style="background:#DA0F1E;"></span>
-	<span style="background:#F47B16;"></span>
-	<span style="background:#FDE206;"></span>
-</div>
-
-<!-- Hero -->
-<div class="pdf-hero">
-	<?php if ( $info ) : ?>
-	<div class="pdf-hero__league">
-		<?php echo esc_html( $info->season_name ); ?>
-		<span class="pdf-hero__league-sep">/</span>
-		<?php echo esc_html( $info->div_name ); ?>
-		<span class="pdf-hero__league-sep">/</span>
-		<?php echo esc_html( $info->group_name ); ?>
-	</div>
-	<?php endif; ?>
-
-	<div class="pdf-hero__body">
-		<div class="pdf-hero__team">
-			<?php echo kurs_team_badge_html( (int) $match->home_team_id, 80 ); ?>
-			<div class="pdf-hero__team-name"><?php echo esc_html( $match->home_name ); ?></div>
-			<div class="pdf-hero__team-role">Domaćin</div>
+	<header class="z-head">
+		<div class="z-logo">
+			<span class="z-logo__s"><i style="background:#DA0F1E"></i><i style="background:#F47B16"></i><i style="background:#FDE206"></i></span>
+			<b>KURS</b>
 		</div>
-
-		<div class="pdf-hero__score">
-			<div class="pdf-score-nums">
-				<span><?php echo $disp_home; ?></span>
-				<span class="pdf-score-sep">:</span>
-				<span><?php echo $disp_away; ?></span>
-			</div>
-			<div class="pdf-status <?php echo $is_finished ? 'pdf-status--finished' : 'pdf-status--live'; ?>">
-				<?php echo $is_finished ? '✓ Završeno' : '● U tijeku'; ?>
-			</div>
-			<?php if ( $date_hr ) : ?>
-			<div class="pdf-meta">
-				<span><?php echo esc_html( $date_hr ); ?></span>
-				<span class="pdf-meta-sep">·</span>
-				<span><?php echo esc_html( $time_hr ); ?></span>
-				<span class="pdf-meta-sep">·</span>
-				<span>Kolo <?php echo (int) $match->round; ?></span>
-			</div>
-			<?php endif; ?>
+		<div class="z-title">
+			<div class="z-title__comp"><?php echo esc_html( $comp ); ?></div>
+			<h1>Zapisnik utakmice</h1>
+			<div class="z-title__sub"><?php echo esc_html( trim( $sub . ' · ' . $stage, ' ·' ) ); ?></div>
 		</div>
-
-		<div class="pdf-hero__team">
-			<?php echo kurs_team_badge_html( (int) $match->away_team_id, 80 ); ?>
-			<div class="pdf-hero__team-name"><?php echo esc_html( $match->away_name ); ?></div>
-			<div class="pdf-hero__team-role">Gost</div>
+		<div class="z-when">
+			<small>Datum i sat</small>
+			<b><?php echo $ts ? esc_html( date( 'j. n. Y.', $ts ) ) : '&nbsp;'; ?></b>
+			<?php echo $ts ? esc_html( 'u ' . date( 'H:i', $ts ) ) : ''; ?>
 		</div>
-	</div>
-</div>
+	</header>
 
-<div class="pdf-body">
-
-	<?php
-	// Golovi i kartoni — razdvojeni po vrsti i poluvremenu (prekršaji se ne prikazuju)
-	$pdf_icons  = [ 'goal' => '⚽', 'penalty' => '⚽', 'own_goal' => '⚽', 'yellow_card' => '🟨', 'second_yellow' => '🟨🟥', 'red_card' => '🟥' ];
-	$pdf_tags   = [ 'penalty' => '(P)', 'own_goal' => '(AG)', 'second_yellow' => '(2Ž)' ];
-	$goal_types = [ 'goal', 'penalty', 'own_goal' ];
-	$card_types = [ 'yellow_card', 'second_yellow', 'red_card' ];
-	$pdf_goals  = array_filter( $events, fn( $e ) => in_array( $e->event_type, $goal_types, true ) );
-	$pdf_cards  = array_filter( $events, fn( $e ) => in_array( $e->event_type, $card_types, true ) );
-
-	$render_half_events = function ( $list ) use ( $match, $pdf_icons, $pdf_tags ) {
-		$by_half = [ 1 => [], 2 => [] ];
-		foreach ( $list as $e ) { $by_half[ ( (int) $e->half === 2 ) ? 2 : 1 ][] = $e; }
-		foreach ( [ 1 => '1. poluvrijeme', 2 => '2. poluvrijeme' ] as $hh => $hlabel ) {
-			if ( empty( $by_half[ $hh ] ) ) continue;
-			echo '<div class="pdf-half__title">' . $hlabel . '</div>';
-			echo '<div class="pdf-events">';
-			foreach ( $by_half[ $hh ] as $ev ) {
-				$is_home = (int) $ev->team_id === (int) $match->home_team_id;
-				$icon    = $pdf_icons[ $ev->event_type ] ?? '⚽';
-				$tag     = $pdf_tags[ $ev->event_type ] ?? '';
-				?>
-				<div class="pdf-event <?php echo $is_home ? 'pdf-event--home' : 'pdf-event--away'; ?>">
-					<span class="pdf-event__min"><?php echo $ev->minute !== null ? (int) $ev->minute . "'" : '–'; ?></span>
-					<span><?php echo $icon; ?></span>
-					<span class="pdf-event__name">
-						<?php echo esc_html( $ev->player_name ?: '—' ); ?>
-						<?php if ( $tag ) : ?><span class="pdf-event__og"><?php echo $tag; ?></span><?php endif; ?>
-					</span>
-					<span class="pdf-event__team"><?php echo esc_html( $is_home ? $match->home_name : $match->away_name ); ?></span>
-				</div>
-				<?php
-			}
-			echo '</div>';
-		}
-	};
-	?>
-
-	<!-- Golovi -->
-	<div>
-		<div class="pdf-section__title">Golovi</div>
-		<?php if ( empty( $pdf_goals ) ) : ?>
-		<p style="color:rgba(0,0,0,.4);font-style:italic;font-size:12px;">Nema evidentiranih golova.</p>
-		<?php else : $render_half_events( $pdf_goals ); endif; ?>
+	<div class="z-score">
+		<div class="z-score__team z-score__team--home"><?php echo esc_html( $match->home_name ); ?><span class="z-dot" style="background:<?php echo esc_attr( kurs_team_color( $home_id ) ); ?>;margin:0 0 0 1.5mm"></span></div>
+		<div class="z-score__box">
+			<div class="z-score__nums"><span><?php echo $blank ? '&nbsp;' : (int) $disp_home; ?></span><span class="z-score__sep">:</span><span><?php echo $blank ? '&nbsp;' : (int) $disp_away; ?></span></div>
+			<div class="z-score__ht">Poluvrijeme <b><?php echo $blank ? '___ : ___' : $ht[0] . ' : ' . $ht[1]; ?></b><?php echo $pens ? ' · penali <b>' . esc_html( $pens ) . '</b>' : ''; ?><?php echo ! $blank && ! $is_finished ? ' · <b>u tijeku</b>' : ''; ?></div>
+		</div>
+		<div class="z-score__team"><span class="z-dot" style="background:<?php echo esc_attr( kurs_team_color( $away_id ) ); ?>"></span><?php echo esc_html( $match->away_name ); ?></div>
 	</div>
 
-	<!-- Kartoni -->
-	<div>
-		<div class="pdf-section__title">Kartoni</div>
-		<?php if ( empty( $pdf_cards ) ) : ?>
-		<p style="color:rgba(0,0,0,.4);font-style:italic;font-size:12px;">Nema evidentiranih kartona.</p>
-		<?php else : $render_half_events( $pdf_cards ); endif; ?>
+	<div class="z-teams">
+		<?php $team_block( $home_id, $match->home_name, $home_squad, 'Domaćin' ); ?>
+		<?php $team_block( $away_id, $match->away_name, $away_squad, 'Gost' ); ?>
 	</div>
 
-	<!-- Postave -->
-	<div>
-		<div class="pdf-section__title">Postave</div>
-		<div class="pdf-squads">
-			<div>
-				<div class="pdf-squad__head">
-					<?php echo kurs_team_badge_html( (int) $match->home_team_id, 22 ); ?>
-					<span class="pdf-squad__name"><?php echo esc_html( $match->home_name ); ?></span>
-				</div>
-				<?php $coach_h = kurs_team_coach( (int) $match->home_team_id ); $rep_h = kurs_team_rep( (int) $match->home_team_id ); ?>
-				<?php if ( $coach_h || $rep_h ) : ?>
-				<div class="pdf-officials">
-					<?php if ( $coach_h ) : ?>Trener: <strong><?php echo esc_html( $coach_h['name'] ); ?></strong><?php if ( $coach_h['phone'] ) echo ' · ' . esc_html( $coach_h['phone'] ); ?><br><?php endif; ?>
-					<?php if ( $rep_h ) : ?>Predstavnik: <strong><?php echo esc_html( $rep_h['name'] ); ?></strong><?php if ( $rep_h['phone'] ) echo ' · ' . esc_html( $rep_h['phone'] ); ?><?php endif; ?>
-				</div>
-				<?php endif; ?>
-				<?php if ( empty( $home_squad ) ) : ?>
-				<p style="color:rgba(0,0,0,.4);font-size:11px;font-style:italic;">Nema prijavljenih igrača.</p>
-				<?php else : ?>
-				<table class="pdf-squad-table">
-					<?php foreach ( $home_squad as $sq ) : ?>
-					<tr>
-						<td><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></td>
-						<td><?php echo esc_html( $sq->player_name ); ?></td>
-					</tr>
-					<?php endforeach; ?>
-				</table>
-				<?php endif; ?>
-			</div>
-			<div>
-				<div class="pdf-squad__head">
-					<?php echo kurs_team_badge_html( (int) $match->away_team_id, 22 ); ?>
-					<span class="pdf-squad__name"><?php echo esc_html( $match->away_name ); ?></span>
-				</div>
-				<?php $coach_a = kurs_team_coach( (int) $match->away_team_id ); $rep_a = kurs_team_rep( (int) $match->away_team_id ); ?>
-				<?php if ( $coach_a || $rep_a ) : ?>
-				<div class="pdf-officials">
-					<?php if ( $coach_a ) : ?>Trener: <strong><?php echo esc_html( $coach_a['name'] ); ?></strong><?php if ( $coach_a['phone'] ) echo ' · ' . esc_html( $coach_a['phone'] ); ?><br><?php endif; ?>
-					<?php if ( $rep_a ) : ?>Predstavnik: <strong><?php echo esc_html( $rep_a['name'] ); ?></strong><?php if ( $rep_a['phone'] ) echo ' · ' . esc_html( $rep_a['phone'] ); ?><?php endif; ?>
-				</div>
-				<?php endif; ?>
-				<?php if ( empty( $away_squad ) ) : ?>
-				<p style="color:rgba(0,0,0,.4);font-size:11px;font-style:italic;">Nema prijavljenih igrača.</p>
-				<?php else : ?>
-				<table class="pdf-squad-table">
-					<?php foreach ( $away_squad as $sq ) : ?>
-					<tr>
-						<td><?php echo $sq->jersey_no ? (int) $sq->jersey_no : '—'; ?></td>
-						<td><?php echo esc_html( $sq->player_name ); ?></td>
-					</tr>
-					<?php endforeach; ?>
-				</table>
-				<?php endif; ?>
-			</div>
+	<section class="z-sec">
+		<h3 class="z-sec__h">Kretanje rezultata</h3>
+		<div class="z-prog">
+			<?php for ( $i = 0; $i < $prog_cells; $i++ ) : $p = $prog[ $i ] ?? null; ?>
+			<div><?php if ( $p ) : ?><b><?php echo esc_html( $p['score'] ); ?></b><small><?php echo esc_html( $p['who'] ); ?></small><?php endif; ?></div>
+			<?php endfor; ?>
 		</div>
+	</section>
+
+	<section class="z-sec">
+		<h3 class="z-sec__h">Opomene i isključenja</h3>
+		<table class="z-tbl z-cards">
+			<thead><tr><th class="c-min">Min.</th><th class="c-team">Ekipa</th><th class="c-no">Br.</th><th>Igrač</th><th class="c-card">Karton</th></tr></thead>
+			<tbody>
+			<?php for ( $i = 0; $i < $card_rows; $i++ ) :
+				$c  = $cards[ $i ] ?? null;
+				$no = '';
+				if ( $c ) foreach ( (int) $c->team_id === $home_id ? $home_squad : $away_squad as $sq ) {
+					if ( (int) $sq->player_id === (int) $c->player_id ) { $no = $sq->jersey_no ? (int) $sq->jersey_no : ''; break; }
+				}
+			?>
+			<tr>
+				<td class="c-min"><?php echo $c && $c->minute !== null ? (int) $c->minute . "'" : ( $c ? ( (int) $c->half === 2 ? '2. p.' : '1. p.' ) : '' ); ?></td>
+				<td class="c-team"><?php echo $c ? esc_html( (int) $c->team_id === $home_id ? $match->home_name : $match->away_name ) : ''; ?></td>
+				<td class="c-no"><?php echo $no; ?></td>
+				<td class="c-pl"><?php echo $c ? esc_html( (string) $c->player_name ) : ''; ?></td>
+				<td class="c-card"><?php echo $c ? esc_html( $card_label[ $c->event_type ] ?? '' ) : ''; ?></td>
+			</tr>
+			<?php endfor; ?>
+			</tbody>
+		</table>
+	</section>
+
+	<div class="z-officials">
+		<div class="z-line"><span>Sudac:</span><b><?php echo esc_html( $refs[0] ); ?></b></div>
+		<div class="z-line"><span>Sudac:</span><b><?php echo esc_html( $refs[1] ); ?></b></div>
+		<div class="z-line"><span>Zapisničar:</span><b></b></div>
 	</div>
 
-	<!-- Suci -->
-	<?php $pdf_refs = array_filter( [ $match->referee1 ?? '', $match->referee2 ?? '' ] ); ?>
-	<?php if ( $pdf_refs ) : ?>
-	<div class="pdf-refs"><span class="pdf-refs__label">Suci:</span> <?php echo esc_html( implode( ' · ', $pdf_refs ) ); ?></div>
-	<?php endif; ?>
+	<section class="z-sec">
+		<h3 class="z-sec__h">Napomene</h3>
+		<div class="z-notes"></div>
+	</section>
 
-	<!-- Potpisi -->
-	<div class="pdf-sigs">
-		<div>
-			<div class="pdf-sig__label">Potpis domaćin</div>
-			<div class="pdf-sig__line"></div>
-		</div>
-		<div>
-			<div class="pdf-sig__label">Sudac</div>
-			<div class="pdf-sig__line"></div>
-		</div>
-		<div>
-			<div class="pdf-sig__label">Potpis gost</div>
-			<div class="pdf-sig__line"></div>
-		</div>
-	</div>
-
-</div>
-
-<div class="pdf-footer">
-	<div class="pdf-footer__brand">KURS Liga · Koprivnica</div>
-	<div class="pdf-footer__note">Generirano <?php echo date_i18n( 'j.n.Y. \u H:i' ); ?></div>
-</div>
+	<footer class="z-foot">
+		KURS — Koprivnička udruga za rekreativni sport · Akumulirani prekršaj: od <?php echo (int) $max_fouls + 1; ?>. prekršaja u poluvremenu izvodi se s 10 m.
+		<?php if ( ! $blank ) : ?>· Ispisano <?php echo esc_html( date_i18n( 'j. n. Y. \u H:i' ) ); ?><?php endif; ?>
+	</footer>
 
 </div><!-- /#zapisnik-doc -->
+</div>
+</div>
 
+<script>
+/* Jedna A4 stranica: sadržaj je složen za 190 × 277 mm; ako ga ima više (puno igrača, golova, kartona),
+   razmjerno se smanji (scale) da stane — i na ispisu i u preuzetom PDF-u. */
+( function () {
+	var doc = document.getElementById( 'zapisnik-doc' );
+	function mm( n ) { return n * 96 / 25.4; }
+	var box = document.getElementById( 'z-fit' );
+	function fit() {
+		doc.style.transform = ''; doc.style.width = ''; box.style.height = '';
+		var h = doc.scrollHeight, max = mm( 277 ) - 2, s = 1;
+		if ( h > max ) {
+			s = Math.floor( max / h * 1000 ) / 1000;
+			doc.style.width = ( 190 / s ) + 'mm';            // šire pa smanji → stane i po širini
+			h = doc.scrollHeight;
+			s = Math.min( s, Math.floor( max / h * 1000 ) / 1000 );
+			doc.style.transform = 'scale(' + s + ')';
+			box.style.height = Math.ceil( h * s ) + 'px';
+		}
+		doc.setAttribute( 'data-fit', String( s ) );
+	}
+	window.kursFit = fit;
+	if ( document.fonts && document.fonts.ready ) document.fonts.ready.then( fit ); else window.addEventListener( 'load', fit );
+	fit();
+	window.addEventListener( 'beforeprint', fit );
+
+	var btn = document.getElementById( 'pdf-download' );
+	btn.addEventListener( 'click', function () {
+		if ( typeof html2canvas === 'undefined' || ! window.jspdf ) { alert( 'PDF se ne može izraditi (provjeri internet). Klikni „Ispiši” i odaberi „Spremi kao PDF”.' ); return; }
+		var old = btn.textContent; btn.disabled = true; btn.textContent = 'Izrađujem…';
+		html2canvas( document.getElementById( 'z-sheet' ), { scale: 2, backgroundColor: '#ffffff', useCORS: true } ).then( function ( canvas ) {
+			var pdf = new window.jspdf.jsPDF( 'p', 'mm', 'a4' ), pw = 210, ph = 297;
+			var w = pw, h = canvas.height * pw / canvas.width;
+			if ( h > ph ) { h = ph; w = canvas.width * ph / canvas.height; } // uvijek jedna stranica
+			pdf.addImage( canvas.toDataURL( 'image/jpeg', 0.92 ), 'JPEG', ( pw - w ) / 2, 0, w, h );
+			pdf.save( 'zapisnik-<?php echo esc_js( sanitize_title( $match->home_name . '-' . $match->away_name ) ); ?>.pdf' );
+		} ).catch( function () {
+			alert( 'PDF nije izrađen. Klikni „Ispiši” i odaberi „Spremi kao PDF”.' );
+		} ).then( function () { btn.disabled = false; btn.textContent = old; } );
+	} );
+} )();
+</script>
 </body>
 </html>

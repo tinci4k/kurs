@@ -23,7 +23,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.23.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
+| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.27.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
 | `includes/class-database.php` | Sve 10 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.14'`, migracije (`maybe_upgrade()`) |
 | `includes/class-cpt.php` | CPT-ovi `kurs_ekipa` (slug `ekipe`) i `kurs_igrac` (slug `igraci`) |
 | `includes/class-players.php` | `Kurs_Players` (1.19.0) — registar igrača: duplikati istog imena, zbroj nastupa/golova, ekipe u aktivnim sezonama, **spajanje** i brisanje igrača |
@@ -32,7 +32,9 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 | `includes/class-playoff.php` | `Kurs_Playoff` — playoff bracket (generate/seeding/advance/reset) |
 | `includes/class-rounds.php` | **NOVO 2026-10-16** — `Kurs_Rounds`: pregled po kolima (rezultati sa strijelcima, ljestvica i strijelci nakon N. kola) |
 | `includes/class-ticker.php` | `Kurs_Ticker` — live ticker za header (transient, `kurs_data_changed`) |
-| `includes/class-roles.php` | `Kurs_Roles` — ovlast `KURS_CAP` za urednike (Author) |
+| `includes/class-roles.php` | `Kurs_Roles` — ovlast `KURS_CAP` za urednike (Author) + uloga **Zapisničar** (`KURS_RECORD_CAP`) |
+| `includes/class-zapisnik.php` + `front/zapisnik.{php,css}` | **1.24.0** — `Kurs_Zapisnik`: stranica **`/zapisnik/`** za zapisničare (prijava, popis utakmica, isti zapisnik kao u adminu, bez wp-admina) |
+| `includes/class-presjek.php` + `front/presjek.{php,css,js,-data.json}` | **1.27.0** — `Kurs_Presjek`: **`/presjek/?k=…`** presjek ekipa i rostera za KURS (snimka u JSON-u) + odgovori na otvorena pitanja (opcija `kurs_presjek_odgovori`, admin → Presjek ekipa) |
 | `includes/helpers.php` | Prezentacijski helperi (`kurs_team_color/_text_color/_badge_html`, `kurs_league_icon`, **`kurs_league_url`**…) + dijeljeni renderi (`kurs_render_standings`, `kurs_render_playoff_bracket`, **`kurs_render_round_results/_scorers`**) |
 | `admin/class-admin.php` | `Kurs_Admin` — sav admin: meni (`HUBS`), **`hub_url()`** (linkovi na stranicu natjecanja), preusmjeravanje starih slugova (`redirect_legacy_pages`), asseti, POST forme (`handle_forms`), AJAX (s guardovima za ekipe), `compute_score()` |
 | `admin/assets/admin.css` / `admin.js` | Admin stilovi (~2750 lin., sekcija „STRANICA NATJECANJA") i JS (flatpickr, AJAX interakcije, `assignTeam`/`markPool`) |
@@ -43,7 +45,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `functions.php` | `KURSKC_VERSION='1.0.44'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
+| `functions.php` | `KURSKC_VERSION='1.0.45'`, theme supports, auto-kreiranje stranica (uklj. `za-medije`), uvjetni require plugin `helpers.php`, `kurs_time_ago()` |
 | `style.css` | Samo theme header (Version 1.0.0 — nedosljedno s functions.php) |
 | `inc/post-types.php` | Registrira SAMO CPT `vijest` + taksonomiju `vijest_kategorija` |
 | `inc/enqueue.php` | Google Fonts + `kurskc-main` CSS/JS |
@@ -156,4 +158,4 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 ---
 
-*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.23.0` vs DB `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.44` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*
+*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.27.0` vs DB `DB_VERSION=1.14`; tema `KURSKC_VERSION=1.0.45` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*

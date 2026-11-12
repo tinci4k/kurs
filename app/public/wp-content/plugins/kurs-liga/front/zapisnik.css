@@ -1,0 +1,139 @@
+/* KURS — /zapisnik/ (Kurs_Zapisnik): samostalna stranica za zapisničare.
+   Zapisnik utakmice dolazi iz admin.css (.kurs-record-*); ovdje su okvir, prijava i popis utakmica. */
+
+:root {
+	--ka-red: #DA0F1E; --ka-dark: #111317; --ka-bg: #F4F4EE; --ka-white: #fff; --ka-border: #e2e2da;
+	--ka-muted: #8a8a84; --ka-orange: #F47B16; --ka-gold: #FDE206; --ka-green: #1F7A43;
+	--font-body: 'Barlow', -apple-system, sans-serif;
+	--font-cond: 'Barlow Semi Condensed', -apple-system, sans-serif;
+	--font-mono: 'Space Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body.kz-body {
+	margin: 0; min-height: 100vh; background: var(--ka-bg); color: var(--ka-dark);
+	font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+}
+.kz-body a { color: inherit; }
+.kz-body button, .kz-body input, .kz-body select, .kz-body textarea { font-family: inherit; font-size: inherit; }
+[hidden] { display: none !important; }
+
+/* ── Gornja traka ─────────────────────────────────────────────────────────── */
+.kz-bar {
+	position: sticky; top: 0; z-index: 50;
+	display: flex; align-items: center; justify-content: space-between; gap: 12px;
+	padding: 10px 20px; background: var(--ka-dark); color: #fff;
+}
+.kz-bar__brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
+.kz-bar__stripes { display: flex; gap: 3px; }
+.kz-bar__stripes i { display: block; width: 6px; height: 24px; transform: skewX(-14deg); }
+.kz-bar__stripes i:nth-child(1) { background: var(--ka-red); }
+.kz-bar__stripes i:nth-child(2) { background: var(--ka-orange); }
+.kz-bar__stripes i:nth-child(3) { background: var(--ka-gold); }
+.kz-bar__name { font-family: var(--font-cond); font-weight: 800; font-style: italic; font-size: 22px; letter-spacing: .02em; }
+.kz-bar__app {
+	font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+	padding: 3px 8px; border: 1px solid rgba(255,255,255,.3); border-radius: 4px;
+}
+.kz-bar__user { display: flex; align-items: center; gap: 16px; font-size: 14px; }
+.kz-bar__who { opacity: .7; }
+.kz-bar__user a { color: #fff; text-decoration: none; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,.35); }
+.kz-bar__user a:hover { border-color: #fff; }
+
+/* ── Sadržaj ──────────────────────────────────────────────────────────────── */
+.kz-main { max-width: 880px; margin: 0 auto; padding: 24px 20px 64px; }
+.kz-body--record .kz-main { max-width: 920px; }
+.kz-body--record .kurs-wrap { margin: 0 auto; }
+
+.kz-h1 {
+	font-family: var(--font-cond); font-weight: 800; font-style: italic; text-transform: uppercase;
+	font-size: 30px; line-height: 1; margin: 6px 0 8px;
+}
+.kz-lead { color: #4a4a46; margin: 0 0 22px; }
+.kz-h2 {
+	display: flex; align-items: center; gap: 8px;
+	font-family: var(--font-cond); font-weight: 800; text-transform: uppercase; font-size: 19px; margin: 0 0 4px;
+}
+.kz-count {
+	display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px;
+	border-radius: 12px; background: var(--ka-red); color: #fff; font-size: 13px; font-style: normal;
+}
+.kz-hint { color: var(--ka-muted); font-size: 14px; margin: 0 0 10px; }
+.kz-empty { color: var(--ka-muted); background: #fff; border: 1px dashed var(--ka-border); border-radius: 10px; padding: 18px; margin: 8px 0 0; }
+.kz-small { font-size: 14px; color: var(--ka-muted); margin: 14px 0 0; }
+
+.kz-sec { margin: 0 0 30px; }
+.kz-sec--late { background: #fff4f4; border: 1px solid #f0b7bb; border-radius: 12px; padding: 16px; }
+.kz-sec--late .kz-h2 { color: var(--ka-red); }
+.kz-day {
+	font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+	color: var(--ka-muted); margin: 18px 0 8px;
+}
+.kz-day.is-today { color: var(--ka-red); }
+
+/* Utakmica = velika kartica za prst */
+.kz-match {
+	display: grid; grid-template-columns: 92px 1fr auto; align-items: center; gap: 14px;
+	min-height: 64px; padding: 12px 16px; margin: 0 0 8px;
+	background: #fff; border: 1px solid var(--ka-border); border-radius: 10px;
+	text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s;
+}
+.kz-match:hover, .kz-match:focus-visible { border-color: var(--ka-dark); box-shadow: 0 2px 10px rgba(0,0,0,.07); outline: none; }
+.kz-match__time { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
+.kz-match--late .kz-match__time, .kz-match--done .kz-match__time { font-size: 12px; font-weight: 400; color: var(--ka-muted); text-transform: uppercase; }
+.kz-match__teams {
+	display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px;
+	font-family: var(--font-cond); font-weight: 700; font-size: 18px; line-height: 1.2;
+}
+.kz-match__vs { color: var(--ka-muted); font-weight: 600; }
+.kz-match--done .kz-match__vs { color: var(--ka-dark); font-weight: 800; font-style: italic; }
+.kz-match__meta { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-family: var(--font-mono); font-size: 11px; color: var(--ka-muted); }
+.kz-match__go {
+	white-space: nowrap; padding: 9px 14px; border-radius: 8px;
+	background: var(--ka-dark); color: #fff; font-family: var(--font-cond); font-weight: 700; font-size: 15px; text-transform: uppercase;
+}
+.kz-match--late .kz-match__go { background: var(--ka-red); }
+.kz-match--done .kz-match__go { background: transparent; color: var(--ka-dark); border: 1px solid var(--ka-border); }
+
+/* ── Kartice: prijava / bez ovlasti ───────────────────────────────────────── */
+.kz-card { max-width: 440px; margin: 40px auto; background: #fff; border: 1px solid var(--ka-border); border-radius: 14px; padding: 28px; }
+.kz-login form p { margin: 0 0 14px; }
+.kz-login label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 5px; }
+.kz-login input.input {
+	width: 100%; padding: 12px 14px; border: 1px solid #cfcfc6; border-radius: 8px; background: #fff; font-size: 17px;
+}
+.kz-login input.input:focus { border-color: var(--ka-dark); outline: 2px solid rgba(17,19,23,.15); }
+.kz-login .login-remember label { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.kz-login .login-remember input { width: 18px; height: 18px; }
+.kz-login #wp-submit, .kz-btn {
+	display: inline-block; width: 100%; padding: 13px 18px; border: 0; border-radius: 8px; cursor: pointer; text-align: center;
+	background: var(--ka-red); color: #fff; font-family: var(--font-cond); font-weight: 800; font-size: 18px; text-transform: uppercase; text-decoration: none;
+}
+.kz-login #wp-submit:hover, .kz-btn:hover { filter: brightness(.94); }
+
+/* ── Mobitel ──────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+	.kz-bar { padding: 8px 14px; }
+	.kz-bar__app, .kz-bar__who { display: none; }
+	.kz-main { padding: 18px 14px 56px; }
+	.kz-h1 { font-size: 26px; }
+	.kz-match { grid-template-columns: 1fr auto; gap: 6px 12px; padding: 12px 14px; }
+	.kz-match__time { grid-column: 1 / -1; }
+	.kz-match__go { padding: 9px 12px; font-size: 14px; }
+	.kz-sec--late { padding: 12px; }
+	.kz-card { margin: 18px auto; padding: 22px 18px; }
+	/* iPhone ne zumira polja s barem 16 px */
+	.kz-body .kurs-ref-input, .kz-body .kurs-rec-modal input[type="number"], .kz-body .kurs-rec-modal input[type="text"], .kz-body .kurs-rec-modal select, .kz-body .kurs-lineup-add__sel { font-size: 16px; }
+	.kz-body .kurs-ref-input { padding: 10px 12px; }
+	.kz-body .kurs-rec-modal select, .kz-body .kurs-rec-modal input[type="number"], .kz-body .kurs-rec-modal input[type="text"] { min-height: 44px; padding: 8px 10px; }
+}
+
+@media print {
+	.kz-bar { display: none !important; }
+	body.kz-body { background: #fff; }
+	.kz-main { max-width: none; padding: 0; }
+}
+
+/* Traka „Poništi” — na /zapisnik/ nema WP izbornika, pa je na sredini */
+.kz-body .kurs-undo { left: 50%; }

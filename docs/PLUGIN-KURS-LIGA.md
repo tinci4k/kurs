@@ -22,11 +22,12 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.23.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.27.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
 | `KURS_CAP` | `'manage_kurs_liga'` | Ovlast za cijelu KURS administraciju (admin + uloga Author, vidi `Kurs_Roles`) |
+| `KURS_RECORD_CAP` | `'kurs_zapisnik'` | **1.24.0** — vođenje zapisnika (stranica `/zapisnik/` + AJAX/forme zapisnika); admin, Author i uloga **Zapisničar** (`kurs_zapisnicar`) |
 
 **Redoslijed učitavanja** (`require_once`):
 1. `includes/class-database.php`
@@ -39,11 +40,14 @@ Definirane konstante:
 8. `includes/class-ticker.php`
 9. `includes/class-rounds.php` — **NOVO 2026-10-16** (`Kurs_Rounds`, pregled po kolima)
 10. `includes/class-roles.php`
+11. `includes/class-zapisnik.php` — **1.24.0** (`Kurs_Zapisnik`, stranica `/zapisnik/` za zapisničare)
 
 **Inicijalizacija:**
 - `new Kurs_CPT();` — registrira CPT-ove (kuka se na `init`).
 - `Kurs_Ticker::init()` — na `kurs_data_changed` briše transient tickera.
-- `Kurs_Roles::init()` — sinkronizira ovlasti (`KURS_CAP` za Author) i skriva menije urednicima.
+- `Kurs_Roles::init()` — sinkronizira ovlasti (`KURS_CAP` za Author, `KURS_RECORD_CAP` za admina/Author, uloga Zapisničar; `CAPS_VER` 2) i skriva menije urednicima.
+- `Kurs_Zapisnik::init()` — rewrite `/zapisnik/`, prikaz na `template_redirect`, zapisničar izvan wp-admina (vidi §Zapisnik za zapisničare).
+- `Kurs_Presjek::init()` — rewrite `/presjek/`, presjek ekipa za KURS s odgovorima na pitanja + admin podstranica „Presjek ekipa” (vidi §Presjek ekipa).
 - `add_action('plugins_loaded', ['Kurs_Database','maybe_upgrade'])` — provjera/migracija DB sheme pri svakom učitavanju.
 - `if (is_admin()) { require admin/class-admin.php; new Kurs_Admin(); }` — admin sloj se učitava **samo u wp-adminu**.
 - `register_activation_hook` × 3 — `Kurs_Database::install()` (kreira tablice), registracija CPT-ova + `flush_rewrite_rules()`, `Kurs_Roles::grant_caps`.
@@ -65,7 +69,8 @@ Definirane konstante:
 │   ├─ Kurs_Playoff ── bracket, seeding, napredovanje
 │   ├─ Kurs_Rounds  ── pregled po kolima (read-only: rezultati, ljestvica i strijelci nakon N. kola)
 │   ├─ Kurs_Ticker  ── live ticker za header (transient cache)
-│   ├─ Kurs_Roles   ── ovlast KURS_CAP za urednike
+│   ├─ Kurs_Roles   ── ovlast KURS_CAP za urednike + uloga Zapisničar (KURS_RECORD_CAP)
+│   ├─ Kurs_Zapisnik ── /zapisnik/: popis utakmica + zapisnik izvan wp-admina (1.24.0)
 │   └─ helpers.php   ── prezentacijski helperi + dijeljeni front-end renderi
 │
 ├─ CPT sloj
@@ -95,7 +100,8 @@ kurs-liga/
 │   ├── class-players.php            — Kurs_Players (registar igrača: duplikati, spajanje, brisanje) — 1.19.0
 │   ├── class-rounds.php             — Kurs_Rounds (pregled po kolima) — NOVO 2026-10-16
 │   ├── class-ticker.php             — Kurs_Ticker (live ticker za header)
-│   ├── class-roles.php              — Kurs_Roles (KURS_CAP za urednike)
+│   ├── class-roles.php              — Kurs_Roles (KURS_CAP za urednike, uloga Zapisničar)
+│   ├── class-zapisnik.php           — Kurs_Zapisnik (/zapisnik/ za zapisničare) — 1.24.0
 │   └── helpers.php                  — boje/badge/ikone + dijeljeni front-end renderi (ljestvica, bracket, kolo…)
 └── admin/
     ├── class-admin.php              — Kurs_Admin (~46 KB: meni, HUBS/hub_url, legacy redirecti, POST, AJAX, asseti)
@@ -671,7 +677,15 @@ Svaka: `check_ajax_referer('kurs_ajax','nonce')` + `KURS_CAP`. Greške dodjele e
 **`match-record.php`** (zapisnik, `kurs-match-record`) — zahtijeva `?match_id=`. `Kurs_Match::get`. **Playoff meč se detektira po `group_id === 0`** (`$is_playoff`) i vuče info iz playoff tablice (`Kurs_Playoff::find_by_match_id`); obični mečevi JOIN-om dohvaćaju group/phase/division/season. Računa `division_id`/`season_id` + squad domaćina i gosta (`get_squad`). Ako `?format=pdf` → `include match-record-pdf.php; exit`. **Povratni link** (1.16.0) vodi na karticu Utakmice natjecanja — `hub_url($season_id, 'utakmice', ['group_id'] | ['playoff_div'])` s labelom „← <naziv sezone> · Utakmice"; izbornik pritom ostaje otvoren i označava natjecanje (filteri `parent_file`/`submenu_file`, §5.2a).
 Sadržaj: **Hero scoreboard** (badge + rezultat; nezavršeno → live `$ev_home/$ev_away` iz eventa, završeno → spremljeni score; status "U TIJEKU"/"ZAVRŠENO"); **Uredi datum/sat/kolo** (`<details>` → `#btn-save-match-info` → `kurs_update_match`); **Golovi/eventi** (lista `get_events`; nezavršeno → forma "Dodaj" ekipa/igrač/tip/minuta → `#btn-add-event` → `kurs_record_add_event` + brisanje `.kurs-del-event` → `kurs_record_del_event`; tipovi `goal/own_goal/yellow_card/red_card`); **Postave** (squad tablice); **Zaključi utakmicu** (nonce `kurs_finish_match`, action `finish_match`, `from_record=1`; rezultat default `readonly` auto-računat, toggle "Ručni unos" `#finish-manual-toggle`; završeno → status + "Otključaj za ispravke" `reopen_match`); **Potpisi** (print-only: domaćin/sudac/gost). Na dnu `<script>` postavlja `window.Kurs*` (squad JSON, team id, imena, `KursMatchId`, `KursPdfUrl`). Topbar: "Ispiši" (`window.print()`), "Preuzmi PDF" (`#btn-download-pdf` → `?format=pdf` u novom prozoru).
 
-**`match-record-pdf.php`** — standalone print/PDF view, uključen iz match-record.php kad `?format=pdf`. Naslijeđuje varijable parent scope-a (`$match`, `$events`, `$home_squad`...). Šalje vlastiti `Content-Type: text/html`, kompletan `<!DOCTYPE html>` s ugrađenim CSS-om (vlastiti `:root` tokeni, `@page { margin:0; size:A4 }`), Google Fonts. `window.onload → setTimeout(window.print, 400)`. Sadrži stripes, hero scoreboard, golove, postave, prostor za potpise, footer "KURS Liga · Koprivnica" + datum. **Nema server-side PDF generacije** — oslanja se na browserov print-to-PDF.
+**Unos u zapisniku po ekipama (1.25.0, `#kurs-rc`)** — korisnik je tražio da zapisnik bude „kao u Pan Zimskoj ligi”: svaka ekipa svoja strana, kod gola se ne bira ekipa, maksimalno jednostavno. Zamijenjeni su gumbi GOL/KARTON/PREKRŠAJ + modali s izborom ekipe:
+- Gore **Poluvrijeme** (`.kurs-rc-half__opt`, `CUR_HALF`; početno = poluvrijeme zadnjeg događaja). Ispod dvije strane `.kurs-rc-team[data-who][data-team]` (traka u boji ekipe `--tc`; preblijeda boja → siva) s gumbima **Gol** (veliki, zeleni) · **Žuti** · **Crveni** · **Prekršaj** + brojač prekršaja tog poluvremena (`n / limit`, žuto na limitu, crveno = penal 10 m) i `−` (undo zadnjeg prekršaja). Na mobitelu dvije strane ostaju jedna do druge.
+- Gol/Žuti/Crveni → **izbor igrača** `#kurs-pick` (pločice s brojem dresa ako postoji + ime; bez odsutnih i isključenih) — **klik na igrača odmah sprema** (`kurs_record_add_event`). Minuta je **neobavezna** (prazno = `NULL`, prikaz „–”), poluvrijeme iz gornjeg odabira. Kod gola: „Penal” (`penalty`) i „Autogol protivnika” (popis igrača druge ekipe, `own_goal` s `team_id` igračeve ekipe). Žuti igraču koji već ima žuti = automatski `second_yellow` (pločica označena „2. žuti → crveni”).
+- Prekršaj = jedan klik (`foul` u `CUR_HALF`). Nakon svakog unosa traka `#kurs-rc-undo` (`.kurs-undo`) s **„Poništi”** (12 s): događaj → `kurs_record_del_event`, prekršaj → `kurs_record_del_foul`.
+- Stari modali `#kurs-modal-gol` / `#kurs-modal-karton` ostaju samo za **✎ Uredi** u popisu događaja (minuta i tamo neobavezna); modal prekršaja je uklonjen. Pregled prekršaja po poluvremenima (`#kurs-fouls`) vidi se samo kod završene utakmice i na ispisu (`.kurs-fouls-printonly`).
+- **Postave:** zelena kvačica na početku retka (`.kurs-sq-tick`, ista klasa `kurs-sq-absent` → `kurs_record_set_absent`) = igrao / klik = nije došao; „★ Kapetan” tekstualni gumb.
+- `ajax_record_add_event` vraća `minute: null` kad minuta nije upisana. Nazivi ekipa lome se iza „/” (`$wbr_name`), na mobitelu je semafor u jednom retku.
+
+**`match-record-pdf.php`** — zapisnik za ispis/PDF, **uvijek jedna A4 stranica** (1.26.0; uključen iz match-record.php kad `?format=pdf`, i na `/zapisnik/`). Korisnik je tražio da svaki zapisnik stane na jednu A4 „i kad bude 10 golova”; raspored je po uzoru na službeni zapisnik Pan Zimske lige: zaglavlje (KURS · natjecanje · „Zapisnik utakmice” · liga/kolo · datum i sat) → rezultat s poluvremenom (playoff: penali) → **dvije tablice ekipa** (Br. · Prezime i ime (GK, K) · ✓ igrao · Gol · Ž · C; isti broj redaka, barem 12; odsutni precrtani) s prekršajima po poluvremenu (kućice 1…limit + „10 m × n”) i voditeljem ekipe (predstavnik, inače trener) + potpis → **Kretanje rezultata** (ćelije po 10 u redu: rezultat + minuta, broj, ime, (P)/(AG); redova koliko treba) → **Opomene i isključenja** (barem 3 retka) → suci · zapisničar → napomene → podnožje s pravilom akumuliranog prekršaja. CSS u mm (`.z-sheet` 210×297, sadržaj 190×277, `@page { size: A4; margin: 10mm }`); skripta `fit()` (na učitavanje, fontove i `beforeprint`) sadržaj koji ipak prijeđe 277 mm razmjerno smanji (`transform: scale` + visina `#z-fit`) — provjereno: 26 golova, 10 kartona i 17 igrača po ekipi = jedna stranica (scale 0,94). **`&prazni=1`** = prazan zapisnik s popisom igrača za ručno pisanje (+2 retka po ekipi, 20 ćelija rezultata, 5 redaka kartona). „Preuzmi PDF” = html2canvas + jsPDF, slika uvijek na jednoj A4 stranici; „Ispiši” = ispis preglednika.
 
 ### 5.7 `admin.js` — ključne interakcije
 
@@ -751,3 +765,30 @@ Opće postavke (ticker izvan sezone) su u **KURS Liga → Postavke** (`kurs-sett
 
 **Neusklađenost s `CLAUDE.md` (povijesno — ✅ CLAUDE.md ispravljen 2026-06-22, dopunjen 2026-10-16):**
 - `CLAUDE.md` je ranije opisivao **temu** `kurskc` (CPT-ovi `momcad`/`utakmica`/`vijest`, taksonomije `liga`/`sezona`). Plugin `kurs-liga` je **odvojen model podataka**: vlastiti CPT-ovi `kurs_ekipa`/`kurs_igrac` i vlastite DB tablice (ne taksonomije) za sezone/divizije/utakmice. Dva odvojena sloja istog projekta.
+
+---
+
+## Zapisnik za zapisničare — `/zapisnik/` (1.24.0)
+
+Zapisničari vode zapisnik bez ulaska u wp-admin. Korisnik je tražio „samo `/zapisnik` s popisom nadolazećih utakmica" i posebnu WP ulogu.
+
+- **Uloga `kurs_zapisnicar` („Zapisničar”)** (`Kurs_Roles::grant_caps`, `CAPS_VER` 2): `read` + **`KURS_RECORD_CAP`** (`kurs_zapisnik`). Tu ovlast imaju i administrator i Author, pa i oni mogu koristiti `/zapisnik/`. Korisnika s ulogom Zapisničar dodaje administrator u WP → Korisnici.
+- **`Kurs_Zapisnik`** (`includes/class-zapisnik.php`): rewrite `^zapisnik/?$` → `kurs_zapisnik=1` (samoizlječenje pravila na `init` 101), `render()` na `template_redirect` 0 — **samostalan dokument bez teme** (`front/zapisnik.php` + `front/zapisnik.css`; ispisuje samo `wp_print_styles(['kurs-zapisnik'])` s ovisnostima i `wp_print_scripts(['kurs-admin'])`). `noindex`, `nocache_headers`.
+  - Stanja: neprijavljen → `wp_login_form` (povratak na istu adresu) · bez ovlasti → poruka + odjava · `?match_id=X` → **isti `admin/views/match-record.php`** (globalna `$GLOBALS['kurs_record_front']`) · inače popis.
+  - Popis (`Kurs_Zapisnik::lists()` preko `Kurs_Admin::active_matches`): **Čeka rezultat** (nezavršene od prije danas), **Nadolazeće** (sljedeća dva dana igranja, danas uključen), **Nedavno završene** (12, za pregled/ispis).
+  - `?match_id=X&format=pdf` → PDF grana viewa; POST `finish_match` / `reopen_match` → `Kurs_Admin::handle_record_forms()`.
+  - `recorder_only()` = ima `KURS_RECORD_CAP`, nema `KURS_CAP` ni `edit_posts`: `admin_init` ga vraća na `/zapisnik/` (osim `profile.php` i AJAX-a), `show_admin_bar` false, `login_redirect` → `/zapisnik/`.
+- **Front-način viewa zapisnika** (`$kurs_front`): povratak „← Sve utakmice” na `/zapisnik/`, PDF preko `/zapisnik/`, bez linka na Postavke kod zaključane sezone, forme šalju `kurs_front=1`. „Uredi datum, sat i kolo” vidi samo `KURS_CAP` (`$can_edit_match`; i u adminu) — `ajax_update_match` ostaje na `KURS_CAP`.
+- **`Kurs_Admin` (1.24.0):** 8 AJAX handlera zapisnika (`kurs_record_*`) traže `KURS_RECORD_CAP`; `finish_match` / `reopen_match` idu kroz javni statični **`handle_record_forms()`** (zove ga i `handle_forms`), povratak `record_return()` (`/zapisnik/` kad je `kurs_front`, inače admin zapisnik); asseti sučelja u **`enqueue_ui()`** (admin + `/zapisnik/`), fontovi `FONTS_URL`. Klasa se na `/zapisnik/` samo učita (`require_once`), ne instancira.
+- Zaključana sezona i dalje odbija izmjene (`guard_unlocked`) i za zapisničara.
+
+## Presjek ekipa za KURS — `/presjek/?k=…` (1.27.0)
+
+Korisnik je tražio presjek svih ekipa nove sezone (tko je poslao popis, što se promijenilo) „na zasebnom linku” koji može poslati KURS-u, s pitanjima na koja mogu odmah odgovoriti.
+
+- **`Kurs_Presjek`** (`includes/class-presjek.php`): rewrite `^presjek/?$` → `kurs_presjek=1` (samoizlječenje na `init` 102), samostalan dokument (`front/presjek.php|css|js`), `noindex`. Bez ispravnog ključa `?k=` (ili `KURS_CAP`) → 404.
+  - Ključ = `substr(hash_hmac('sha256','kurs-presjek', wp_salt('auth')),0,12)` — **ovisi o solima, lokalno ≠ produkcija**; link se kopira iz **wp-admin → KURS Liga → Presjek ekipa** (`admin_page()`: link + tablica svih odgovora).
+- **Podaci su snimka** `front/presjek-data.json` (ekipe s rosterom, „novi / dopunjeno ime / došli / prešli / nisu na popisu”, napomene, pitanja, promjene u ligama, „što smo napravili”) — **ne čita bazu**, pa radi i na produkciji prije migracije baze. Generirano iz lokalne baze (stanje 12. 11. 2026.); nakon odgovora/novih popisa regeneriraj ili ručno uredi JSON.
+- **Odgovori:** AJAX `kurs_presjek_odgovor` (priv + nopriv, provjera ključa, honeypot `web`, odgovor mora biti jedna od ponuđenih opcija) → opcija **`kurs_presjek_odgovori`** (`[id => [{v,t,who,at}]]`, zadnjih 20, bez autoloada). Id = id pitanja, `team-<ID>` (ispravak/popis uz ekipu) ili `opce`. Vrijedi zadnji odgovor.
+- ⚠️ Odgovori žive u bazi instalacije na kojoj su dani — **migracija lokalne baze na produkciju ih pregazi**; prije toga ih prepiši (admin → Presjek ekipa).
+
