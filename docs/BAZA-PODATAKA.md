@@ -28,7 +28,7 @@ Bootstrap, konstante i hookovi nalaze se u glavnoj datoteci `kurs-liga.php`.
 
 | Konstanta | Vrijednost | Značenje |
 |-----------|-----------|----------|
-| `KURS_VERSION` | `'1.34.0'` | Verzija koda plugina (header plugina je `1.2.0` — ne podiže se) |
+| `KURS_VERSION` | `'1.35.0'` | Verzija koda plugina (header plugina je `1.2.0` — ne podiže se) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutna putanja do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks za DB tablice; sklapa se kao `$wpdb->prefix . KURS_PREFIX` → npr. `wp_kurs_` |
@@ -359,7 +359,7 @@ Na kraju `install()` poziva `update_option('kurs_db_version', DB_VERSION)`.
 >
 > **Gotcha migracija:** migracije nisu uvjetovane pojedinom verzijom (npr. `if installed < 1.2`); cijeli blok se izvrši svaki put kad je instalirana verzija < `DB_VERSION`. Sigurno je jer su koraci idempotentni (`dbDelta` + `MODIFY`).
 >
-> **Gotcha verzija:** plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.34.0`, a `DB_VERSION` `1.16` — kod i shema imaju različite verzijske sheme (namjerno).
+> **Gotcha verzija:** plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.35.0`, a `DB_VERSION` `1.16` — kod i shema imaju različite verzijske sheme (namjerno).
 
 ---
 
@@ -387,7 +387,7 @@ Seed (prvih ~250 redaka) popunjava samo dio sustava:
 5. CPT-ovi ne registriraju vlastite taksonomije; natjecateljska pripadnost je isključivo u custom tablicama (taksonomije `liga`/`sezona` iz `CLAUDE.md` pripadaju temi, ne pluginu).
 6. `kurs_seed.sql` je krhak: ovisi o tvrdo kodiranim `team_id` (9–25), `division_id=2`, `group_id` 5–7 i `matches.id` 1–24; pretpostavlja da ekipe/utakmice/grupe već postoje.
 7. Seed NE puni `seasons`/`divisions`/`phases`/`groups`/`group_teams`/`match_events`/`playoff_matches` — samo igrače (`wp_posts`), `squads` i `UPDATE` rezultata u `matches`.
-8. Plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.34.0`, a `DB_VERSION` `1.16` — različite verzijske sheme za kod i bazu.
+8. Plugin header `Version` je `1.2.0`, `KURS_VERSION` `1.35.0`, a `DB_VERSION` `1.16` — različite verzijske sheme za kod i bazu.
 9. (2026-10-16) Redove `divisions`/`phases`/`groups` kreira isključivo `Kurs_Season::scaffold()` prema `COMPETITIONS`; `groups.playoff_spots` dolazi iz divizije (0 za KC). Playoff zapisnici (`matches.group_id = 0`) brišu se zajedno s bracketom (`Kurs_Playoff::reset()`), pa više ne ostaju siročad.
 10. Lokalni demo podaci (`tools/demo-podaci.php`) označeni su postmetom `_kurs_demo = 1` i opcijom `kurs_demo_seed` — vidi `POSTAVKE-I-KONVENCIJE.md` §1.4.
 

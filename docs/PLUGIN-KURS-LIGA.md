@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.34.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.35.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -858,3 +858,11 @@ Vlastito, anonimno brojanje posjeta **bez kolačića** (za izvještaje sponzorim
 
 - Iznad unosa po ekipama je **štoperica** (`#kurs-clock`): „Početak utakmice” → „Pauza” → „Počni 2. poluvrijeme” (prebaci i poluvrijeme) ili „Nastavi”; ±1′ za ispravak; „Poništi”. Vrijeme teče kontinuirano (2. poluvrijeme nastavlja od minute pauze). Stanje je u **localStorage** preglednika (`kurs-clock-<match_id>`: `acc`, `at`, `h2`) — preživi osvježavanje, ali ne prelazi na drugi uređaj.
 - Prozor za gol/karton (`#kurs-pick`): minuta se **sama popuni** iz štoperice (nogometno: 0:00–0:59 = 1. minuta; oznaka „iz štoperice”), uz velike gumbe **−** / **+** (52 px) i × „bez minute”. Bez pokrenute štoperice polje je prazno kao prije (minuta je neobavezna).
+
+## E-pošta s weba — `Kurs_Mail` (1.35.0)
+
+`includes/class-mail.php`. DNS kurskc.hr: MX `mail.kurskc.hr` (isti server 88.99.1.226), SPF `v=spf1 +a +mx +a:s2.taka.hr -all`, DKIM `default._domainkey`, **DMARC `p=quarantine; adkim=s; aspf=s`** — zato WordPressov PHP `mail()` (omotnica = sistemski korisnik) ne prolazi pouzdano.
+- Konstante u `wp-config.php` (samo na serveru): `KURS_SMTP_HOST`, `KURS_SMTP_PORT` (587/465), `KURS_SMTP_SECURE` (`tls`/`ssl`/''), `KURS_SMTP_USER` (sandučić, npr. `web@kurskc.hr`), `KURS_SMTP_PASS`, neobavezno `KURS_MAIL_FROM_NAME`. Kad postoje, `phpmailer_init` prebaci na SMTP s prijavom; From i omotnica (Sender) = `KURS_SMTP_USER`.
+- Ime pošiljatelja uvijek „KURS — kurskc.hr”. Greške (`wp_mail_failed`) → opcija `kurs_mail_last_error`.
+- **KURS Liga → Postavke → E-pošta:** status (SMTP / PHP mail()), zadnja greška, „Pošalji probni mail” (`admin_post_kurs_mail_test`) s ispisom razgovora sa SMTP serverom (SMTPDebug 3; AUTH redci se cenzuriraju).
+- Ako `mail.kurskc.hr` nema valjan certifikat, za `KURS_SMTP_HOST` upiši ime servera iz Plesk certifikata (npr. `s2.taka.hr`) — probni mail to pokaže.

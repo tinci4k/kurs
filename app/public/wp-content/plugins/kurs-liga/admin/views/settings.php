@@ -53,4 +53,42 @@ $tk_off = class_exists( 'Kurs_Ticker' ) ? get_option( Kurs_Ticker::OPT_OFFSEASON
 			</div>
 		</div>
 	</div>
+
+	<?php
+	/* E-pošta (1.35.0): stanje slanja + probni mail (Kurs_Mail) */
+	$mt   = get_transient( 'kurs_mail_test_' . get_current_user_id() );
+	if ( $mt ) delete_transient( 'kurs_mail_test_' . get_current_user_id() );
+	$merr = get_option( Kurs_Mail::ERR_OPT );
+	$smtp = Kurs_Mail::smtp_on();
+	?>
+	<div class="kurs-panel" id="kurs-mail" style="margin-top:18px;">
+		<div class="kurs-panel__head"><h3 class="kurs-panel__title">E-pošta s weba (nova lozinka, novi korisnik)</h3></div>
+		<div class="kurs-panel__body" style="padding:18px;">
+			<?php if ( $smtp ) : ?>
+			<p style="margin:0 0 10px;"><span style="display:inline-block;padding:2px 9px;border-radius:10px;background:#e6f3ea;color:#1F7A43;font-weight:700;">✓ SMTP</span>
+				Šalje se preko sandučića <strong><?php echo esc_html( KURS_SMTP_USER ); ?></strong> na <strong><?php echo esc_html( KURS_SMTP_HOST . ':' . ( defined( 'KURS_SMTP_PORT' ) ? (int) KURS_SMTP_PORT : 587 ) ); ?></strong>.</p>
+			<?php else : ?>
+			<p style="margin:0 0 10px;"><span style="display:inline-block;padding:2px 9px;border-radius:10px;background:#fdecec;color:#DA0F1E;font-weight:700;">PHP mail()</span>
+				Mailovi idu bez prijave u sandučić — zbog strogih pravila domene (DMARC) često završe u spamu ili ne stignu. Rješenje: u Plesku napravi sandučić (npr. <code>web@kurskc.hr</code>) i u <code>wp-config.php</code> upiši <code>KURS_SMTP_HOST</code>, <code>KURS_SMTP_PORT</code>, <code>KURS_SMTP_SECURE</code>, <code>KURS_SMTP_USER</code> i <code>KURS_SMTP_PASS</code>.</p>
+			<?php endif; ?>
+			<?php if ( is_array( $merr ) ) : ?>
+			<p style="margin:0 0 10px;color:#8a4300;font-size:13px;">Zadnja greška slanja (<?php echo esc_html( $merr['at'] ); ?>): <?php echo esc_html( $merr['msg'] ); ?></p>
+			<?php endif; ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+				<?php wp_nonce_field( 'kurs_mail_test' ); ?>
+				<input type="hidden" name="action" value="kurs_mail_test">
+				<input type="email" name="to" class="kurs-field-input" style="min-width:260px;" value="<?php echo esc_attr( $mt['to'] ?? wp_get_current_user()->user_email ); ?>" required>
+				<button class="kurs-btn kurs-btn--red">Pošalji probni mail</button>
+			</form>
+			<?php if ( $mt ) : ?>
+			<div class="notice <?php echo $mt['ok'] ? 'notice-success' : 'notice-error'; ?> inline" style="margin:12px 0 0;"><p><?php echo esc_html( $mt['msg'] ); ?></p></div>
+			<?php if ( $mt['log'] ) : ?>
+			<details style="margin-top:10px;"><summary style="cursor:pointer;">Razgovor sa SMTP serverom (za dijagnostiku)</summary>
+				<pre style="max-height:300px;overflow:auto;background:#111317;color:#e6e6e0;padding:10px;border-radius:6px;font-size:11px;white-space:pre-wrap;"><?php echo esc_html( implode( "
+", $mt['log'] ) ); ?></pre>
+			</details>
+			<?php endif; ?>
+			<?php endif; ?>
+		</div>
+	</div>
 </div>
