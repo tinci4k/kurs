@@ -22,7 +22,7 @@ Definirane konstante:
 
 | Konstanta | Vrijednost | Značenje |
 |---|---|---|
-| `KURS_VERSION` | `'1.35.0'` | Verzija koda (cache-busting admin asseta) |
+| `KURS_VERSION` | `'1.36.0'` | Verzija koda (cache-busting admin asseta) |
 | `KURS_DIR` | `plugin_dir_path(__FILE__)` | Apsolutni put do plugina |
 | `KURS_URL` | `plugin_dir_url(__FILE__)` | URL do plugina (asseti) |
 | `KURS_PREFIX` | `'kurs_'` | Prefiks DB tablica (uz `$wpdb->prefix`) |
@@ -866,3 +866,10 @@ Vlastito, anonimno brojanje posjeta **bez kolačića** (za izvještaje sponzorim
 - Ime pošiljatelja uvijek „KURS — kurskc.hr”. Greške (`wp_mail_failed`) → opcija `kurs_mail_last_error`.
 - **KURS Liga → Postavke → E-pošta:** status (SMTP / PHP mail()), zadnja greška, „Pošalji probni mail” (`admin_post_kurs_mail_test`) s ispisom razgovora sa SMTP serverom (SMTPDebug 3; AUTH redci se cenzuriraju).
 - Ako `mail.kurskc.hr` nema valjan certifikat, za `KURS_SMTP_HOST` upiši ime servera iz Plesk certifikata (npr. `s2.taka.hr`) — probni mail to pokaže.
+
+## Jednokratni paketi podataka — `Kurs_Data_Patches` (1.36.0)
+
+Live je izvor istine, pa se podaci više ne prenose bazom. Paket = `includes/patches/<id>.php` (vraća `function ( Kurs_Data_Patches $p )`), id u `Kurs_Data_Patches::PATCHES`. Na `init` (prioritet 120) se svaki neizvršeni paket izvrši jednom; `add_option( 'kurs_patch_lock_<md5>' )` sprječava dvostruko izvršavanje (zapeli lock > 5 min se preuzima); rezultat i dnevnik u opciji `kurs_data_patches`, zatim `wp_cache_flush()` + `kurs_data_changed`. Prikaz: KURS Liga → Postavke → „Paketi podataka”.
+- `set_roster( ekipa, [puna imena], $pan )` — liga aktualne sezone; spaja s rosterom ekipe (ova pa prošla sezona): isto ime, samo prezime (ako je na popisu jedinstveno) ili skraćeno ime („M.”, „Dan.”) → preimenuje u puno ime (povijest ostaje); inače postojeći igrač točnog imena koji ne igra u toj sezoni, inače novi igrač. Tko nije na popisu, makne se iz rostera te lige. Igrač iz druge ekipe iste lige se ne premješta (upozorenje u dnevniku). Zaključana sezona se preskače.
+- `set_meta()`, `rename_player_in_team()`, `team()`, `sponsor()`, `current_division()`.
+- **2026-11-13-rosteri-sponzori:** „Sedlanić” (Profesori 2025/26) → Igor Sedlanić (isti igrač, sada Klikaj; `rename_player_any()` prije rostera); rosteri HEP-ODS (15), Klikaj.hr / Zona tri (15), ENDURA fit (12), AL Nemčić/Klesarstvo Habek (13); voditelj Klikaja Goran Ogrizović, Profesora Zlatko Martić, trener Čekićara Tihomir Henezi; sponzori: Grad Koprivnica (glavni, obje lige, prvi; logo `assets/sponsors/grad-koprivnica.png` — grb s natpisom, iz službenog SVG-a s koprivnica.hr, 800 px PNG), Pan obje lige, Praona Drnje samo KC, Marks u koš.

@@ -61,6 +61,21 @@ $tk_off = class_exists( 'Kurs_Ticker' ) ? get_option( Kurs_Ticker::OPT_OFFSEASON
 	$merr = get_option( Kurs_Mail::ERR_OPT );
 	$smtp = Kurs_Mail::smtp_on();
 	?>
+	<?php $patches = Kurs_Data_Patches::done(); if ( $patches ) : ?>
+	<div class="kurs-panel" style="margin-top:18px;">
+		<div class="kurs-panel__head"><h3 class="kurs-panel__title">Paketi podataka (izvršeni)</h3></div>
+		<div class="kurs-panel__body" style="padding:14px 18px;">
+			<?php foreach ( array_reverse( $patches, true ) as $pid => $pr ) : ?>
+			<details style="margin:0 0 8px;">
+				<summary style="cursor:pointer;"><strong><?php echo esc_html( $pid ); ?></strong> · <?php echo esc_html( $pr['at'] ); ?> · <?php echo ! empty( $pr['ok'] ) ? '<span style="color:#1F7A43;font-weight:700;">✓ izvršen</span>' : '<span style="color:#DA0F1E;font-weight:700;">greška</span>'; ?></summary>
+				<pre style="max-height:320px;overflow:auto;background:#f6f6f1;padding:10px;border-radius:6px;font-size:12px;white-space:pre-wrap;margin:8px 0 0;"><?php echo esc_html( implode( "
+", (array) $pr['log'] ) ); ?></pre>
+			</details>
+			<?php endforeach; ?>
+		</div>
+	</div>
+	<?php endif; ?>
+
 	<div class="kurs-panel" id="kurs-mail" style="margin-top:18px;">
 		<div class="kurs-panel__head"><h3 class="kurs-panel__title">E-pošta s weba (nova lozinka, novi korisnik)</h3></div>
 		<div class="kurs-panel__body" style="padding:18px;">

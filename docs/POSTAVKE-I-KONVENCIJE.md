@@ -104,7 +104,7 @@ Projekt ima **dva** glavna dijela:
 
 | Element | Konvencija / vrijednost |
 |---|---|
-| Verzija | `KURS_VERSION = '1.35.0'` (header plugina `Version: 1.2.0` se ne podiže; podigni `KURS_VERSION` pri izmjeni `admin.css`/`admin.js` — cache-busting) |
+| Verzija | `KURS_VERSION = '1.36.0'` (header plugina `Version: 1.2.0` se ne podiže; podigni `KURS_VERSION` pri izmjeni `admin.css`/`admin.js` — cache-busting) |
 | Putanje | `KURS_DIR` = `plugin_dir_path(__FILE__)`, `KURS_URL` = `plugin_dir_url(__FILE__)` |
 | Prefiks | `KURS_PREFIX = 'kurs_'` |
 | Ovlast | `KURS_CAP = 'manage_kurs_liga'` (cijeli KURS admin; ranije `manage_options`) |

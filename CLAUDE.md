@@ -88,6 +88,7 @@ Skriven je `kurs-match-record` (zapisnik). **Prijava** (wp-login.php i /zapisnik
 samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 
 ## Razvojne napomene
+- **LIVE JE IZVOR ISTINE (od 2026-11-13).** Baza se **više ne prenosi** s lokala na live (pregazila bi korisnike, odgovore presjeka, zahtjeve ekipa, statistiku). Nove podatke (rosteri iz mailova, odgovori, sponzori) piši kao **jednokratni paket** `includes/patches/<id>.php` + upis id-a u `Kurs_Data_Patches::PATCHES` (`includes/class-data-patches.php`, 1.36.0): nakon deploya se izvrši sam, jednom (lock opcijom), traži ekipe/igrače/sponzore **po imenu**; pomoćnici `set_roster()` (prepozna „Fulir”/„M. Kovaček”/„Dan. Nemčić” u rosteru ekipe i preimenuje u puno ime, ostale doda, višak makne iz rostera), `set_meta()`, `rename_player_in_team()`, `sponsor()`. Dnevnik: opcija `kurs_data_patches`, prikaz KURS Liga → Postavke. Prije: probni prolaz u CLI transakciji s ROLLBACK.
 - `WP_DEBUG` je uključen, log se piše u `app/public/wp-content/debug.log`.
 - **Naming konvencije**: `KURS_PREFIX = 'kurs_'` (tablice `wp_kurs_*`, CPT `kurs_*`,
   postmeta `_kurs_*`); tema koristi prefiks `kurskc_` / `kurs_`. Uvijek koristi
@@ -150,5 +151,5 @@ samo se preusmjeravaju (`redirect_legacy_pages()`) i moraju ostati registrirani.
 - Integritet ekipa čuvaju **admin handleri** (nema FK): ekipa je u najviše jednoj skupini po ligi, ne
   miče se iz lige dok ima utakmica i ne briše se dok ima ijednu utakmicu (`ajax_assign_team`,
   `ajax_remove_team`, `do_delete_team`). Domenske metode same ništa ne provjeravaju.
-- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.35.0` vs
+- Verzije se razlikuju namjerno: plugin header `1.2.0` vs `KURS_VERSION=1.36.0` vs
   `DB_VERSION=1.16`; tema `KURSKC_VERSION=1.0.63` vs `style.css` 1.0.0.

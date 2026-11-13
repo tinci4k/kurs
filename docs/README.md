@@ -23,7 +23,7 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 | Putanja | Opis |
 |---|---|
-| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.35.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
+| `kurs-liga.php` | Bootstrap: konstante (`KURS_VERSION='1.36.0'`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`), require-ovi, hookovi, instanca `Kurs_CPT`, `Kurs_Ticker::init()`, `Kurs_Roles::init()` |
 | `includes/class-database.php` | Sve 12 custom tablica (`install()` + `dbDelta`), `DB_VERSION='1.16'`, migracije (`maybe_upgrade()`) |
 | `includes/class-cpt.php` | CPT-ovi `kurs_ekipa` (slug `ekipe`) i `kurs_igrac` (slug `igraci`) |
 | `includes/class-players.php` | `Kurs_Players` (1.19.0) — registar igrača: duplikati istog imena, zbroj nastupa/golova, ekipe u aktivnim sezonama, **spajanje** i brisanje igrača |
@@ -158,4 +158,4 @@ Repozitorij korijen: `C:\Users\Tinci\Local Sites\kurshr\`. WordPress korijen: `a
 
 ---
 
-*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.35.0` vs DB `DB_VERSION=1.16`; tema `KURSKC_VERSION=1.0.63` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*
+*Verzije u kodu su nedosljedne (namjerno): plugin header `Version: 1.2.0` vs `KURS_VERSION=1.36.0` vs DB `DB_VERSION=1.16`; tema `KURSKC_VERSION=1.0.63` vs `style.css` Version `1.0.0`. To su poznate nedosljednosti, ne bugovi.*

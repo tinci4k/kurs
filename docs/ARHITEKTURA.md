@@ -85,7 +85,7 @@ graph TB
 ## 2. Ključne ulazne točke
 
 ### `kurs-liga.php` (bootstrap plugina)
-Definira konstante: `KURS_VERSION='1.35.0'` (header plugina i dalje `1.2.0`), `KURS_DIR`, `KURS_URL`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`. Učitava (`require_once`) sve domenske klase (`class-database`, `helpers`, `class-playoff`, `class-cpt`, `class-season`, `class-match`, `class-ticker`, **`class-rounds`**, `class-roles`), te u adminu `admin/class-admin.php`. Instancira `new Kurs_CPT()` (registrira CPT-ove na `init`), `Kurs_Ticker::init()`, `Kurs_Roles::init()`. Veže:
+Definira konstante: `KURS_VERSION='1.36.0'` (header plugina i dalje `1.2.0`), `KURS_DIR`, `KURS_URL`, `KURS_PREFIX='kurs_'`, `KURS_CAP='manage_kurs_liga'`. Učitava (`require_once`) sve domenske klase (`class-database`, `helpers`, `class-playoff`, `class-cpt`, `class-season`, `class-match`, `class-ticker`, **`class-rounds`**, `class-roles`), te u adminu `admin/class-admin.php`. Instancira `new Kurs_CPT()` (registrira CPT-ove na `init`), `Kurs_Ticker::init()`, `Kurs_Roles::init()`. Veže:
 - `add_action('plugins_loaded', ['Kurs_Database','maybe_upgrade'])` — migracija sheme na svakom učitavanju.
 - `register_activation_hook` — `Kurs_Database::install()` (kreira tablice) + registracija CPT-ova + `flush_rewrite_rules()`.
 - `init` 99 — jednokratni flush rewrite pravila (opcija `kurs_flush_needed`); `init` 100 — samoizlječenje: regenerira pravila ako u `rewrite_rules` nema `ekipe/…`.
